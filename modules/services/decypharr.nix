@@ -1,72 +1,84 @@
-{ pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
-  vars = import ./vars.nix;
-
-  decypharr-pkg = pkgs.buildGoModule rec {
-    pname = "decypharr";
-    version = "1.1.7-minz";
-
-    src = pkgs.fetchFromGitHub {
-      owner = "minz1";
-      repo = "decypharr";
-      rev = "${version}";
-      hash = "sha256-b1KBUv32Y2b0o7dpuk6XgYvwRCTGqYuejTYi6NP15xw";
-    };
-    vendorHash = "sha256-vp74DNPJYV0HwfG4dptxOXtEaU+dnaJJYvgk0KbqkhM=";
-
-    preCheck = ''
-      echo "{}" > config.json
-    '';
-
-    checkFlags = [ "-config=config.json" ];
-
-    nativeBuildInputs = [ pkgs.makeBinaryWrapper pkgs.pkg-config ];
-    buildInputs = [ pkgs.fuse pkgs.fuse3 ];
-    postInstall = ''
-      wrapProgram $out/bin/decypharr \
-        --prefix PATH : ${lib.makeBinPath [ pkgs.rclone pkgs.fuse3 pkgs.ffmpeg-headless ]}
-    '';
-
-  };
+  cfg = config.services.decypharr;
 in
 {
-  networking.firewall.allowedTCPPorts = [ 8282 ];
+  options.services.decypharr = {
+    enable = lib.mkEnableOption "Decypharr debrid mock qBittorrent service";
 
-  programs.fuse.userAllowOther = true;
-
-  users.users.decypharr = {
-    isSystemUser = true;
-    group = "decypharr";
-    extraGroups = [ vars.mediaGroup ];
-  };
-  users.groups.decypharr = {};
-
-  systemd.services.decypharr = {
-    description = "Decypharr - Debrid Mock QBittorrent";
-    after = [ "network.target" ];
-    wantedBy = [ "multi-user.target" ];
-
-    serviceConfig = {
-      ExecStart = "${decypharr-pkg}/bin/decypharr --config /var/lib/decypharr";
-
-      User = "decypharr";
-      Group = "decypharr";
-      WorkingDirectory = "/var/lib/decypharr";
-      Restart = "on-failure";
-      RestartSec = 5;
-
-      ReadWritePaths = [ vars.mediaPath ];
-
-      CapabilityBoundingSet = [ "CAP_SYS_ADMIN" ];
-      AmbientCapabilities = [ "CAP_SYS_ADMIN" ];
-      DeviceAllow = [ "/dev/fuse rw" ];
-      PrivateDevices = false;
-
-      NoNewPrivileges = true;
-      ProtectSystem = "strict";
-      PrivateTmp = true;
-      StateDirectory = "decypharr";
+    mediaGroup = lib.mkOption {
+      type = lib.types.str;
+      default = "media";
+      description = "Unix group name that has access to the media path.";
     };
+
+    mediaPath = lib.mkOption {
+      type = lib.types.str;
+      default = "/mnt/media";
+      description = "Path to the media directory that decypharr can read/write.";
+    };
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 8282;
+      description = "Port on which decypharr listens.";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    networking.firewall.allowedTCPPorts = [ cfg.port ];
+
+    programs.fuse.userAllowOther = true;
+
+    users.users.decypharr = {
+      isSystemUser = true;
+      group = "decypharr";
+      extraGroups = [ cfg.mediaGroup ];
+    };
+    users.groups.decypharr = { };
+    users.groups.${cfg.mediaGroup} = { };
+
+    systemd.services.decypharr = {
+      description = "Decypharr - Debrid Mock QBittorrent";
+      after = [ "network.target" ];
+      wantedBy = [ "multi-user.target" ];
+
+      serviceConfig = {
+        ExecStart = "${pkgs.decypharr}/bin/decypharr --config /var/lib/decypharr";
+
+        User = "decypharr";
+        Group = "decypharr";
+        WorkingDirectory = "/var/lib/decypharr";
+        Restart = "on-failure";
+        RestartSec = 5;
+
+        ReadWritePaths = [ cfg.mediaPath ];
+        RequiresMountsFor = [ cfg.mediaPath ];
+
+        CapabilityBoundingSet = [ "CAP_SYS_ADMIN" ];
+        AmbientCapabilities = [ "CAP_SYS_ADMIN" ];
+        DeviceAllow = [ "/dev/fuse rw" ];
+        PrivateDevices = false;
+
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectControlGroups = true;
+        PrivateTmp = true;
+        StateDirectory = "decypharr";
+      };
+    };
+
+    systemd.tmpfiles.rules = [
+      "d ${cfg.mediaPath} 0755 ${cfg.mediaGroup} ${cfg.mediaGroup} -"
+    ];
   };
 }
