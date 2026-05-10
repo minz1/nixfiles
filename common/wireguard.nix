@@ -8,20 +8,20 @@ let
       publicKey = "R42VqreOxYnlgs6SoaX+uOHrzComhJcOMshgjjXHcBc=";
       endpoint = "144.202.58.162:51820";
     };
-    desktop = {
+    device-2 = {
       role = "client";
       ip = "10.8.0.2";
       publicKey = "kvjC79ivkCmFXBUiJm2wt4SLoyFrlxyiZvOffSraJCc=";
-    };
-    laptop = {
-      role = "client";
-      ip = "10.8.0.4";
-      publicKey = "E/ptYaj0yogTCFlHuvnYV88NLErGdOL5F8p/PeW6JXM=";
     };
     device-3 = {
       role = "client";
       ip = "10.8.0.3";
       publicKey = "t/NvyVClqspHWixGJzjWBOnbfm4AyZNEdF9NGT1hWw4=";
+    };
+    minz-desktop = {
+      role = "client";
+      ip = "10.8.0.4";
+      publicKey = "E/ptYaj0yogTCFlHuvnYV88NLErGdOL5F8p/PeW6JXM=";
     };
     minz-home-vm-0 = {
       role = "client";

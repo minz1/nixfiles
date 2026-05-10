@@ -17,6 +17,8 @@ in
   networking.hostName = "minz-vultr-nix-0";
   system.stateVersion = "23.11";
 
+  boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
+
   users.users.root.openssh.authorizedKeys.keys = sshKeys;
   services.openssh.settings.PermitRootLogin = "no";
   services.openssh.listenAddresses = [

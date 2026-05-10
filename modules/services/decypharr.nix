@@ -32,8 +32,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    networking.firewall.allowedTCPPorts = [ cfg.port ];
-
     programs.fuse.userAllowOther = true;
 
     users.users.decypharr = {
