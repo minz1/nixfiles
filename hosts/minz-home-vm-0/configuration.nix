@@ -19,6 +19,7 @@
   };
 
   networking.networkmanager.enable = true;
+  networking.nftables.enable = true;
 
   services.decypharr = {
     enable = true;
@@ -35,12 +36,59 @@
 
   users.users.minz1 = {
     description = "Minz One";
-    extraGroups = [ "networkmanager" ];
+    extraGroups = [
+      "networkmanager"
+      "incus-admin"
+    ];
   };
 
   programs.neovim.defaultEditor = true;
   environment.shellAliases = {
     vi = "nvim";
     vim = "nvim";
+  };
+
+  virtualisation.incus = {
+    enable = true;
+    bucketSupport = false;
+    preseed = {
+      networks = [
+        {
+          name = "incusbr0";
+          type = "bridge";
+          config = {
+            "ipv4.address" = "10.10.0.1/24";
+            "ipv4.nat" = "true";
+          };
+        }
+      ];
+      storage_pools = [
+        {
+          name = "default";
+          driver = "dir";
+          config = {
+            source = "/var/lib/incus/storage-pools/default";
+          };
+        }
+      ];
+      profiles = [
+        {
+          name = "default";
+          devices = {
+            eth0 = {
+              name = "eth0";
+              network = "incusbr0";
+              type = "nic";
+            };
+            root = {
+              path = "/";
+              pool = "default";
+              size = "20GiB";
+              type = "disk";
+            };
+          };
+        }
+      ];
+    };
   };
 }
