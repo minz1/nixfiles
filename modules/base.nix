@@ -26,6 +26,8 @@ in
 
   nix.settings.trusted-users = [ "minz1" ];
 
+  security.sudo.wheelNeedsPassword = false;
+
   boot.tmp.cleanOnBoot = true;
   zramSwap.enable = true;
   services.logrotate.checkConfig = false;

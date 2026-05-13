@@ -43,6 +43,7 @@
   };
 
   programs.neovim.defaultEditor = true;
+  environment.systemPackages = with pkgs; [ opentofu ];
   environment.shellAliases = {
     vi = "nvim";
     vim = "nvim";
@@ -50,8 +51,10 @@
 
   virtualisation.incus = {
     enable = true;
-    bucketSupport = false;
     preseed = {
+      config = {
+        "core.https_address" = "10.8.0.5:8443";
+      };
       networks = [
         {
           name = "incusbr0";
