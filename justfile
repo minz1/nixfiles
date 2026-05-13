@@ -20,13 +20,13 @@ tofu-all: tofu-apply tofu-export
 
 # ── Deploy (deploy-rs) ────────────────────────────
 # Uses deploy-rs for auto-rollback on failure.
-# Usage: just deploy-vm or just deploy-vultr
+# Usage: just deploy <node-name> (e.g., just deploy minz-home-vm-0)
 
-deploy-vm:
-    nix run .#deploy-rs -- .#minz-home-vm-0 --skip-checks
-
-deploy-vultr:
-    nix run .#deploy-rs -- .#minz-vultr-nix-0 --skip-checks
+deploy node:
+    nix run .#deploy-rs -- .#{{ node }} --skip-checks
 
 deploy-all:
     nix run .#deploy-rs -- . --skip-checks
+
+list-nodes:
+    @nix eval --json .#deploy.nodes --apply 'builtins.attrNames' | jq -r '.[]'

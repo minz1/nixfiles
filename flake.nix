@@ -57,23 +57,19 @@
         ];
       };
 
-      deploy.nodes.minz-vultr-nix-0 = {
-        hostname = "10.8.0.1";
-        sshUser = "minz1";
-        profiles.system = {
-          user = "root";
-          path = deployPkgs.deploy-rs.lib.activate.nixos self.nixosConfigurations.minz-vultr-nix-0;
-        };
-      };
-
-      deploy.nodes.minz-home-vm-0 = {
-        hostname = "10.8.0.5";
-        sshUser = "minz1";
-        profiles.system = {
-          user = "root";
-          path = deployPkgs.deploy-rs.lib.activate.nixos self.nixosConfigurations.minz-home-vm-0;
-        };
-      };
+      deploy.nodes =
+        let
+          topology = import ./common/topology.nix;
+          nixosNodes = nixpkgs.lib.filterAttrs (_: node: node.type == "nixos") topology;
+        in
+        builtins.mapAttrs (name: node: {
+          hostname = node.ip;
+          sshUser = node.sshUser;
+          profiles.system = {
+            user = "root";
+            path = deployPkgs.deploy-rs.lib.activate.nixos self.nixosConfigurations.${name};
+          };
+        }) nixosNodes;
 
       checks = builtins.mapAttrs (
         system: deployLib: deployLib.deployChecks self.deploy
