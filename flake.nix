@@ -24,9 +24,8 @@
         overlays = [
           deploy-rs.overlays.default
           (self: super: {
-            deploy-rs = {
+            deploy-rs = super.deploy-rs // {
               inherit (pkgs) deploy-rs;
-              lib = super.deploy-rs.lib;
             };
           })
         ];
@@ -38,7 +37,6 @@
         modules = [
           ./modules/base.nix
           ./hosts/minz-vultr-nix-0/configuration.nix
-          ./modules/services/decypharr.nix
           {
             nixpkgs.overlays = [ overlay ];
           }

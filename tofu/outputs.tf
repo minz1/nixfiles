@@ -1,12 +1,8 @@
-# Outputs for the flake to consume
-# After `tofu apply`, run the export script to regenerate common/vm-ips.nix:
+# Outputs
 #
-#   tofu output | sort | perl -ne '
-#     chomp;
-#     s/_/./g;
-#     print "  $_;\n"
-#   ' > ../common/vm-ips.nix
-
-# output "minz_vm_ubuntu_0_ipv4" {
-#   value = incus_instance.ubuntu_0.ipv4_address
+# IPs flow from common/topology.nix → OpenTofu (not the other way around).
+# Add VM outputs here for visibility after `tofu apply`, e.g.:
+#
+# output "minz_vm_ubuntu_0_state" {
+#   value = incus_instance.ubuntu_0.status
 # }

@@ -5,12 +5,23 @@
   ...
 }:
 
+let
+  hostName = "minz-home-vm-0";
+  topology = (import ../../common/topology.nix);
+
+  node = topology.nodes."${hostName}";
+  incusNetwork = topology.networks.incus_bridge;
+  incusNodeNetwork = node.networks.incus_bridge;
+  wgAddr = node.networks.mgmt.ip;
+
+  incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
+in
 {
   imports = [
     ./hardware-configuration.nix
   ];
 
-  networking.hostName = "minz-home-vm-0";
+  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   networking.wireguard.interfaces = import ../../common/wireguard.nix {
@@ -18,8 +29,18 @@
     hostName = config.networking.hostName;
   };
 
+  systemd.services.sshd.after = [ "wireguard-wg0.service" ];
+  systemd.services.sshd.wants = [ "wireguard-wg0.service" ];
+
   networking.networkmanager.enable = true;
   networking.nftables.enable = true;
+
+  services.openssh.listenAddresses = [
+    {
+      addr = wgAddr;
+      port = node.services.ssh.port;
+    }
+  ];
 
   services.decypharr = {
     enable = true;
@@ -53,14 +74,14 @@
     enable = true;
     preseed = {
       config = {
-        "core.https_address" = "10.8.0.5:8443";
+        "core.https_address" = "${wgAddr}:${toString node.services.incus.port}";
       };
       networks = [
         {
-          name = "incusbr0";
+          name = incusNetwork.interface;
           type = "bridge";
           config = {
-            "ipv4.address" = "10.10.0.1/24";
+            "ipv4.address" = "${incusNodeNetwork.ip}/${incusPrefix}";
             "ipv4.nat" = "true";
           };
         }
@@ -80,7 +101,7 @@
           devices = {
             eth0 = {
               name = "eth0";
-              network = "incusbr0";
+              network = incusNetwork.interface;
               type = "nic";
             };
             root = {

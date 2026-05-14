@@ -9,7 +9,7 @@ let
 
   wireguardNetworks = lib.filterAttrs (
     networkName: networkConfig:
-    (builtins.hasAttr networkName currentNode.networks) && (networks.${networkName}.type == "wireguard")
+    (builtins.hasAttr networkName currentNode.networks) && (networkConfig.type == "wireguard")
   ) networks;
 
   generateInterface =

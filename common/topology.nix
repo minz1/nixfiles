@@ -4,6 +4,7 @@
       type = "wireguard";
       subnet = "10.8.0.0/24";
       interface = "wg0";
+      listenPort = 51820;
     };
     incus_bridge = {
       type = "incus";
@@ -16,6 +17,10 @@
     minz-vultr-nix-0 = {
       os = "nixos";
       sshUser = "minz1";
+      services = {
+        ssh.port = 22;
+        forgejo.port = 3000;
+      };
       networks.mgmt = {
         ip = "10.8.0.1";
         role = "server";
@@ -55,6 +60,10 @@
       os = "nixos";
       sshUser = "minz1";
       provisioner = "incus-host";
+      services = {
+        ssh.port = 22;
+        incus.port = 8443;
+      };
       networks = {
         mgmt = {
           ip = "10.8.0.5";

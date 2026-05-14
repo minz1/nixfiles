@@ -6,25 +6,25 @@
 }:
 
 let
-  sshKeys = (import ../../common/ssh-keys.nix).minz1;
-  wgAddr = "10.8.0.1";
+  hostName = "minz-vultr-nix-0";
+  topology = (import ../../common/topology.nix).nodes."${hostName}";
+  wgAddr = topology.networks.mgmt.ip;
+  forgejoPort = topology.services.forgejo.port;
 in
 {
   imports = [
     ./hardware-configuration.nix
   ];
 
-  networking.hostName = "minz-vultr-nix-0";
+  networking.hostName = hostName;
   system.stateVersion = "23.11";
 
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
 
-  users.users.root.openssh.authorizedKeys.keys = sshKeys;
-  services.openssh.settings.PermitRootLogin = "no";
   services.openssh.listenAddresses = [
     {
       addr = wgAddr;
-      port = 22;
+      port = topology.services.ssh.port;
     }
   ];
 
@@ -49,9 +49,9 @@ in
     settings = {
       server = {
         HTTP_ADDR = wgAddr;
-        HTTP_PORT = 3000;
+        HTTP_PORT = forgejoPort;
         DOMAIN = wgAddr;
-        ROOT_URL = "http://${wgAddr}:3000/";
+        ROOT_URL = "http://${wgAddr}:${toString forgejoPort}/";
       };
       service.DISABLE_REGISTRATION = true;
     };
@@ -63,7 +63,7 @@ in
       enable = true;
       name = "minz_forgejo-runner-0";
       tokenFile = "/var/lib/secrets/forgejo-runner/token";
-      url = "http://${wgAddr}:3000";
+      url = "http://${wgAddr}:${toString forgejoPort}";
       labels = [
         "ubuntu-latest:docker://catthehacker/ubuntu:act-latest"
         "node-22:docker://node:22-bookworm"

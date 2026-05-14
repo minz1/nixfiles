@@ -4,18 +4,18 @@ let
   sshKeys = (import ../common/ssh-keys.nix).minz1;
 in
 {
-  networking.wireguard.enable = true;
-
   networking.firewall = {
     enable = true;
-    allowedTCPPorts = [ ];
     allowedUDPPorts = [ 51820 ];
     trustedInterfaces = [ "wg0" ];
   };
 
   services.openssh = {
     enable = true;
-    settings.PasswordAuthentication = false;
+    settings = {
+      PasswordAuthentication = false;
+      PermitRootLogin = "no";
+    };
   };
 
   users.users.minz1 = {

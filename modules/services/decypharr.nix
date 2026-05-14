@@ -76,7 +76,7 @@ in
     };
 
     systemd.tmpfiles.rules = [
-      "d ${cfg.mediaPath} 0755 ${cfg.mediaGroup} ${cfg.mediaGroup} -"
+      "d ${cfg.mediaPath} 0775 root ${cfg.mediaGroup} -"
     ];
   };
 }
