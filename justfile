@@ -26,7 +26,7 @@ deploy node:
     nix run .#deploy-rs -- .#{{ node }}
 
 deploy-all:
-    nix run .#deploy-rs -- . --skip-checks
+    nix run .#deploy-rs -- .
 
 list-nodes:
     @nix eval --raw .#deploy.nodes --apply 'x: (builtins.concatStringsSep "\n" (builtins.attrNames x)) + "\n"'
