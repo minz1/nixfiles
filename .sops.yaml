@@ -1,0 +1,19 @@
+keys:
+  - &minz-vultr-nix-0 age13peqkdj9wj2clcqkkkjpfdt0fk4jz57tfgjpwkckkk4vfaz97dqsl8g6gf
+
+  - &minz-home-vm-0 age1jpmc7f5wmqa6lnz94xqyu9qcfnazave4gnkkdct60rukureu09gqm262zx
+
+  - &minz-desktop age1m7d8ymts4dhvdz8fzllxwtxhy8h6q5dm4h5fvsxuv7f5t68cedeskh8ksy
+
+creation_rules:
+  - path_regex: secrets/minz-vultr-nix-0\.yaml$
+    key_groups:
+      - age:
+          - *minz-vultr-nix-0
+          - *minz-desktop
+
+  - path_regex: secrets/minz-home-vm-0\.yaml$
+    key_groups:
+      - age:
+          - *minz-home-vm-0
+          - *minz-desktop

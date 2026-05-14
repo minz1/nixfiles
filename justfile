@@ -14,6 +14,33 @@ tofu-plan: tofu-init
 tofu-apply: tofu-init
     cd tofu && INCUS_REMOTE=home-vm tofu apply
 
+# ── Secrets (sops) ───────────────────────────────
+# One-time bootstrap: fill in .sops.yaml with real age keys, then:
+#   just sops-bootstrap-vultr   (or home)
+# Subsequent edits:
+#   just sops-edit-vultr        (or home)
+
+sops-bootstrap-vultr:
+    @echo "Run on minz-vultr-nix-0:"
+    @echo "  cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age"
+    @echo "Paste the result into .sops.yaml, then:"
+    @echo "  sops --encrypt --in-place secrets/minz-vultr-nix-0.yaml"
+
+sops-bootstrap-home:
+    @echo "Run on minz-home-vm-0:"
+    @echo "  cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age"
+    @echo "Paste the result into .sops.yaml, then:"
+    @echo "  sops --encrypt --in-place secrets/minz-home-vm-0.yaml"
+
+sops-edit-vultr:
+    sops secrets/minz-vultr-nix-0.yaml
+
+sops-edit-home:
+    sops secrets/minz-home-vm-0.yaml
+
+sops-edit node:
+    sops secrets/{{ node }}.yaml
+
 # ── Deploy (deploy-rs) ────────────────────────────
 # Uses deploy-rs for atomic activation and auto-rollback on failure.
 # Usage: just deploy <node-name>  (e.g., just deploy minz-home-vm-0)

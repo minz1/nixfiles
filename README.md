@@ -31,6 +31,25 @@ nixfiles/
 └── pkgs/             # Custom package overlays
 ```
 
+## Secrets management
+
+This project uses [SOPS](https://github.com/getsops/sops) with [sops-nix](https://github.com/Mic92/sops-nix). SSH host keys are used as age identities.
+
+### Local setup
+
+To edit secrets, you must point SOPS to an age-compatible private key. If your `~/.ssh/id_ed25519` is password-protected, generate a native age key file:
+
+```bash
+mkdir -p ~/.config/sops/age
+ssh-to-age -private-key -i ~/.ssh/id_ed25519 -o ~/.config/sops/age/keys.txt
+```
+
+Then export the path in your shell or `.envrc`:
+
+```bash
+export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
+```
+
 ## Secrets
 | Path | Description |
 |------|-------------|

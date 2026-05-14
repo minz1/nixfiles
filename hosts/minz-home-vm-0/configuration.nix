@@ -19,18 +19,11 @@ in
 {
   imports = [
     ./hardware-configuration.nix
+    ../../modules/services/decypharr.nix
   ];
 
   networking.hostName = hostName;
   system.stateVersion = "25.11";
-
-  networking.wireguard.interfaces = import ../../common/wireguard.nix {
-    inherit lib;
-    hostName = config.networking.hostName;
-  };
-
-  systemd.services.sshd.after = [ "wireguard-wg0.service" ];
-  systemd.services.sshd.wants = [ "wireguard-wg0.service" ];
 
   networking.networkmanager.enable = true;
   networking.nftables.enable = true;

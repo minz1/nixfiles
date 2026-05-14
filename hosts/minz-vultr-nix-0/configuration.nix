@@ -7,9 +7,10 @@
 
 let
   hostName = "minz-vultr-nix-0";
-  topology = (import ../../common/topology.nix).nodes."${hostName}";
-  wgAddr = topology.networks.mgmt.ip;
-  forgejoPort = topology.services.forgejo.port;
+  topology = (import ../../common/topology.nix);
+  node = topology.nodes."${hostName}";
+  wgAddr = node.networks.mgmt.ip;
+  forgejoPort = node.services.forgejo.port;
 in
 {
   imports = [
@@ -19,21 +20,18 @@ in
   networking.hostName = hostName;
   system.stateVersion = "23.11";
 
-  boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
-
   services.openssh.listenAddresses = [
     {
       addr = wgAddr;
-      port = topology.services.ssh.port;
+      port = node.services.ssh.port;
     }
   ];
 
-  systemd.services.sshd.after = [ "wireguard-wg0.service" ];
-  systemd.services.sshd.wants = [ "wireguard-wg0.service" ];
-
-  networking.wireguard.interfaces = import ../../common/wireguard.nix {
-    inherit lib;
-    hostName = config.networking.hostName;
+  # EnvironmentFile sets $TOKEN for the register script; sops-nix places this before services start.
+  # File must contain "TOKEN=<value>" (KEY=VALUE format, not a raw token string).
+  sops.secrets.forgejo_runner_token = {
+    mode = "0400";
+    restartUnits = [ "gitea-runner-minz_forgejo.service" ];
   };
 
   swapDevices = [
@@ -62,7 +60,7 @@ in
     instances.minz_forgejo = {
       enable = true;
       name = "minz_forgejo-runner-0";
-      tokenFile = "/var/lib/secrets/forgejo-runner/token";
+      tokenFile = config.sops.secrets.forgejo_runner_token.path;
       url = "http://${wgAddr}:${toString forgejoPort}";
       labels = [
         "ubuntu-latest:docker://catthehacker/ubuntu:act-latest"
