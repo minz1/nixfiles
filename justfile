@@ -23,10 +23,10 @@ tofu-all: tofu-apply tofu-export
 # Usage: just deploy <node-name> (e.g., just deploy minz-home-vm-0)
 
 deploy node:
-    nix run .#deploy-rs -- .#{{ node }} --skip-checks
+    nix run .#deploy-rs -- .#{{ node }}
 
 deploy-all:
     nix run .#deploy-rs -- . --skip-checks
 
 list-nodes:
-    @nix eval --json .#deploy.nodes --apply 'builtins.attrNames' | jq -r '.[]'
+    @nix eval --raw .#deploy.nodes --apply 'x: (builtins.concatStringsSep "\n" (builtins.attrNames x)) + "\n"'

@@ -1,35 +1,85 @@
 {
-  minz-vultr-nix-0 = {
-    type = "nixos";
-    role = "server";
-    ip = "10.8.0.1";
-    sshUser = "minz1";
-    publicKey = "R42VqreOxYnlgs6SoaX+uOHrzComhJcOMshgjjXHcBc=";
-    endpoint = "144.202.58.162:51820";
+  networks = {
+    mgmt = {
+      type = "wireguard";
+      subnet = "10.8.0.0/24";
+      interface = "wg0";
+    };
+    incus_bridge = {
+      type = "incus";
+      subnet = "10.10.0.0/24";
+      interface = "incusbr0";
+    };
   };
-  device-2 = {
-    type = "external";
-    role = "client";
-    ip = "10.8.0.2";
-    publicKey = "kvjC79ivkCmFXBUiJm2wt4SLoyFrlxyiZvOffSraJCc=";
-  };
-  device-3 = {
-    type = "external";
-    role = "client";
-    ip = "10.8.0.3";
-    publicKey = "t/NvyVClqspHWixGJzjWBOnbfm4AyZNEdF9NGT1hWw4=";
-  };
-  minz-desktop = {
-    type = "external";
-    role = "client";
-    ip = "10.8.0.4";
-    publicKey = "E/ptYaj0yogTCFlHuvnYV88NLErGdOL5F8p/PeW6JXM=";
-  };
-  minz-home-vm-0 = {
-    type = "nixos";
-    role = "client";
-    ip = "10.8.0.5";
-    sshUser = "minz1";
-    publicKey = "82wMGARWEdw9PGqZXYGRoo/fYOaCffokD3BOv/4mEG0=";
+
+  nodes = {
+    minz-vultr-nix-0 = {
+      os = "nixos";
+      sshUser = "minz1";
+      networks.mgmt = {
+        ip = "10.8.0.1";
+        role = "server";
+        publicKey = "R42VqreOxYnlgs6SoaX+uOHrzComhJcOMshgjjXHcBc=";
+        endpoint = "144.202.58.162:51820";
+      };
+    };
+
+    device-2 = {
+      os = "external";
+      networks.mgmt = {
+        ip = "10.8.0.2";
+        role = "client";
+        publicKey = "kvjC79ivkCmFXBUiJm2wt4SLoyFrlxyiZvOffSraJCc=";
+      };
+    };
+
+    device-3 = {
+      os = "external";
+      networks.mgmt = {
+        ip = "10.8.0.3";
+        role = "client";
+        publicKey = "t/NvyVClqspHWixGJzjWBOnbfm4AyZNEdF9NGT1hWw4=";
+      };
+    };
+
+    minz-desktop = {
+      os = "external";
+      networks.mgmt = {
+        ip = "10.8.0.4";
+        role = "client";
+        publicKey = "E/ptYaj0yogTCFlHuvnYV88NLErGdOL5F8p/PeW6JXM=";
+      };
+    };
+
+    minz-home-vm-0 = {
+      os = "nixos";
+      sshUser = "minz1";
+      provisioner = "incus-host";
+      networks = {
+        mgmt = {
+          ip = "10.8.0.5";
+          role = "client";
+          publicKey = "82wMGARWEdw9PGqZXYGRoo/fYOaCffokD3BOv/4mEG0=";
+          extraAllowedIPs = [ "10.10.0.0/24" ];
+        };
+        incus_bridge = {
+          ip = "10.10.0.1";
+          role = "gateway";
+        };
+      };
+    };
+
+    minz-vm-ubuntu-0 = {
+      os = "ubuntu";
+      provisioner = "incus";
+      networks.incus_bridge = {
+        ip = "10.10.0.10";
+      };
+      incus = {
+        image = "images:ubuntu/24.04";
+        memory = "4GiB";
+        cpus = 2;
+      };
+    };
   };
 }

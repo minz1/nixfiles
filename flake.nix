@@ -60,10 +60,10 @@
       deploy.nodes =
         let
           topology = import ./common/topology.nix;
-          nixosNodes = nixpkgs.lib.filterAttrs (_: node: node.type == "nixos") topology;
+          nixosNodes = nixpkgs.lib.filterAttrs (_: node: node.os == "nixos") topology.nodes;
         in
         builtins.mapAttrs (name: node: {
-          hostname = node.ip;
+          hostname = node.networks.mgmt.ip;
           sshUser = node.sshUser;
           profiles.system = {
             user = "root";
