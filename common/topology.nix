@@ -20,6 +20,10 @@
       services = {
         ssh.port = 22;
         forgejo.port = 3000;
+        rustfs.ports = [
+          9000
+          9001
+        ];
       };
       networks.mgmt = {
         ip = "10.8.0.1";
@@ -78,14 +82,16 @@
       };
     };
 
-    minz-vm-ubuntu-0 = {
-      os = "ubuntu";
+    minz-vm-nixos-0 = {
+      os = "nixos";
+      sshUser = "minz1";
       provisioner = "incus";
+      deployed = false;
       networks.incus_bridge = {
-        ip = "10.10.0.10";
+        ip = "10.10.0.11";
       };
       incus = {
-        image = "images:ubuntu/24.04";
+        image = "images:nixos/unstable";
         memory = "4GiB";
         cpus = 2;
       };

@@ -1,0 +1,27 @@
+#cloud-config
+hostname: ${hostname}
+manage_etc_hosts: true
+
+users:
+  - name: minz1
+    groups: [wheel, adm]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /run/current-system/sw/bin/bash
+    ssh_authorized_keys:
+%{ for key in ssh_keys ~}
+      - ${key}
+%{ endfor ~}
+
+write_files:
+  - path: /etc/systemd/network/10-eth0.network
+    content: |
+      [Match]
+      Name=eth0
+
+      [Network]
+      Address=${ip}/${prefix}
+      Gateway=${gateway}
+      DNS=1.1.1.1
+
+runcmd:
+  - systemctl restart systemd-networkd

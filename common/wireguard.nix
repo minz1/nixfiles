@@ -35,10 +35,13 @@ let
 
       nodesInNetwork = lib.filterAttrs (_: node: builtins.hasAttr networkName node.networks) nodes;
 
-      # All extraAllowedIPs declared by any node in this network (e.g. the Incus bridge subnet).
-      # Clients receive these so they can reach subnets routed through other peers.
-      allExtraAllowedIPs = lib.flatten (
-        lib.mapAttrsToList (_: node: node.networks.${networkName}.extraAllowedIPs or [ ]) nodesInNetwork
+      # All extraAllowedIPs declared by other nodes in this network.
+      # Clients receive these so they can reach subnets routed through other peers,
+      # excluding our own to prevent local routing conflicts.
+      otherNodesExtraAllowedIPs = lib.flatten (
+        lib.mapAttrsToList (
+          n: node: if n != hostName then (node.networks.${networkName}.extraAllowedIPs or [ ]) else [ ]
+        ) nodesInNetwork
       );
 
       # Hub-and-spoke: servers peer with everyone; clients only peer with servers.
@@ -60,7 +63,7 @@ let
             if isServer then
               [ "${peerCfg.ip}/32" ] ++ (peerCfg.extraAllowedIPs or [ ])
             else
-              lib.unique ([ networkConfig.subnet ] ++ allExtraAllowedIPs);
+              lib.unique ([ networkConfig.subnet ] ++ otherNodesExtraAllowedIPs);
         }
         // lib.optionalAttrs (peerCfg ? endpoint) {
           endpoint = peerCfg.endpoint;

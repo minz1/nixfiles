@@ -10,6 +10,11 @@ let
   node = topology.nodes."${hostName}";
   wgAddr = node.networks.mgmt.ip;
   forgejoPort = node.services.forgejo.port;
+  fwPorts =
+    node.services.rustfs.ports or [
+      9000
+      9001
+    ];
 in
 {
   imports = [
@@ -31,6 +36,20 @@ in
   sops.secrets.forgejo_runner_token = {
     mode = "0400";
     restartUnits = [ "gitea-runner-minz_forgejo.service" ];
+  };
+
+  # RustFS secrets for the S3-compatible state backend.
+  sops.secrets.rustfs-access-key = {
+    mode = "0400";
+    owner = config.services.rustfs.user;
+    group = config.services.rustfs.group;
+    restartUnits = [ "rustfs.service" ];
+  };
+  sops.secrets.rustfs-secret-key = {
+    mode = "0400";
+    owner = config.services.rustfs.user;
+    group = config.services.rustfs.group;
+    restartUnits = [ "rustfs.service" ];
   };
 
   swapDevices = [
@@ -72,6 +91,23 @@ in
   systemd.services."gitea-runner-minz_forgejo".serviceConfig = {
     SupplementaryGroups = [ "podman" ];
   };
+
+  # RustFS — S3-compatible object storage for OpenTofu remote state.
+  # Binds to all interfaces; the firewall restricts access to the WireGuard
+  # interface only (see trustedInterfaces in base.nix).
+  # Console is localhost-only; access via SSH tunnel over WG.
+  services.rustfs = {
+    enable = true;
+    accessKeyFile = config.sops.secrets.rustfs-access-key.path;
+    secretKeyFile = config.sops.secrets.rustfs-secret-key.path;
+    volumes = "/var/lib/rustfs";
+    address = ":9000";
+    consoleEnable = true;
+    consoleAddress = "127.0.0.1:9001";
+    logLevel = "info";
+  };
+
+  networking.firewall.allowedTCPPorts = fwPorts;
 
   virtualisation.podman = {
     enable = true;

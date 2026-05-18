@@ -1,42 +1,41 @@
 # nixfiles — command reference
 # Install just: https://github.com/casey/just
 # ── OpenTofu ──────────────────────────────────────
-# Run tofu commands against the home VM's Incus daemon.
-# Requires the Incus remote to be configured:
-#   incus remote add home-vm 10.8.0.5:8443
+# Run tofu commands against an Incus daemon.
+# Credentials for the RustFS S3 backend are passed via sops exec-env.
+# The secret file must contain:
+#   AWS_ACCESS_KEY_ID=<value>
+#   AWS_SECRET_ACCESS_KEY=<value>
 
 tofu-init:
-    [ -d tofu/.terraform ] || (cd tofu && tofu init)
+    [ -d tofu/.terraform ] || (sops exec-env secrets/rustfs-tofu.env "tofu -chdir=tofu init")
 
-tofu-plan: tofu-init
-    cd tofu && INCUS_REMOTE=home-vm tofu plan
+# Decrypt the Incus TLS client certs into tofu/.incus/
+# Requires secrets/incus-client.yaml with key client_key.
 
-tofu-apply: tofu-init
-    cd tofu && INCUS_REMOTE=home-vm tofu apply
+# The cert (client.crt) is in secrets/incus-client.crt — it's public.
+tofu-setup-certs:
+    mkdir -p tofu/.incus
+    cp secrets/incus-client.crt tofu/.incus/client.crt
+    sops -d --extract '["client_key"]' secrets/incus-client.yaml > tofu/.incus/client.key
+    chmod 600 tofu/.incus/client.key
 
-# ── Secrets (sops) ───────────────────────────────
-# One-time bootstrap: fill in .sops.yaml with real age keys, then:
-#   just sops-bootstrap-vultr   (or home)
-# Subsequent edits:
-#   just sops-edit-vultr        (or home)
+# Plan VMs hosted on a given Incus daemon.
+# Usage:
+#   just tofu-plan                              # all VMs on minz-home-vm-0
 
-sops-bootstrap-vultr:
-    @echo "Run on minz-vultr-nix-0:"
-    @echo "  cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age"
-    @echo "Paste the result into .sops.yaml, then:"
-    @echo "  sops --encrypt --in-place secrets/minz-vultr-nix-0.yaml"
+# just tofu-plan minz-vm-nixos-0               # single VM on minz-home-vm-0
+tofu-plan hostname="": tofu-init tofu-setup-certs
+    INCUS_CONF=$PWD/tofu/.incus INCUS_REMOTE=minz-home-vm-0 sops exec-env secrets/rustfs-tofu.env \
+        "tofu -chdir=tofu plan -var=\"hostname={{ hostname }}\" -out=tofu.plan"
 
-sops-bootstrap-home:
-    @echo "Run on minz-home-vm-0:"
-    @echo "  cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age"
-    @echo "Paste the result into .sops.yaml, then:"
-    @echo "  sops --encrypt --in-place secrets/minz-home-vm-0.yaml"
+tofu-apply hostname="": tofu-init tofu-setup-certs
+    INCUS_CONF=$PWD/tofu/.incus INCUS_REMOTE=minz-home-vm-0 sops exec-env secrets/rustfs-tofu.env \
+        "tofu -chdir=tofu apply tofu.plan"
 
-sops-edit-vultr:
-    sops secrets/minz-vultr-nix-0.yaml
-
-sops-edit-home:
-    sops secrets/minz-home-vm-0.yaml
+tofu-destroy hostname: tofu-init tofu-setup-certs
+    INCUS_CONF=$PWD/tofu/.incus INCUS_REMOTE=minz-home-vm-0 sops exec-env secrets/rustfs-tofu.env \
+        "tofu -chdir=tofu destroy -var=\"hostname={{ hostname }}\""
 
 sops-edit node:
     sops secrets/{{ node }}.yaml

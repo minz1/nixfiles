@@ -56,7 +56,11 @@ in
   };
 
   programs.neovim.defaultEditor = true;
-  environment.systemPackages = with pkgs; [ opentofu ];
+  environment.systemPackages = with pkgs; [
+    opentofu
+    sops
+  ];
+
   environment.shellAliases = {
     vi = "nvim";
     vim = "nvim";
@@ -68,6 +72,12 @@ in
       config = {
         "core.https_address" = "${wgAddr}:${toString node.services.incus.port}";
       };
+      certificates = [
+        {
+          certificate = builtins.readFile ../../secrets/incus-client.crt;
+          name = "tofu-automation";
+        }
+      ];
       networks = [
         {
           name = incusNetwork.interface;

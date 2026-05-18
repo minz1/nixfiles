@@ -17,3 +17,15 @@ creation_rules:
       - age:
           - *minz-home-vm-0
           - *minz-desktop
+
+  - path_regex: secrets/rustfs-tofu\.env$
+    key_groups:
+      - age:
+          - *minz-vultr-nix-0
+          - *minz-desktop
+
+  - path_regex: secrets/incus-client\.yaml$
+    key_groups:
+      - age:
+          - *minz-vultr-nix-0
+          - *minz-desktop

@@ -1,8 +1,15 @@
 # Outputs
 #
 # IPs flow from common/topology.nix → OpenTofu (not the other way around).
-# Add VM outputs here for visibility after `tofu apply`, e.g.:
-#
-# output "minz_vm_ubuntu_0_state" {
-#   value = incus_instance.ubuntu_0.status
-# }
+# These outputs provide visibility after `tofu apply`.
+
+output "vms" {
+  description = "Status of all Incus VMs managed by OpenTofu"
+  value = {
+    for name, inst in incus_instance.vm : name => {
+      name    = inst.name
+      status  = inst.status
+      image   = inst.image
+    }
+  }
+}

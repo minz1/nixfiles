@@ -72,7 +72,28 @@
       "inputs": {
         "deploy-rs": "deploy-rs",
         "nixpkgs": "nixpkgs_2",
+        "rustfs": "rustfs",
         "sops-nix": "sops-nix"
+      }
+    },
+    "rustfs": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1777635550,
+        "narHash": "sha256-QHknn6JYNb4+8ztMl7Ngk3Px3r2FRUPwbbrswYuHSpA=",
+        "owner": "rustfs",
+        "repo": "rustfs-flake",
+        "rev": "efaad834053c41ac618804fb4e7612cea455848e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "rustfs",
+        "repo": "rustfs-flake",
+        "type": "github"
       }
     },
     "sops-nix": {

@@ -3,18 +3,34 @@ terraform {
 
   required_providers {
     incus = {
-      source  = "terraform-linux/incus"
-      version = "~> 0.1"
+      source  = "lxc/incus"
     }
+  }
+
+  backend "s3" {
+    endpoint = "http://10.8.0.1:9000"
+    bucket   = "tofu-state"
+    key      = "incus/terraform.tfstate"
+    region   = "us-east-1"
+
+    skip_credentials_validation = true
+    skip_requesting_account_id  = true
+    skip_metadata_api_check     = true
+    skip_region_validation      = true
+    use_path_style              = true
+
+    # Credentials are provided via sops exec-env:
+    #   export AWS_ACCESS_KEY_ID=<value>
+    #   export AWS_SECRET_ACCESS_KEY=<value>
   }
 }
 
 provider "incus" {
-  # Connects to the Incus daemon on the home VM over WireGuard.
-  # Set INCUS_REMOTE=home-vm in your environment, or configure
-  # the remote with:
-  #
-  #   incus remote add home-vm 10.8.0.5:8443
-  #
-  # The provider reads from ~/.config/incus/config.yml by default.
+  generate_client_certificates = false
+  accept_remote_certificate    = true
+
+  remote {
+    name    = "minz-home-vm-0"
+    address = "https://10.8.0.5:8443"
+  }
 }
