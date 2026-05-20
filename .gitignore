@@ -50,3 +50,6 @@ tofu/.incus/
 
 # Ignore tofu/.terraform to avoid committing provider plugins to the Tofu directory
 tofu/.terraform/
+
+result
+result-*

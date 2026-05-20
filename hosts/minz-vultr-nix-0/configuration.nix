@@ -1,11 +1,11 @@
 {
   config,
   pkgs,
+  hostName,
   ...
 }:
 
 let
-  hostName = "minz-vultr-nix-0";
   topology = (import ../../common/topology.nix);
   node = topology.nodes."${hostName}";
   wgAddr = node.networks.mgmt.ip;
@@ -31,14 +31,11 @@ in
     }
   ];
 
-  # EnvironmentFile sets $TOKEN for the register script; sops-nix places this before services start.
-  # File must contain "TOKEN=<value>" (KEY=VALUE format, not a raw token string).
   sops.secrets.forgejo_runner_token = {
     mode = "0400";
     restartUnits = [ "gitea-runner-minz_forgejo.service" ];
   };
 
-  # RustFS secrets for the S3-compatible state backend.
   sops.secrets.rustfs-access-key = {
     mode = "0400";
     owner = config.services.rustfs.user;
@@ -92,10 +89,6 @@ in
     SupplementaryGroups = [ "podman" ];
   };
 
-  # RustFS — S3-compatible object storage for OpenTofu remote state.
-  # Binds to all interfaces; the firewall restricts access to the WireGuard
-  # interface only (see trustedInterfaces in base.nix).
-  # Console is localhost-only; access via SSH tunnel over WG.
   services.rustfs = {
     enable = true;
     accessKeyFile = config.sops.secrets.rustfs-access-key.path;

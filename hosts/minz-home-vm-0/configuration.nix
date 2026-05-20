@@ -1,11 +1,11 @@
 {
   pkgs,
   lib,
+  hostName,
   ...
 }:
 
 let
-  hostName = "minz-home-vm-0";
   topology = (import ../../common/topology.nix);
 
   node = topology.nodes."${hostName}";
@@ -18,7 +18,6 @@ in
 {
   imports = [
     ./hardware-configuration.nix
-    ../../modules/services/decypharr.nix
   ];
 
   networking.hostName = hostName;
@@ -26,6 +25,7 @@ in
 
   networking.networkmanager.enable = true;
   networking.nftables.enable = true;
+  networking.firewall.trustedInterfaces = [ incusNetwork.interface ];
 
   services.openssh.listenAddresses = [
     {
@@ -33,12 +33,6 @@ in
       port = node.services.ssh.port;
     }
   ];
-
-  services.decypharr = {
-    enable = true;
-    mediaPath = "/mnt/debrid";
-    mediaGroup = "media";
-  };
 
   services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;

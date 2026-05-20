@@ -1,9 +1,9 @@
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.7"
 
   required_providers {
     incus = {
-      source  = "lxc/incus"
+      source = "lxc/incus"
     }
   }
 
@@ -18,10 +18,6 @@ terraform {
     skip_metadata_api_check     = true
     skip_region_validation      = true
     use_path_style              = true
-
-    # Credentials are provided via sops exec-env:
-    #   export AWS_ACCESS_KEY_ID=<value>
-    #   export AWS_SECRET_ACCESS_KEY=<value>
   }
 }
 

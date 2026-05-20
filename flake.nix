@@ -1,5 +1,5 @@
 {
-  description = "minz1 NixOS configurations";
+  description = "minz1's nixfiles";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -26,26 +26,16 @@
       system = "x86_64-linux";
       overlay = import ./pkgs;
       topology = import ./common/topology.nix;
-      # All nodes declared in topology with os = "nixos" get a NixOS configuration
-      # and a deploy-rs node automatically. Adding a new host only requires a
-      # topology entry and a hosts/<name>/configuration.nix file.
       nixosNodes = nixpkgs.lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
 
-      # Hosts that have a NixOS configuration to build. Incus VMs are excluded
-      # until OpenTofu provisions them and set deployed = true.
       configurableNodes = nixpkgs.lib.filterAttrs (
         _: node: if (node.provisioner or "") == "incus" then node.deployed or false else true
       ) nixosNodes;
 
-      # Nodes that are also provisioned by Incus use their incus_bridge IP for deploy-rs.
-      # This is because the mgmt (WireGuard) tunnel doesn't route to VMs directly
-      # from the runner — the Incus bridge on the host VM provides L2 adjacency.
       deployHostname =
         name: node:
         if node.provisioner or "" == "incus" then node.networks.incus_bridge.ip else node.networks.mgmt.ip;
 
-      # Deployable NixOS nodes: only those that have been provisioned (or don't need provisioning).
-      # VMs with `deployed = false` are skipped until OpenTofu creates them.
       deployableNodes =
         let
           filterDeployed =
@@ -80,17 +70,36 @@
           })
         ];
       };
+
+      bootstrapImage = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ./modules/vm-hardware.nix
+          ./modules/bootstrap-image.nix
+        ];
+      };
     in
     {
       nixosConfigurations = builtins.mapAttrs (
         name: _:
+        let
+          node = topology.nodes.${name} or { };
+          isVm = (node.provisioner or "") == "incus";
+          vmModule = if isVm then [ ./modules/base-vm.nix ] else [ ];
+        in
         nixpkgs.lib.nixosSystem {
           inherit system;
+          specialArgs = {
+            hostName = name;
+          };
           modules = [
             sops-nix.nixosModules.sops
             rustfs.nixosModules.rustfs
             { services.rustfs.package = rustfs.packages.${system}.default; }
             ./modules/base.nix
+          ]
+          ++ vmModule
+          ++ [
             (./hosts + "/${name}/configuration.nix")
             {
               nixpkgs.overlays = [
@@ -116,6 +125,11 @@
       packages.${system} = {
         inherit (pkgs) decypharr;
         deploy-rs = deployPkgs.deploy-rs.deploy-rs;
+        incus-bootstrap-image = pkgs.runCommand "nixos-bootstrap-incus" { } ''
+          mkdir -p $out
+          ln -s ${bootstrapImage.config.system.build.qemuImage}/nixos.qcow2 $out/nixos.qcow2
+          ln -s ${bootstrapImage.config.system.build.metadata}/tarball/*.tar.xz $out/metadata.tar.xz
+        '';
       };
     };
 }

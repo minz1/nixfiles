@@ -86,14 +86,17 @@
       os = "nixos";
       sshUser = "minz1";
       provisioner = "incus";
-      deployed = false;
+      deployed = true;
       networks.incus_bridge = {
         ip = "10.10.0.11";
       };
       incus = {
-        image = "images:nixos/unstable";
+        image = "nixos-bootstrap";
         memory = "4GiB";
         cpus = 2;
+        persist_size = "100GiB";
+        # Optional GPU passthrough
+        # gpu_pci = "0000:01:00.0";
       };
     };
   };
