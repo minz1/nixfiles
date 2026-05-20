@@ -12,6 +12,15 @@
       url = "github:rustfs/rustfs-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nixos-anywhere = {
+      url = "github:nix-community/nixos-anywhere";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.disko.follows = "disko";
+    };
   };
 
   outputs =
@@ -21,6 +30,8 @@
       deploy-rs,
       sops-nix,
       rustfs,
+      disko,
+      nixos-anywhere,
     }:
     let
       system = "x86_64-linux";
@@ -104,7 +115,7 @@
         let
           node = topology.nodes.${name} or { };
           isVm = (node.provisioner or "") == "incus";
-          vmModule = if isVm then [ ./modules/base-vm.nix ] else [ ];
+          vmModule = if isVm then [ disko.nixosModules.disko ./modules/base-vm.nix ] else [ ];
         in
         nixpkgs.lib.nixosSystem {
           inherit system;
@@ -139,6 +150,7 @@
       packages.${system} = {
         inherit (pkgs) decypharr;
         deploy-rs = deployPkgs.deploy-rs.deploy-rs;
+        nixos-anywhere = nixos-anywhere.packages.${system}.nixos-anywhere;
         incus-bootstrap-image = pkgs.runCommand "nixos-bootstrap-incus" { } ''
           mkdir -p $out
           ln -s ${bootstrapImage.config.system.build.qemuImage}/nixos.qcow2 $out/nixos.qcow2

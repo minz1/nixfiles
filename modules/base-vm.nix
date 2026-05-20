@@ -1,5 +1,4 @@
 {
-  pkgs,
   hostName,
   ...
 }:
@@ -36,30 +35,40 @@ in
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = false;
 
-  fileSystems."/" = {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "ext4";
+  disko.devices = {
+    disk.root = {
+      device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_root";
+      content = {
+        type = "gpt";
+        partitions = {
+          ESP = {
+            size = "512M";
+            type = "EF00";
+            content = {
+              type = "filesystem";
+              format = "vfat";
+              mountpoint = "/boot";
+              mountOptions = [ "umask=0077" ];
+            };
+          };
+          root = {
+            size = "100%";
+            content = {
+              type = "filesystem";
+              format = "ext4";
+              mountpoint = "/";
+            };
+          };
+        };
+      };
+    };
+    disk.persist = {
+      device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_persist";
+      content = {
+        type = "filesystem";
+        format = "ext4";
+        mountpoint = "/persist";
+      };
+    };
   };
-
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-label/ESP";
-    fsType = "vfat";
-  };
-
-  fileSystems."/persist" = {
-    device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_persist";
-    fsType = "ext4";
-    neededForBoot = false;
-  };
-
-  # ── Automation ───────────────────────────────────────────────────
-  # Format the persistent disk on first boot if it's currently unformatted.
-  # This runs during every activation but only executes mkfs if blkid fails.
-  system.activationScripts.formatPersist = ''
-    DISK="/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_persist"
-    if [ -b "$DISK" ] && ! ${pkgs.e2fsprogs}/bin/blkid "$DISK" >/dev/null; then
-      echo "base-vm: formatting $DISK as ext4 (label: persist)"
-      ${pkgs.e2fsprogs}/bin/mkfs.ext4 -L persist "$DISK"
-    fi
-  '';
 }

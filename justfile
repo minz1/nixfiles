@@ -78,3 +78,16 @@ list-nodes:
 
 sops-edit node:
     sops secrets/{{ node }}.yaml
+
+# ── Initial VM Provisioning (nixos-anywhere) ──────────────────────────────────
+# Workflow for a new Incus VM:
+#   1. just tofu-apply            (provision VM, running the bootstrap image)
+#   2. just install <node>        (nixos-anywhere installs real config)
+#   3. ssh-keyscan <ip> | ssh-to-age  → add age pubkey to .sops.yaml
+#   4. sops secrets/<node>.yaml   (create secrets file for the host)
+#   5. just deploy <node>         (all future updates via deploy-rs)
+
+install node:
+    nix run .#nixos-anywhere -- \
+        --flake .#{{ node }} \
+        minz1@$(nix eval --raw --impure --expr '(import ./common/topology.nix).nodes."{{ node }}".networks.incus_bridge.ip')
