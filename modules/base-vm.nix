@@ -7,6 +7,7 @@ let
   topology = import ../common/topology.nix;
   node = topology.nodes.${hostName} or (throw "No topology entry for ${hostName}");
   vmIp = node.networks.incus_bridge.ip;
+  nixSize = node.incus.nix_size or "60GiB";
 in
 {
   networking.hostName = hostName;
@@ -35,6 +36,22 @@ in
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = false;
 
+  virtualisation.incus.agent.enable = true;
+
+  fileSystems."/" = {
+    device = "none";
+    fsType = "tmpfs";
+    options = [
+      "defaults"
+      "size=2G"
+      "mode=755"
+    ];
+  };
+
+  # /nix and /persist must be available before systemd services start
+  fileSystems."/nix".neededForBoot = true;
+  fileSystems."/persist".neededForBoot = true;
+
   disko.devices = {
     disk.root = {
       device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_root";
@@ -51,23 +68,31 @@ in
               mountOptions = [ "umask=0077" ];
             };
           };
-          root = {
-            size = "100%";
-            content = {
-              type = "filesystem";
-              format = "ext4";
-              mountpoint = "/";
-            };
-          };
         };
       };
     };
     disk.persist = {
       device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_persist";
       content = {
-        type = "filesystem";
-        format = "ext4";
-        mountpoint = "/persist";
+        type = "gpt";
+        partitions = {
+          nix = {
+            size = nixSize;
+            content = {
+              type = "filesystem";
+              format = "ext4";
+              mountpoint = "/nix";
+            };
+          };
+          persist = {
+            size = "100%";
+            content = {
+              type = "filesystem";
+              format = "ext4";
+              mountpoint = "/persist";
+            };
+          };
+        };
       };
     };
   };

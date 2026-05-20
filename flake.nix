@@ -21,6 +21,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.disko.follows = "disko";
     };
+    impermanence.url = "github:nix-community/impermanence";
   };
 
   outputs =
@@ -32,6 +33,7 @@
       rustfs,
       disko,
       nixos-anywhere,
+      impermanence,
     }:
     let
       system = "x86_64-linux";
@@ -115,7 +117,16 @@
         let
           node = topology.nodes.${name} or { };
           isVm = (node.provisioner or "") == "incus";
-          vmModule = if isVm then [ disko.nixosModules.disko ./modules/base-vm.nix ] else [ ];
+          vmModule =
+          if isVm then
+            [
+              disko.nixosModules.disko
+              impermanence.nixosModules.impermanence
+              ./modules/base-vm.nix
+              ./modules/impermanence.nix
+            ]
+          else
+            [ ];
         in
         nixpkgs.lib.nixosSystem {
           inherit system;

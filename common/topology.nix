@@ -95,6 +95,7 @@
         memory = "4GiB";
         cpus = 2;
         persist_size = "100GiB";
+        nix_size = "60G";
         # Optional GPU passthrough
         # gpu_pci = "0000:01:00.0";
       };
