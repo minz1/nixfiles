@@ -1,17 +1,10 @@
-# Bootstrap Image
-{
-  lib,
-  modulesPath,
-  ...
-}:
+{ lib, modulesPath, ... }:
 
-let
-  sshKeys = (import ../common/ssh-keys.nix).minz1;
-in
 {
   imports = [
     (modulesPath + "/virtualisation/incus-virtual-machine.nix")
     ./vm-hardware.nix
+    ./common.nix
   ];
 
   virtualisation.incus.agent.enable = true;
@@ -20,23 +13,6 @@ in
   services.spice-vdagentd.enable = true;
 
   networking.hostName = lib.mkDefault "nixos-bootstrap";
-
-  services.openssh = {
-    enable = true;
-    settings = {
-      PasswordAuthentication = false;
-      PermitRootLogin = "no";
-    };
-  };
-
-  users.users.minz1 = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = sshKeys;
-  };
-
-  nix.settings.trusted-users = [ "minz1" ];
-  security.sudo.wheelNeedsPassword = false;
 
   networking.useDHCP = false;
   systemd.network.enable = true;
@@ -47,8 +23,6 @@ in
   };
 
   services.xserver.enable = false;
-  zramSwap.enable = true;
-  programs.neovim.enable = true;
 
   system.stateVersion = "25.11";
 

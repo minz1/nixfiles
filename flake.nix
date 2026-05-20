@@ -26,16 +26,31 @@
       system = "x86_64-linux";
       overlay = import ./pkgs;
       topology = import ./common/topology.nix;
+
+      # Shared overlay list — used for both the top-level pkgs and per-host nixpkgs.overlays.
+      overlays = [
+        rustfs.overlays.default
+        overlay
+      ];
+
       nixosNodes = nixpkgs.lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
 
+      # All nodes declared in topology with os = "nixos" get a NixOS configuration
+      # and a deploy-rs node automatically. Adding a new host only requires a
+      # topology entry and a hosts/<name>/configuration.nix file.
       configurableNodes = nixpkgs.lib.filterAttrs (
         _: node: if (node.provisioner or "") == "incus" then node.deployed or false else true
       ) nixosNodes;
 
+      # Nodes that are also provisioned by Incus use their incus_bridge IP for deploy-rs.
+      # This is because the mgmt (WireGuard) tunnel doesn't route to VMs directly
+      # from the runner — the Incus bridge on the host VM provides L2 adjacency.
       deployHostname =
         name: node:
         if node.provisioner or "" == "incus" then node.networks.incus_bridge.ip else node.networks.mgmt.ip;
 
+      # Deployable NixOS nodes: only those that have been provisioned (or don't need provisioning).
+      # VMs with `deployed = false` are skipped until OpenTofu creates them.
       deployableNodes =
         let
           filterDeployed =
@@ -54,16 +69,18 @@
 
       pkgs = import nixpkgs {
         inherit system;
-        overlays = [
-          rustfs.overlays.default
-          overlay
-        ];
+        inherit overlays;
       };
+
+      # deploy-rs shim: re-use the deploy-rs binary from our main pkgs evaluation
+      # rather than letting deployPkgs build a second copy. Without this, Nix would
+      # build deploy-rs twice (once for pkgs, once for deployPkgs) even though
+      # the inputs are identical, wasting significant build time.
       deployPkgs = import nixpkgs {
         inherit system;
         overlays = [
           deploy-rs.overlays.default
-          (self: super: {
+          (_: super: {
             deploy-rs = super.deploy-rs // {
               inherit (pkgs) deploy-rs;
             };
@@ -71,10 +88,12 @@
         ];
       };
 
+      # Bootstrap image target — a NixOS eval just for building the golden image.
+      # nixos-rebuild build-image --image-variant incus --flake .#bootstrapImage
+      # or: nix build .#bootstrap-image
       bootstrapImage = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
-          ./modules/vm-hardware.nix
           ./modules/bootstrap-image.nix
         ];
       };
@@ -101,12 +120,7 @@
           ++ vmModule
           ++ [
             (./hosts + "/${name}/configuration.nix")
-            {
-              nixpkgs.overlays = [
-                rustfs.overlays.default
-                overlay
-              ];
-            }
+            { nixpkgs.overlays = overlays; }
           ];
         }
       ) configurableNodes;
