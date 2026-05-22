@@ -79,15 +79,68 @@ list-nodes:
 sops-edit node:
     sops secrets/{{ node }}.yaml
 
-# ── Initial VM Provisioning (nixos-anywhere) ──────────────────────────────────
-# Workflow for a new Incus VM:
-#   1. just tofu-apply            (provision VM, running the bootstrap image)
-#   2. just install <node>        (nixos-anywhere installs real config)
-#   3. ssh-keyscan <ip> | ssh-to-age  → add age pubkey to .sops.yaml
-#   4. sops secrets/<node>.yaml   (create secrets file for the host)
-#   5. just deploy <node>         (all future updates via deploy-rs)
+# ── Initial Host Provisioning (nixos-anywhere) ────────────────────────────────
+# All hosts — VMs and bare-metal alike — have their SSH host key generated once,
+# stored in sops, and reused on every reprovisioning. Rotation is rare and
+# follows the same procedure everywhere: bootstrap-keygen → update .sops.yaml →
+# bootstrap-store-key → bootstrap-install[-vm].
+#
+# First provisioning of any host:
+#   1. just bootstrap-keygen <node>                  (generates key in RAM, prints age pubkey)
+#   2. Add age pubkey to .sops.yaml; sops updatekeys secrets/<node>.yaml
+#   3. just bootstrap-store-key <node>               (writes private key into sops)
+#   4. git commit -am "sops: register <node>"; git push
+#   5. just bootstrap-install-vm <node>              (Incus VM — IP from topology)
+#      just bootstrap-install <node> <ip>            (bare-metal / cloud)
+#   6. just deploy <node>
+#
+# Reprovisioning (key unchanged, no .sops.yaml update needed):
+#   just bootstrap-install[-vm] <node> [<ip>]
+#   just deploy <node>
 
-install node:
+bootstrap-keygen node:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    KEY_DIR="/dev/shm/nixos-bootstrap-{{ node }}/persist/etc/ssh"
+    rm -rf "/dev/shm/nixos-bootstrap-{{ node }}"
+    mkdir -p "$KEY_DIR"
+    ssh-keygen -t ed25519 -q -N "" -f "$KEY_DIR/ssh_host_ed25519_key"
+    chmod 600 "$KEY_DIR/ssh_host_ed25519_key"
+    echo "Age pubkey for {{ node }}:"
+    ssh-to-age < "$KEY_DIR/ssh_host_ed25519_key.pub"
+
+bootstrap-store-key node:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    KEY_FILE="/dev/shm/nixos-bootstrap-{{ node }}/persist/etc/ssh/ssh_host_ed25519_key"
+    if [ ! -f "$KEY_FILE" ]; then
+        echo "ERROR: Run 'just bootstrap-keygen {{ node }}' first." >&2
+        exit 1
+    fi
+    sops --set '["ssh_host_ed25519_key"] '"$(jq -Rs . < "$KEY_FILE")" secrets/{{ node }}.yaml
+    echo "Stored in secrets/{{ node }}.yaml — commit and push before running bootstrap-install."
+
+[private]
+_bootstrap-extract-key node:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    KEY_DIR="/dev/shm/nixos-bootstrap-{{ node }}/persist/etc/ssh"
+    rm -rf "/dev/shm/nixos-bootstrap-{{ node }}"
+    mkdir -p "$KEY_DIR"
+    sops -d --extract '["ssh_host_ed25519_key"]' secrets/{{ node }}.yaml > "$KEY_DIR/ssh_host_ed25519_key"
+    chmod 600 "$KEY_DIR/ssh_host_ed25519_key"
+    ssh-keygen -y -f "$KEY_DIR/ssh_host_ed25519_key" > "$KEY_DIR/ssh_host_ed25519_key.pub"
+
+bootstrap-install node ip: (_bootstrap-extract-key node)
     nix run .#nixos-anywhere -- \
         --flake .#{{ node }} \
+        --extra-files /dev/shm/nixos-bootstrap-{{ node }} \
+        minz1@{{ ip }}
+    rm -rf /dev/shm/nixos-bootstrap-{{ node }}
+
+bootstrap-install-vm node: (_bootstrap-extract-key node)
+    nix run .#nixos-anywhere -- \
+        --flake .#{{ node }} \
+        --extra-files /dev/shm/nixos-bootstrap-{{ node }} \
         minz1@$(nix eval --raw --impure --expr '(import ./common/topology.nix).nodes."{{ node }}".networks.incus_bridge.ip')
+    rm -rf /dev/shm/nixos-bootstrap-{{ node }}

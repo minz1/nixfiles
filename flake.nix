@@ -117,16 +117,27 @@
         let
           node = topology.nodes.${name} or { };
           isVm = (node.provisioner or "") == "incus";
+          isBareMetal = !isVm && (node ? storage);
           vmModule =
-          if isVm then
-            [
-              disko.nixosModules.disko
-              impermanence.nixosModules.impermanence
-              ./modules/base-vm.nix
-              ./modules/impermanence.nix
-            ]
-          else
-            [ ];
+            if isVm then
+              [
+                disko.nixosModules.disko
+                impermanence.nixosModules.impermanence
+                ./modules/base-vm.nix
+                ./modules/impermanence.nix
+              ]
+            else
+              [ ];
+          baremetalModule =
+            if isBareMetal then
+              [
+                disko.nixosModules.disko
+                impermanence.nixosModules.impermanence
+                ./modules/base-baremetal.nix
+                ./modules/impermanence.nix
+              ]
+            else
+              [ ];
         in
         nixpkgs.lib.nixosSystem {
           inherit system;
@@ -140,6 +151,7 @@
             ./modules/base.nix
           ]
           ++ vmModule
+          ++ baremetalModule
           ++ [
             (./hosts + "/${name}/configuration.nix")
             { nixpkgs.overlays = overlays; }

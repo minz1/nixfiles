@@ -16,12 +16,12 @@ let
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
 in
 {
-  imports = [
-    ./hardware-configuration.nix
-  ];
-
   networking.hostName = hostName;
   system.stateVersion = "25.11";
+
+  # Proxmox VM — EFI variables are writable.
+  boot.loader.efi.canTouchEfiVariables = true;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   networking.networkmanager.enable = true;
   networking.nftables.enable = true;
@@ -36,10 +36,6 @@ in
 
   services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
-
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   users.users.minz1 = {
     description = "Minz One";
@@ -59,6 +55,11 @@ in
     vi = "nvim";
     vim = "nvim";
   };
+
+  environment.persistence."/persist".directories = [
+    "/var/lib/incus"
+    "/var/lib/NetworkManager"
+  ];
 
   virtualisation.incus = {
     enable = true;

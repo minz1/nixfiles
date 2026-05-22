@@ -17,6 +17,10 @@
     minz-vultr-nix-0 = {
       os = "nixos";
       sshUser = "minz1";
+      storage = {
+        disk = "/dev/vda";
+        nix_size = "20G";
+      };
       services = {
         ssh.port = 22;
         forgejo.port = 3000;
@@ -64,6 +68,10 @@
       os = "nixos";
       sshUser = "minz1";
       provisioner = "incus-host";
+      storage = {
+        disk = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0";
+        nix_size = "30G";
+      };
       services = {
         ssh.port = 22;
         incus.port = 8443;

@@ -17,10 +17,6 @@ let
     ];
 in
 {
-  imports = [
-    ./hardware-configuration.nix
-  ];
-
   networking.hostName = hostName;
   system.stateVersion = "23.11";
 
@@ -51,9 +47,17 @@ in
 
   swapDevices = [
     {
-      device = "/var/lib/swapfile";
+      device = "/persist/swapfile";
       size = 4096;
     }
+  ];
+
+  environment.persistence."/persist".directories = [
+    "/var/lib/forgejo"
+    "/var/lib/postgresql"
+    "/var/lib/rustfs"
+    "/var/lib/containers"
+    "/var/lib/gitea-runner"
   ];
 
   services.forgejo = {
