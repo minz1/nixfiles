@@ -135,7 +135,7 @@ bootstrap-install node ip: (_bootstrap-extract-key node)
     nix run .#nixos-anywhere -- \
         --flake .#{{ node }} \
         --extra-files /dev/shm/nixos-bootstrap-{{ node }} \
-        minz1@{{ ip }}
+        root@{{ ip }}
     rm -rf /dev/shm/nixos-bootstrap-{{ node }}
 
 bootstrap-install-vm node: (_bootstrap-extract-key node)
