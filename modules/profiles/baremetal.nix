@@ -1,13 +1,12 @@
 { lib, hostName, ... }:
 
 let
-  topology = import ../common/topology.nix;
+  topology = import ../../common/topology.nix;
   node = topology.nodes.${hostName} or (throw "No topology entry for ${hostName}");
   disk = node.storage.disk;
   nixSize = node.storage.nix_size or "30G";
 in
 {
-  # Union of kernel modules seen across Proxmox and Vultr QEMU guests.
   boot.initrd.availableKernelModules = [
     "ata_piix"
     "uhci_hcd"
@@ -22,7 +21,6 @@ in
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
-  # Main interface gets DHCP; WireGuard and static addresses layer on top.
   networking.useDHCP = lib.mkDefault true;
 
   boot.loader.systemd-boot.enable = true;

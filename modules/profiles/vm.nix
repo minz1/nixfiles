@@ -1,15 +1,21 @@
 {
   hostName,
+  lib,
+  modulesPath,
   ...
 }:
 
 let
-  topology = import ../common/topology.nix;
+  topology = import ../../common/topology.nix;
   node = topology.nodes.${hostName} or (throw "No topology entry for ${hostName}");
   vmIp = node.networks.incus_bridge.ip;
   nixSize = node.incus.nix_size or "60GiB";
 in
 {
+  imports = [
+    (modulesPath + "/profiles/qemu-guest.nix")
+  ];
+
   networking.hostName = hostName;
 
   networking.useNetworkd = true;
@@ -28,10 +34,19 @@ in
       port = 22;
     }
   ];
-  systemd.services.sshd.after = [ ];
-  systemd.services.sshd.wants = [ ];
 
   networking.firewall.allowedTCPPorts = [ 22 ];
+
+  boot.initrd.availableKernelModules = [
+    "ata_piix"
+    "uhci_hcd"
+    "virtio_pci"
+    "virtio_scsi"
+    "sd_mod"
+    "sr_mod"
+  ];
+
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = false;
@@ -48,7 +63,6 @@ in
     ];
   };
 
-  # /nix and /persist must be available before systemd services start
   fileSystems."/nix".neededForBoot = true;
   fileSystems."/persist".neededForBoot = true;
 

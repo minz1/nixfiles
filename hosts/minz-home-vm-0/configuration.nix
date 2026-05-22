@@ -16,6 +16,10 @@ let
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
 in
 {
+  imports = [
+    ./hardware-configuration.nix
+  ];
+
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 

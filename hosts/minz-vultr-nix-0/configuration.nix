@@ -17,6 +17,10 @@ let
     ];
 in
 {
+  imports = [
+    ./hardware-configuration.nix
+  ];
+
   networking.hostName = hostName;
   system.stateVersion = "23.11";
 

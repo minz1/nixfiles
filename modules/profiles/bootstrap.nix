@@ -3,9 +3,19 @@
 {
   imports = [
     (modulesPath + "/virtualisation/incus-virtual-machine.nix")
-    ./vm-hardware.nix
-    ./common.nix
+    ../nixos/common.nix
   ];
+
+  boot.initrd.availableKernelModules = [
+    "ata_piix"
+    "uhci_hcd"
+    "virtio_pci"
+    "virtio_scsi"
+    "sd_mod"
+    "sr_mod"
+  ];
+
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
   virtualisation.incus.agent.enable = true;
 

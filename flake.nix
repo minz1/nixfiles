@@ -107,7 +107,7 @@
       bootstrapImage = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
-          ./modules/bootstrap-image.nix
+          ./modules/profiles/bootstrap.nix
         ];
       };
     in
@@ -123,8 +123,8 @@
               [
                 disko.nixosModules.disko
                 impermanence.nixosModules.impermanence
-                ./modules/base-vm.nix
-                ./modules/impermanence.nix
+                ./modules/profiles/vm.nix
+                ./modules/nixos/impermanence.nix
               ]
             else
               [ ];
@@ -133,8 +133,8 @@
               [
                 disko.nixosModules.disko
                 impermanence.nixosModules.impermanence
-                ./modules/base-baremetal.nix
-                ./modules/impermanence.nix
+                ./modules/profiles/baremetal.nix
+                ./modules/nixos/impermanence.nix
               ]
             else
               [ ];
@@ -148,7 +148,7 @@
             sops-nix.nixosModules.sops
             rustfs.nixosModules.rustfs
             { services.rustfs.package = rustfs.packages.${system}.default; }
-            ./modules/base.nix
+            ./modules/nixos/base.nix
           ]
           ++ vmModule
           ++ baremetalModule

@@ -1,7 +1,7 @@
 { config, lib, ... }:
 
 let
-  topology = import ../common/topology.nix;
+  topology = import ../../common/topology.nix;
   mgmtNetwork = topology.networks.mgmt;
   hostNode = topology.nodes.${config.networking.hostName} or { networks = { }; };
   hasMgmt = hostNode.networks ? mgmt;
@@ -9,7 +9,7 @@ in
 {
   imports = [
     ./common.nix
-    ../common/wireguard.nix
+    ../../common/wireguard.nix
   ];
 
   networking.firewall = {
@@ -22,7 +22,7 @@ in
 
   systemd.services.sshd.after = lib.mkIf hasMgmt [ "wireguard-${mgmtNetwork.interface}.service" ];
   systemd.services.sshd.wants = lib.mkIf hasMgmt [ "wireguard-${mgmtNetwork.interface}.service" ];
-  sops.defaultSopsFile = lib.mkIf hasMgmt (../secrets + "/${config.networking.hostName}.yaml");
+  sops.defaultSopsFile = lib.mkIf hasMgmt (../../secrets + "/${config.networking.hostName}.yaml");
   sops.secrets.wg_private = lib.mkIf hasMgmt { mode = "0400"; };
 
   boot.tmp.cleanOnBoot = true;

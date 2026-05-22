@@ -1,7 +1,7 @@
 { ... }:
 
 let
-  sshKeys = (import ../common/ssh-keys.nix).minz1;
+  sshKeys = (import ../../common/ssh-keys.nix).minz1;
 in
 {
   services.openssh = {

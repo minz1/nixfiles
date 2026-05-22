@@ -12,7 +12,6 @@ bootstrap-build:
     nix build .#incus-bootstrap-image -o result
 
 # Import the bootstrap image into Incus as alias "nixos-bootstrap".
-
 # Run this after bootstrap-build and before tofu-apply when the image has changed.
 bootstrap-import:
     @just _with-incus "incus image import result/metadata.tar.xz result/nixos.qcow2 --alias nixos-bootstrap"
@@ -20,8 +19,7 @@ bootstrap-import:
 # Plan VMs hosted on the Incus daemon.
 # Usage:
 #   just tofu-plan                   # all VMs
-
-# just tofu-plan minz-vm-nixos-0   # single VM
+#   just tofu-plan minz-vm-nixos-0   # single VM
 tofu-plan hostname="": bootstrap-build
     @just _with-incus "sops exec-env secrets/rustfs-tofu.env 'tofu -chdir=tofu plan -var=\"hostname={{ hostname }}\" -out=tofu.plan'"
 
@@ -37,31 +35,7 @@ tofu-destroy hostname: bootstrap-build
 
 [private]
 _with-incus command:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    INCUS_REMOTE=$(nix eval --raw --impure \
-      --expr 'let t = import ./common/topology.nix; in
-              builtins.head (builtins.filter
-                (name: (t.nodes.${name}.provisioner or "") == "incus-host")
-                (builtins.attrNames t.nodes))')
-    RAM_DIR=""
-    for dir in "/run/user/$(id -u)" "/run" "/dev/shm"; do
-        if [ -d "$dir" ] && [ -w "$dir" ] && [ "$(stat -f -c %T "$dir")" == "tmpfs" ]; then
-            RAM_DIR="$dir"
-            break
-        fi
-    done
-    if [ -z "$RAM_DIR" ]; then
-        echo "ERROR: No writable tmpfs directory found to safely stage secrets. Checked: /run/user/$(id -u), /run, /dev/shm" >&2
-        echo "If you are on WSL, ensure /run/user/$(id -u) exists or use /dev/shm." >&2
-        exit 1
-    fi
-    CONF=$(mktemp -d "$RAM_DIR/incus-tofu.XXXXXX")
-    trap "rm -rf $CONF" EXIT
-    cp secrets/incus-client.crt "$CONF/client.crt"
-    sops -d --extract '["client_key"]' secrets/incus-client.yaml > "$CONF/client.key"
-    chmod 600 "$CONF/client.key"
-    INCUS_CONF="$CONF" INCUS_REMOTE="$INCUS_REMOTE" bash -c "{{ command }}"
+    ./scripts/with-incus.sh "{{ command }}"
 
 # ── Deploy (deploy-rs) ────────────────────────────────────────────────────────
 # Uses deploy-rs for atomic activation and auto-rollback on failure.
@@ -91,7 +65,7 @@ sops-edit node:
 #   3. just bootstrap-store-key <node>               (writes private key into sops)
 #   4. git commit -am "sops: register <node>"; git push
 #   5. just bootstrap-install-vm <node>              (Incus VM — IP from topology)
-#      just bootstrap-install <node> <ip>            (bare-metal / cloud)
+#      just bootstrap-install <node> <ip>            (bare-metal / cloud — also writes hosts/<node>/hardware-configuration.nix)
 #   6. just deploy <node>
 #
 # Reprovisioning (key unchanged, no .sops.yaml update needed):
@@ -99,42 +73,20 @@ sops-edit node:
 #   just deploy <node>
 
 bootstrap-keygen node:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    KEY_DIR="/dev/shm/nixos-bootstrap-{{ node }}/persist/etc/ssh"
-    rm -rf "/dev/shm/nixos-bootstrap-{{ node }}"
-    mkdir -p "$KEY_DIR"
-    ssh-keygen -t ed25519 -q -N "" -f "$KEY_DIR/ssh_host_ed25519_key"
-    chmod 600 "$KEY_DIR/ssh_host_ed25519_key"
-    echo "Age pubkey for {{ node }}:"
-    ssh-to-age < "$KEY_DIR/ssh_host_ed25519_key.pub"
+    ./scripts/bootstrap-keygen.sh "{{ node }}"
 
 bootstrap-store-key node:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    KEY_FILE="/dev/shm/nixos-bootstrap-{{ node }}/persist/etc/ssh/ssh_host_ed25519_key"
-    if [ ! -f "$KEY_FILE" ]; then
-        echo "ERROR: Run 'just bootstrap-keygen {{ node }}' first." >&2
-        exit 1
-    fi
-    sops --set '["ssh_host_ed25519_key"] '"$(jq -Rs . < "$KEY_FILE")" secrets/{{ node }}.yaml
-    echo "Stored in secrets/{{ node }}.yaml — commit and push before running bootstrap-install."
+    ./scripts/bootstrap-store-key.sh "{{ node }}"
 
 [private]
 _bootstrap-extract-key node:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    KEY_DIR="/dev/shm/nixos-bootstrap-{{ node }}/persist/etc/ssh"
-    rm -rf "/dev/shm/nixos-bootstrap-{{ node }}"
-    mkdir -p "$KEY_DIR"
-    sops -d --extract '["ssh_host_ed25519_key"]' secrets/{{ node }}.yaml > "$KEY_DIR/ssh_host_ed25519_key"
-    chmod 600 "$KEY_DIR/ssh_host_ed25519_key"
-    ssh-keygen -y -f "$KEY_DIR/ssh_host_ed25519_key" > "$KEY_DIR/ssh_host_ed25519_key.pub"
+    ./scripts/bootstrap-extract-key.sh "{{ node }}"
 
 bootstrap-install node ip: (_bootstrap-extract-key node)
     nix run .#nixos-anywhere -- \
         --flake .#{{ node }} \
         --extra-files /dev/shm/nixos-bootstrap-{{ node }} \
+        --generate-hardware-config nixos-generate-config hosts/{{ node }}/hardware-configuration.nix \
         root@{{ ip }}
     rm -rf /dev/shm/nixos-bootstrap-{{ node }}
 
