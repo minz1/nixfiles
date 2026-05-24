@@ -37,3 +37,4 @@ creation_rules:
       - age:
           - *minz-vultr-nix-0
           - *minz-desktop
+

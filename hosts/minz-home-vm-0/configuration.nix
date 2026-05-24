@@ -18,6 +18,7 @@ in
 {
   imports = [
     ./hardware-configuration.nix
+    ../../modules/nixos/secureboot.nix
   ];
 
   networking.hostName = hostName;

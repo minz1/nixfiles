@@ -49,7 +49,7 @@ in
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
   boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = false;
+  boot.loader.efi.canTouchEfiVariables = lib.mkDefault false;
 
   virtualisation.incus.agent.enable = true;
 

@@ -22,6 +22,10 @@
       inputs.disko.follows = "disko";
     };
     impermanence.url = "github:nix-community/impermanence";
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote/v1.0.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -34,6 +38,7 @@
       disko,
       nixos-anywhere,
       impermanence,
+      lanzaboote,
     }:
     let
       system = "x86_64-linux";
@@ -143,6 +148,7 @@
           inherit system;
           specialArgs = {
             hostName = name;
+            inherit lanzaboote;
           };
           modules = [
             sops-nix.nixosModules.sops
