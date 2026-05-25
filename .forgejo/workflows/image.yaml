@@ -12,7 +12,7 @@ jobs:
     env:
       NIX_CONFIG: "extra-experimental-features = nix-command flakes"
     steps:
-      - uses: actions/checkout@v4
+      - uses: taiki-e/checkout-action@v1
 
       - name: Build image
         run: nix build .#incus-bootstrap-image -o result
