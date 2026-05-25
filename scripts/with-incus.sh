@@ -3,7 +3,7 @@ set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 COMMAND="$1"
 INCUS_REMOTE=$(nix eval --raw --impure \
-  --expr "let t = import ./common/topology.nix; in
+  --expr "let t = import ${ROOT_DIR}/common/topology.nix; in
           builtins.head (builtins.filter
             (name: (t.nodes.\${name}.provisioner or \"\") == \"incus-host\")
             (builtins.attrNames t.nodes))")

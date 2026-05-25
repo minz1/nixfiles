@@ -108,6 +108,40 @@ in
     logLevel = "info";
   };
 
+  systemd.services.rustfs-bucket-setup = {
+    description = "Ensure RustFS buckets exist";
+    after = [ "rustfs.service" ];
+    requires = [ "rustfs.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    environment = {
+      AWS_DEFAULT_REGION = "us-east-1";
+      AWS_ENDPOINT_URL = "http://127.0.0.1:9000";
+    };
+    script = ''
+      ACCESS_KEY=$(cat ${config.sops.secrets.rustfs-access-key.path})
+      SECRET_KEY=$(cat ${config.sops.secrets.rustfs-secret-key.path})
+      export AWS_ACCESS_KEY_ID="$ACCESS_KEY"
+      export AWS_SECRET_ACCESS_KEY="$SECRET_KEY"
+
+      aws=${pkgs.awscli2}/bin/aws
+
+      for i in $(seq 30); do
+        $aws s3api list-buckets &>/dev/null && break
+        sleep 2
+      done
+
+      $aws s3api head-bucket --bucket tofu-state 2>/dev/null \
+        || $aws s3api create-bucket --bucket tofu-state
+
+      $aws s3api head-bucket --bucket incus-images 2>/dev/null \
+        || $aws s3api create-bucket --bucket incus-images
+    '';
+  };
+
   networking.firewall.allowedTCPPorts = fwPorts;
 
   virtualisation.podman = {

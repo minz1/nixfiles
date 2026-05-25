@@ -1,11 +1,12 @@
 resource "incus_image" "bootstrap" {
-  source_file = {
-    data_path     = "../result/nixos.qcow2"
-    metadata_path = "../result/metadata.tar.xz"
+  source_image = {
+    remote = "nixos-bootstrap-registry"
+    name   = "nixos-bootstrap"
+    type   = "virtual-machine"
   }
 
   alias {
-    name        = "nixos-bootstrap"
+    name = "nixos-bootstrap"
   }
 
   lifecycle {

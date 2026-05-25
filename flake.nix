@@ -176,6 +176,16 @@
 
       checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
 
+      devShells.${system}.default = pkgs.mkShell {
+        packages = with pkgs; [
+          just
+          sops
+          opentofu
+          awscli2
+          deployPkgs.deploy-rs.deploy-rs
+        ];
+      };
+
       packages.${system} = {
         inherit (pkgs) decypharr;
         deploy-rs = deployPkgs.deploy-rs.deploy-rs;

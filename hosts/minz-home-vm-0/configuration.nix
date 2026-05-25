@@ -76,6 +76,8 @@ in
         {
           certificate = builtins.readFile ../../secrets/incus-client.crt;
           name = "tofu-automation";
+          type = "client";
+          restricted = false;
         }
       ];
       networks = [

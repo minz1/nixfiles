@@ -70,7 +70,7 @@
       provisioner = "incus-host";
       storage = {
         disk = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0";
-        nix_size = "30G";
+        nix_size = "20G";
       };
       services = {
         ssh.port = 22;
