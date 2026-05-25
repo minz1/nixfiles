@@ -182,6 +182,7 @@
           sops
           opentofu
           awscli2
+          nix-update
           deployPkgs.deploy-rs.deploy-rs
         ];
       };

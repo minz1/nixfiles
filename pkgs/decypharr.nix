@@ -12,12 +12,12 @@
 
 buildGoModule rec {
   pname = "decypharr";
-  version = "v2.2";
+  version = "2.3";
 
   src = fetchFromGitHub {
     owner = "sirrobot01";
     repo = "decypharr";
-    rev = "${version}";
+    rev = "v${version}";
     hash = "sha256-Tsv6l6m+DSprcfiu2kCzKT+iHmqNLQzZdcdbL1p3aoQ=";
   };
   vendorHash = "sha256-vp74DNPJYV0HwfG4dptxOXtEaU+dnaJJYvgk0KbqkhM=";

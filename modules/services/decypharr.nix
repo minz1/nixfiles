@@ -32,6 +32,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    boot.kernelModules = [ "fuse" ];
     programs.fuse.userAllowOther = true;
 
     users.users.decypharr = {
@@ -56,8 +57,10 @@ in
         Restart = "on-failure";
         RestartSec = 5;
 
-        ReadWritePaths = [ cfg.mediaPath ];
-        RequiresMountsFor = [ cfg.mediaPath ];
+        # Shared mount propagation so FUSE mounts are visible outside the service namespace.
+        MountFlags = "shared";
+
+        ReadWritePaths = [ cfg.mediaPath "/var/lib/decypharr" ];
 
         CapabilityBoundingSet = [ "CAP_SYS_ADMIN" ];
         AmbientCapabilities = [ "CAP_SYS_ADMIN" ];
@@ -70,10 +73,11 @@ in
         ProtectKernelTunables = true;
         ProtectKernelModules = true;
         ProtectControlGroups = true;
-        PrivateTmp = true;
         StateDirectory = "decypharr";
       };
     };
+
+    networking.firewall.allowedTCPPorts = [ cfg.port ];
 
     systemd.tmpfiles.rules = [
       "d ${cfg.mediaPath} 0775 root ${cfg.mediaGroup} -"

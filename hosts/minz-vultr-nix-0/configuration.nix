@@ -31,9 +31,12 @@ in
     }
   ];
 
-  sops.secrets.forgejo_runner_token = {
+  sops.secrets.forgejo_runner_token.mode = "0400";
+  sops.secrets.forgejo_deploy_key.mode = "0400";
+
+  sops.templates.forgejo-runner-env = {
+    content = "TOKEN=${config.sops.placeholder.forgejo_runner_token}";
     mode = "0400";
-    restartUnits = [ "gitea-runner-minz_forgejo.service" ];
   };
 
   sops.secrets.rustfs-access-key = {
@@ -61,7 +64,7 @@ in
     "/var/lib/postgresql"
     "/var/lib/rustfs"
     "/var/lib/containers"
-    "/var/lib/gitea-runner"
+    "/var/lib/private/gitea-runner"
   ];
 
   services.forgejo = {
@@ -83,13 +86,16 @@ in
     instances.minz_forgejo = {
       enable = true;
       name = "minz_forgejo-runner-0";
-      tokenFile = config.sops.secrets.forgejo_runner_token.path;
+      tokenFile = config.sops.templates.forgejo-runner-env.path;
       url = "http://${wgAddr}:${toString forgejoPort}";
       labels = [
-        "ubuntu-latest:docker://catthehacker/ubuntu:act-latest"
-        "node-22:docker://node:22-bookworm"
         "nixos-latest:docker://nixos/nix"
       ];
+      settings.container = {
+        # Mount the sops-decrypted deploy key into every job container.
+        # CI workflows access it at /run/secrets/deploy_ssh_key.
+        options = "-v ${config.sops.secrets.forgejo_deploy_key.path}:/run/secrets/deploy_ssh_key:ro";
+      };
     };
   };
 

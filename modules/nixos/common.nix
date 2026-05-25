@@ -1,7 +1,7 @@
 { ... }:
 
 let
-  sshKeys = (import ../../common/ssh-keys.nix).minz1;
+  sshKeys = import ../../common/ssh-keys.nix;
 in
 {
   services.openssh = {
@@ -15,7 +15,7 @@ in
   users.users.minz1 = {
     isNormalUser = true;
     extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = sshKeys;
+    openssh.authorizedKeys.keys = sshKeys.minz1 ++ (sshKeys.deploy or [ ]);
   };
 
   nix.settings.trusted-users = [ "minz1" ];
