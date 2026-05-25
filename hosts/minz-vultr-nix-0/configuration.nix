@@ -1,6 +1,7 @@
 {
   hostName,
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -63,8 +64,18 @@ in
     "/var/lib/forgejo"
     "/var/lib/postgresql"
     "/var/lib/rustfs"
-    "/var/lib/containers"
-    "/var/lib/private/gitea-runner"
+    {
+      directory = "/var/lib/podman-runner";
+      user = "podman-runner";
+      group = "podman-runner";
+      mode = "0750";
+    }
+    {
+      directory = "/var/lib/gitea-runner";
+      user = "podman-runner";
+      group = "podman-runner";
+      mode = "0750";
+    }
   ];
 
   services.forgejo = {
@@ -92,15 +103,20 @@ in
         "nixos-latest:docker://nixos/nix"
       ];
       settings.container = {
-        # Mount the sops-decrypted deploy key into every job container.
-        # CI workflows access it at /run/secrets/deploy_ssh_key.
+        docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
         options = "-v ${config.sops.secrets.forgejo_deploy_key.path}:/run/secrets/deploy_ssh_key:ro";
       };
     };
   };
 
-  systemd.services."gitea-runner-minz_forgejo".serviceConfig = {
-    SupplementaryGroups = [ "podman" ];
+  systemd.services."gitea-runner-minz_forgejo" = {
+    after = [ "user@${toString config.users.users.podman-runner.uid}.service" ];
+    wants = [ "user@${toString config.users.users.podman-runner.uid}.service" ];
+    serviceConfig = {
+      DynamicUser = lib.mkForce false;
+      User = lib.mkForce "podman-runner";
+      Group = lib.mkForce "podman-runner";
+    };
   };
 
   services.rustfs = {
@@ -150,11 +166,29 @@ in
 
   networking.firewall.allowedTCPPorts = fwPorts;
 
+  users.manageLingering = true;
+
+  users.users.podman-runner = {
+    isSystemUser = true;
+    uid = 800;
+    group = "podman-runner";
+    home = "/var/lib/podman-runner";
+    createHome = true;
+    linger = true;
+    subUidRanges = [ { startUid = 100000; count = 65536; } ];
+    subGidRanges = [ { startGid = 100000; count = 65536; } ];
+  };
+  users.groups.podman-runner = { };
+
   virtualisation.podman = {
     enable = true;
     dockerCompat = true;
-    dockerSocket.enable = true;
+    dockerSocket.enable = false;
     defaultNetwork.settings.dns_enabled = true;
+    autoPrune = {
+      enable = true;
+      dates = "weekly";
+    };
   };
 
   environment.systemPackages =
