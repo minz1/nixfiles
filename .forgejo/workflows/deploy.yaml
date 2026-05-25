@@ -1,4 +1,5 @@
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -14,7 +15,7 @@ jobs:
     env:
       NIX_CONFIG: "extra-experimental-features = nix-command flakes"
     steps:
-      - uses: taiki-e/checkout-action@v1
+      - uses: https://github.com/taiki-e/checkout-action@v1
 
       - name: Fetch full history
         run: git fetch --unshallow
