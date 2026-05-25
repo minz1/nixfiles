@@ -1,0 +1,75 @@
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hosts/**'
+      - 'modules/**'
+      - 'common/**'
+      - 'flake.nix'
+      - 'flake.lock'
+
+jobs:
+  deploy:
+    runs-on: nixos-latest
+    env:
+      NIX_CONFIG: "extra-experimental-features = nix-command flakes"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          cp /run/secrets/deploy_ssh_key ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf 'Host 10.8.0.* 10.10.0.*\n  User minz1\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking accept-new\n' \
+            > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Detect affected hosts
+        id: affected
+        run: |
+          before="${{ github.event.before }}"
+          after="${{ github.sha }}"
+
+          all=$(TOPO="$GITHUB_WORKSPACE/common/topology.nix" \
+            nix eval --raw --impure --expr '
+              let
+                t = import (builtins.getEnv "TOPO");
+                nixos = builtins.filterAttrs (_: n: (n.os or "") == "nixos") t.nodes;
+                deployable = builtins.filterAttrs (_: n:
+                  if (n.provisioner or "") == "incus" then n.deployed or false else true
+                ) nixos;
+              in builtins.concatStringsSep " " (builtins.attrNames deployable)')
+
+          if [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            echo "hosts=$all" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed=$(git log --name-only --pretty=format: "${before}..${after}" \
+            | grep -v '^$' | sort -u)
+
+          if echo "$changed" | grep -qE '^(modules/|common/|flake\.(nix|lock))'; then
+            echo "hosts=$all" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          hosts=""
+          for host in $all; do
+            if echo "$changed" | grep -q "^hosts/$host/"; then
+              hosts="$hosts $host"
+            fi
+          done
+          echo "hosts=${hosts# }" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy
+        if: steps.affected.outputs.hosts != ''
+        run: |
+          targets=""
+          for host in ${{ steps.affected.outputs.hosts }}; do
+            targets="$targets .#$host"
+          done
+          nix run .#deploy-rs -- $targets

@@ -69,11 +69,22 @@ cat > "$tmpdir/streams/v1/images.json" <<ENDJSON
 ENDJSON
 
 endpoint="http://10.8.0.1:9000"
-creds="${ROOT_DIR}/secrets/rustfs-tofu.env"
 
-sops exec-env "$creds" "aws --endpoint-url $endpoint s3 cp result/metadata.tar.xz     s3://incus-images/images/${meta_sha256}.incus.tar.xz"
-sops exec-env "$creds" "aws --endpoint-url $endpoint s3 cp result/nixos.qcow2          s3://incus-images/images/${meta_sha256}.qcow2"
-sops exec-env "$creds" "aws --endpoint-url $endpoint s3 cp $tmpdir/streams/v1/index.json  s3://incus-images/streams/v1/index.json"
-sops exec-env "$creds" "aws --endpoint-url $endpoint s3 cp $tmpdir/streams/v1/images.json s3://incus-images/streams/v1/images.json"
+if [ -n "${AWS_ACCESS_KEY_ID:-}" ]; then
+  _aws() { aws --endpoint-url "$endpoint" "$@"; }
+else
+  creds="${ROOT_DIR}/secrets/rustfs-tofu.env"
+  _aws() { sops exec-env "$creds" "aws --endpoint-url $endpoint $*"; }
+fi
+
+if _aws s3api head-object --bucket incus-images --key "images/${meta_sha256}.qcow2" 2>/dev/null; then
+  echo "Image ${version} (${meta_sha256}) already in registry, skipping upload."
+  exit 0
+fi
+
+_aws s3 cp result/metadata.tar.xz "s3://incus-images/images/${meta_sha256}.incus.tar.xz"
+_aws s3 cp result/nixos.qcow2     "s3://incus-images/images/${meta_sha256}.qcow2"
+_aws s3 cp "$tmpdir/streams/v1/index.json"  s3://incus-images/streams/v1/index.json
+_aws s3 cp "$tmpdir/streams/v1/images.json" s3://incus-images/streams/v1/images.json
 
 echo "Published ${version} fingerprint=${combined_sha256}"

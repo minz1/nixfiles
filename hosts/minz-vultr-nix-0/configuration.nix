@@ -35,8 +35,24 @@ in
   sops.secrets.forgejo_runner_token.mode = "0400";
   sops.secrets.forgejo_deploy_key.mode = "0400";
 
+  sops.secrets.incus_client_key = {
+    sopsFile = ../../secrets/incus-client.yaml;
+    key = "client_key";
+    mode = "0400";
+    owner = "podman-runner";
+  };
+
   sops.templates.forgejo-runner-env = {
     content = "TOKEN=${config.sops.placeholder.forgejo_runner_token}";
+    mode = "0400";
+  };
+
+  sops.templates.tofu-env = {
+    content = ''
+      AWS_ACCESS_KEY_ID=${config.sops.placeholder.rustfs-access-key}
+      AWS_SECRET_ACCESS_KEY=${config.sops.placeholder.rustfs-secret-key}
+    '';
+    owner = "podman-runner";
     mode = "0400";
   };
 
@@ -104,7 +120,11 @@ in
       ];
       settings.container = {
         docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
-        options = "-v ${config.sops.secrets.forgejo_deploy_key.path}:/run/secrets/deploy_ssh_key:ro";
+        options = lib.concatStringsSep " " [
+          "-v ${config.sops.secrets.forgejo_deploy_key.path}:/run/secrets/deploy_ssh_key:ro"
+          "-v ${config.sops.secrets.incus_client_key.path}:/run/secrets/incus_client_key:ro"
+          "-v ${config.sops.templates.tofu-env.path}:/run/secrets/tofu-env:ro"
+        ];
       };
     };
   };

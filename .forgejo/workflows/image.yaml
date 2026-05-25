@@ -1,0 +1,25 @@
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'modules/profiles/bootstrap.nix'
+      - 'modules/profiles/vm.nix'
+      - 'flake.lock'
+
+jobs:
+  publish:
+    runs-on: nixos-latest
+    env:
+      NIX_CONFIG: "extra-experimental-features = nix-command flakes"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: nix build .#incus-bootstrap-image -o result
+
+      - name: Publish image
+        run: |
+          set -a; source /run/secrets/tofu-env; set +a
+          export ROOT_DIR="$GITHUB_WORKSPACE"
+          nix shell nixpkgs#awscli2 --command \
+            "$GITHUB_WORKSPACE/scripts/tofu-publish-image.sh"
