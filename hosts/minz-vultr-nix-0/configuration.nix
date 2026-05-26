@@ -33,7 +33,10 @@ in
   ];
 
   sops.secrets.forgejo_runner_token.mode = "0400";
-  sops.secrets.forgejo_deploy_key.mode = "0400";
+  sops.secrets.forgejo_deploy_key = {
+    mode = "0400";
+    owner = "podman-runner";
+  };
 
   sops.secrets.incus_client_key = {
     sopsFile = ../../secrets/incus-client.yaml;
