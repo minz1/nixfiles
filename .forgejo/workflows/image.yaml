@@ -1,11 +1,5 @@
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'modules/profiles/bootstrap.nix'
-      - 'modules/profiles/vm.nix'
-      - 'flake.lock'
 
 jobs:
   publish:

@@ -86,8 +86,6 @@ jobs:
       - name: Deploy
         if: steps.affected.outputs.hosts != ''
         run: |
-          targets=""
           for host in ${{ steps.affected.outputs.hosts }}; do
-            targets="$targets .#$host"
+            nix run .#deploy-rs -- ".#$host"
           done
-          nix run .#deploy-rs -- $targets
