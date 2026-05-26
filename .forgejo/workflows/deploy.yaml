@@ -28,11 +28,6 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
 
-      - name: Debug Nix
-        run: |
-          nix config show | grep substituter
-          curl -s https://cache.nixos.org/nix-cache-info
-
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
