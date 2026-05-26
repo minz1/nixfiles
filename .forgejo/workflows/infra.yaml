@@ -20,14 +20,11 @@ jobs:
 
       - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
 
-      - uses: https://github.com/nix-community/cache-nix-action@v7
+      - uses: https://github.com/nix-community/cache-nix-action/restore@v7
+        id: cache-nix
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-          gc-max-store-size-linux: 10G
-          purge: true
-          purge-prefixes: nix-${{ runner.os }}-
-          purge-last-accessed: 604800
 
       - name: Setup Incus credentials
         run: |
@@ -49,3 +46,13 @@ jobs:
           export TOFU_DIR="$GITHUB_WORKSPACE/tofu"
           nix shell nixpkgs#opentofu --command \
             tofu -chdir="$TOFU_DIR" apply -auto-approve -input=false
+
+      - name: Save Nix cache
+        if: always()
+        uses: https://github.com/nix-community/cache-nix-action/save@v7
+        with:
+          primary-key: ${{ steps.cache-nix.outputs.primary-key }}
+          gc-max-store-size-linux: 10G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-last-accessed: 604800
