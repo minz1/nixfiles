@@ -116,7 +116,7 @@ in
       tokenFile = config.sops.templates.forgejo-runner-env.path;
       url = "http://${wgAddr}:${toString forgejoPort}";
       labels = [
-        "nixos-latest:docker://ubuntu:24.04"
+        "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04"
       ];
       settings.container = {
         docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
