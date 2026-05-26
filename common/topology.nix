@@ -14,6 +14,24 @@
   };
 
   nodes = {
+    minz-vultr-nix-1 = {
+      os = "nixos";
+      sshUser = "minz1";
+      storage = {
+        disk = "/dev/vda";
+        nix_size = "20G";
+      };
+      services = {
+        ssh.port = 22;
+      };
+      networks.mgmt = {
+        ip = "10.8.0.6";
+        role = "client";
+        publicKey = "q/T9w4if7+hSzwGQ1Rez7LrPmuKNGUEJIzL6WhQFIAo=";
+        endpoint = "144.202.63.186:51820";
+      };
+    };
+
     minz-vultr-nix-0 = {
       os = "nixos";
       ci_managed = false;
