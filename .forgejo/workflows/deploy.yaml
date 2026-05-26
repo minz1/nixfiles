@@ -50,7 +50,9 @@ jobs:
                 t = import (builtins.getEnv "TOPO");
                 nixos = builtins.filterAttrs (_: n: (n.os or "") == "nixos") t.nodes;
                 deployable = builtins.filterAttrs (_: n:
-                  if (n.provisioner or "") == "incus" then n.deployed or false else true
+                  if !(n.ci_managed or true) then false
+                  else if (n.provisioner or "") == "incus" then n.deployed or false
+                  else true
                 ) nixos;
               in builtins.concatStringsSep " " (builtins.attrNames deployable)')
 

@@ -16,6 +16,7 @@
   nodes = {
     minz-vultr-nix-0 = {
       os = "nixos";
+      ci_managed = false;
       sshUser = "minz1";
       storage = {
         disk = "/dev/vda";
