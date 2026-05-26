@@ -14,6 +14,7 @@ let
   wgAddr = node.networks.mgmt.ip;
 
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
+  incusClientCert = pkgs.writeText "incus-client.crt" (builtins.readFile ../../secrets/incus-client.crt);
 in
 {
   imports = [
@@ -72,14 +73,6 @@ in
       config = {
         "core.https_address" = "${wgAddr}:${toString node.services.incus.port}";
       };
-      certificates = [
-        {
-          certificate = builtins.readFile ../../secrets/incus-client.crt;
-          name = "tofu-automation";
-          type = "client";
-          restricted = false;
-        }
-      ];
       networks = [
         {
           name = incusNetwork.interface;
@@ -117,6 +110,24 @@ in
           };
         }
       ];
+    };
+  };
+
+  systemd.services.incus-add-tofu-cert = {
+    description = "Add tofu-automation client certificate to Incus trust store";
+    after = [ "incus-preseed.service" ];
+    wantedBy = [ "incus.service" ];
+    partOf = [ "incus.service" ];
+    path = [ pkgs.incus ];
+    script = ''
+      if incus config trust list | grep -q "tofu-automation"; then
+        exit 0
+      fi
+      incus config trust add-certificate ${incusClientCert} --name=tofu-automation --type=client
+    '';
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
     };
   };
 }

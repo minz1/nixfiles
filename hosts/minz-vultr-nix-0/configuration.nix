@@ -16,8 +16,6 @@ let
       9000
       9001
     ];
-  # default gateway of Podman's bridge network, reachable from inside containers
-  podmanGateway = "10.88.0.1";
 in
 {
   imports = [
