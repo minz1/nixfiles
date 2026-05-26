@@ -25,6 +25,9 @@ in
   sops.defaultSopsFile = lib.mkIf hasMgmt (../../secrets + "/${config.networking.hostName}.yaml");
   sops.secrets.wg_private = lib.mkIf hasMgmt { mode = "0400"; };
 
+  networking.useNetworkd = true;
+  networking.useDHCP = false;
+
   boot.tmp.cleanOnBoot = true;
   services.logrotate.checkConfig = false;
 

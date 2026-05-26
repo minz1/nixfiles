@@ -25,6 +25,12 @@ in
   networking.hostName = hostName;
   system.stateVersion = "23.11";
 
+  systemd.network.networks."20-enp1s0" = {
+    matchConfig.Name = "enp1s0";
+    networkConfig.DHCP = "ipv4";
+    linkConfig.RequiredForOnline = "routable";
+  };
+
   services.openssh.listenAddresses = [
     {
       addr = wgAddr;

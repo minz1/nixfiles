@@ -21,8 +21,6 @@ in
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
-  networking.useDHCP = lib.mkDefault true;
-
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = lib.mkDefault false;
 

@@ -37,9 +37,26 @@ in
   # Without this the profiles are generated but not enforced.
   security.apparmor.enable = true;
 
-  networking.networkmanager.enable = true;
   networking.nftables.enable = true;
   networking.firewall.trustedInterfaces = [ incusNetwork.interface ];
+
+  systemd.network = {
+    netdevs."10-vlan10" = {
+      netdevConfig = { Name = "vlan10"; Kind = "vlan"; };
+      vlanConfig.Id = 10;
+    };
+    networks."20-eno1" = {
+      matchConfig.Name = "eno1";
+      vlan = [ "vlan10" ];
+      networkConfig.DHCP = "ipv4";
+      dhcpV4Config.UseGateway = false;
+    };
+    networks."30-vlan10" = {
+      matchConfig.Name = "vlan10";
+      networkConfig.DHCP = "ipv4";
+      linkConfig.RequiredForOnline = "routable";
+    };
+  };
 
   services.openssh.listenAddresses = [
     {
@@ -51,7 +68,6 @@ in
   users.users.minz1 = {
     description = "Minz One";
     extraGroups = [
-      "networkmanager"
       "incus-admin"
     ];
   };

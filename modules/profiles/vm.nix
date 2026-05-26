@@ -23,8 +23,8 @@ in
 
   systemd.network.networks."10-enp" = {
     matchConfig.Name = "en*";
-    networkConfig.Address = [ "${vmIp}/24" ];
-    networkConfig.Gateway = [ "10.10.0.1" ];
+    address = [ "${vmIp}/24" ];
+    gateway = [ "10.10.0.1" ];
     linkConfig.RequiredForOnline = "routable";
   };
 
