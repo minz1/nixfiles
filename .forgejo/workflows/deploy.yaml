@@ -12,13 +12,14 @@ on:
 jobs:
   deploy:
     runs-on: nixos-latest
-    env:
-      NIX_CONFIG: "extra-experimental-features = nix-command flakes"
     steps:
-      - uses: https://github.com/taiki-e/checkout-action@v1
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-      - name: Fetch full history
-        run: git fetch --unshallow
+      - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
+
+      - uses: https://github.com/DeterminateSystems/magic-nix-cache-action@v13
 
       - name: Setup SSH
         run: |

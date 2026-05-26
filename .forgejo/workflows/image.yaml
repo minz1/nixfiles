@@ -10,10 +10,12 @@ on:
 jobs:
   publish:
     runs-on: nixos-latest
-    env:
-      NIX_CONFIG: "extra-experimental-features = nix-command flakes"
     steps:
-      - uses: https://github.com/taiki-e/checkout-action@v1
+      - uses: actions/checkout@v6
+
+      - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
+
+      - uses: https://github.com/DeterminateSystems/magic-nix-cache-action@v13
 
       - name: Build image
         run: nix build .#incus-bootstrap-image -o result

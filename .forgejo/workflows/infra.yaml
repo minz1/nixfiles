@@ -10,11 +10,14 @@ jobs:
   apply:
     runs-on: nixos-latest
     env:
-      NIX_CONFIG: "extra-experimental-features = nix-command flakes"
       INCUS_CONF: /tmp/incus-conf
       INCUS_REMOTE: minz-home-vm-0
     steps:
-      - uses: https://github.com/taiki-e/checkout-action@v1
+      - uses: actions/checkout@v6
+
+      - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
+
+      - uses: https://github.com/DeterminateSystems/magic-nix-cache-action@v13
 
       - name: Setup Incus credentials
         run: |
