@@ -125,7 +125,7 @@ in
       ];
       settings.cache = {
         enabled = true;
-        host = podmanGateway;
+        host = wgAddr;
       };
       settings.container = {
         docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";

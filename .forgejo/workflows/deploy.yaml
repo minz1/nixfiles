@@ -62,7 +62,7 @@ jobs:
                 ) nixos;
               in builtins.concatStringsSep " " (builtins.attrNames deployable)')
 
-          if [ "$before" = "0000000000000000000000000000000000000000" ]; then
+          if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
             echo "hosts=$all" >> "$GITHUB_OUTPUT"
             exit 0
           fi
