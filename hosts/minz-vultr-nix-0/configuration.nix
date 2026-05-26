@@ -16,6 +16,8 @@ let
       9000
       9001
     ];
+  # default gateway of Podman's bridge network, reachable from inside containers
+  podmanGateway = "10.88.0.1";
 in
 {
   imports = [
@@ -121,6 +123,10 @@ in
       labels = [
         "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04"
       ];
+      settings.cache = {
+        enabled = true;
+        host = podmanGateway;
+      };
       settings.container = {
         docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
         valid_volumes = [ "/run/secrets/**" ];
@@ -199,8 +205,18 @@ in
     home = "/var/lib/podman-runner";
     createHome = true;
     linger = true;
-    subUidRanges = [ { startUid = 100000; count = 65536; } ];
-    subGidRanges = [ { startGid = 100000; count = 65536; } ];
+    subUidRanges = [
+      {
+        startUid = 100000;
+        count = 65536;
+      }
+    ];
+    subGidRanges = [
+      {
+        startGid = 100000;
+        count = 65536;
+      }
+    ];
   };
   users.groups.podman-runner = { };
 

@@ -3,11 +3,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'hosts/**'
-      - 'modules/**'
-      - 'common/**'
-      - 'flake.nix'
-      - 'flake.lock'
+      - "hosts/**"
+      - "modules/**"
+      - "common/**"
+      - "flake.nix"
+      - "flake.lock"
 
 jobs:
   deploy:
@@ -30,13 +30,6 @@ jobs:
           purge: true
           purge-prefixes: nix-${{ runner.os }}-
           purge-last-accessed: 604800
-
-      - name: Debug secrets
-        run: |
-          echo "=== /run/secrets ==="
-          ls -la /run/secrets/ 2>&1 || echo "not present"
-          echo "=== mounts ==="
-          grep secrets /proc/mounts || echo "no secrets mounts"
 
       - name: Setup SSH
         run: |
