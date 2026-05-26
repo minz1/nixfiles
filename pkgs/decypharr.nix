@@ -18,9 +18,9 @@ buildGoModule rec {
     owner = "sirrobot01";
     repo = "decypharr";
     rev = "v${version}";
-    hash = "sha256-Tsv6l6m+DSprcfiu2kCzKT+iHmqNLQzZdcdbL1p3aoQ=";
+    hash = "sha256-Ms8FjpxasogWP/H/pAa5SZ/DgHoLcRyC5hjIpvuJ2BU=";
   };
-  vendorHash = "sha256-vp74DNPJYV0HwfG4dptxOXtEaU+dnaJJYvgk0KbqkhM=";
+  vendorHash = "sha256-Pl21UNO5Oe2rILB2SDS99pyR5Q6gi0BplTTnCVKkWZM=";
 
   preCheck = ''
     echo "{}" > config.json
