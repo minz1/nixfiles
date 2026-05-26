@@ -31,6 +31,13 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-last-accessed: 604800
 
+      - name: Debug secrets
+        run: |
+          echo "=== /run/secrets ==="
+          ls -la /run/secrets/ 2>&1 || echo "not present"
+          echo "=== mounts ==="
+          grep secrets /proc/mounts || echo "no secrets mounts"
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
