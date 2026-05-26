@@ -123,6 +123,7 @@ in
       ];
       settings.container = {
         docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
+        valid_volumes = [ "/run/secrets/**" ];
         options = lib.concatStringsSep " " [
           "-v ${config.sops.secrets.forgejo_deploy_key.path}:/run/secrets/deploy_ssh_key:ro"
           "-v ${config.sops.secrets.incus_client_key.path}:/run/secrets/incus_client_key:ro"
