@@ -6,6 +6,12 @@
       interface = "wg0";
       listenPort = 51820;
     };
+    edge = {
+      type = "wireguard";
+      subnet = "10.9.0.0/24";
+      interface = "wg1";
+      listenPort = 51820;
+    };
     incus_bridge = {
       type = "incus";
       subnet = "10.10.0.0/24";
@@ -24,11 +30,19 @@
       services = {
         ssh.port = 22;
       };
-      networks.mgmt = {
-        ip = "10.8.0.6";
-        role = "client";
-        publicKey = "q/T9w4if7+hSzwGQ1Rez7LrPmuKNGUEJIzL6WhQFIAo=";
-        endpoint = "144.202.63.186:51820";
+      networks = {
+        mgmt = {
+          ip = "10.8.0.6";
+          role = "client";
+          publicKey = "q/T9w4if7+hSzwGQ1Rez7LrPmuKNGUEJIzL6WhQFIAo=";
+          endpoint = "144.202.63.186:51820";
+        };
+        edge = {
+          ip = "10.9.0.1";
+          role = "server";
+          publicKey = "qgN5hkR3bAH3Ae+oTLgGjtOOTzkm1yFbMpir7m9beFs=";
+          endpoint = "144.202.63.186:51820";
+        };
       };
     };
 
@@ -103,6 +117,12 @@
           ip = "10.8.0.5";
           role = "client";
           publicKey = "shqkweq2kj0ytkVnmF9iJMLPnxdDLls2cfmv7p/1gx8=";
+          extraAllowedIPs = [ "10.10.0.0/24" ];
+        };
+        edge = {
+          ip = "10.9.0.2";
+          role = "client";
+          publicKey = "5jZQ6SJ/TvsXkFhTV3U1MsNtTpeii0AsKSOM80KGiSE=";
           extraAllowedIPs = [ "10.10.0.0/24" ];
         };
         incus_bridge = {

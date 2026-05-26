@@ -2,7 +2,7 @@
 # for any host that has a wireguard-type network in common/topology.nix.
 #
 # Reads config.networking.hostName to self-identify in the topology.
-# Private key is sourced from the sops-nix secret "wg_private" (convention).
+# Private key convention: sops secret named "wg_private_<networkName>" (e.g. wg_private_mgmt).
 { config, lib, ... }:
 
 let
@@ -74,8 +74,7 @@ let
       name = networkConfig.interface;
       value = {
         ips = [ "${currentNetworkConfig.ip}/${subnetPrefix}" ];
-        # Convention: the WireGuard private key is managed as a sops secret named "wg_private".
-        privateKeyFile = config.sops.secrets.wg_private.path;
+        privateKeyFile = config.sops.secrets."wg_private_${networkName}".path;
         peers = lib.mapAttrsToList toPeer peers;
       }
       // lib.optionalAttrs isServer {
@@ -93,4 +92,25 @@ in
   boot.kernel.sysctl = lib.optionalAttrs isAnyServer {
     "net.ipv4.ip_forward" = 1;
   };
+
+  # Declare a sops secret for each WG network this host participates in.
+  sops.secrets = builtins.listToAttrs (
+    lib.mapAttrsToList (networkName: _: {
+      name = "wg_private_${networkName}";
+      value = { mode = "0400"; };
+    }) wireguardNetworks
+  );
+
+  # Open the listen port for each network where this host is a server.
+  networking.firewall.allowedUDPPorts = lib.flatten (
+    lib.mapAttrsToList (
+      networkName: networkConfig:
+      let currentNetCfg = currentNode.networks.${networkName};
+      in lib.optional (currentNetCfg.role == "server")
+        (currentNetCfg.listenPort or networkConfig.listenPort or 51820)
+    ) wireguardNetworks
+  );
+
+  # All WG interfaces carry internal traffic and are trusted.
+  networking.firewall.trustedInterfaces = lib.mapAttrsToList (_: netCfg: netCfg.interface) wireguardNetworks;
 }
