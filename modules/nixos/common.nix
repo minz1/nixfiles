@@ -20,6 +20,7 @@ in
 
   nix.settings.trusted-users = [ "minz1" ];
   security.sudo.wheelNeedsPassword = false;
+  users.mutableUsers = false;
   zramSwap.enable = true;
   programs.neovim.enable = true;
 }

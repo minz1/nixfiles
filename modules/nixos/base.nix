@@ -27,4 +27,10 @@ in
 
   boot.tmp.cleanOnBoot = true;
   services.logrotate.checkConfig = false;
+
+  boot.kernel.sysctl = {
+    "kernel.dmesg_restrict" = 1;
+    "kernel.kptr_restrict" = 2;
+    "net.core.bpf_jit_harden" = 2;
+  };
 }

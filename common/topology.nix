@@ -65,13 +65,16 @@
       };
     };
 
-    minz-home-vm-0 = {
+    minz-home-nix-0 = {
       os = "nixos";
       sshUser = "minz1";
       provisioner = "incus-host";
       storage = {
-        disk = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0";
-        nix_size = "20G";
+        # 256GB NVMe — NixOS system disk
+        disk = "/dev/disk/by-id/nvme-SAMSUNG_MZALQ256HAJD-000L1_S4YDNX0R638478";
+        nix_size = "60G";
+        # 500GB SATA SSD — Incus storage pool, ext4, mounted at /var/lib/incus
+        incus_disk = "/dev/disk/by-id/ata-WDC_WDBNCE5000PNC_21112L803982";
       };
       services = {
         ssh.port = 22;
@@ -81,32 +84,13 @@
         mgmt = {
           ip = "10.8.0.5";
           role = "client";
-          publicKey = "82wMGARWEdw9PGqZXYGRoo/fYOaCffokD3BOv/4mEG0=";
+          publicKey = "shqkweq2kj0ytkVnmF9iJMLPnxdDLls2cfmv7p/1gx8=";
           extraAllowedIPs = [ "10.10.0.0/24" ];
         };
         incus_bridge = {
           ip = "10.10.0.1";
           role = "gateway";
         };
-      };
-    };
-
-    minz-vm-nixos-0 = {
-      os = "nixos";
-      sshUser = "minz1";
-      provisioner = "incus";
-      deployed = true;
-      networks.incus_bridge = {
-        ip = "10.10.0.11";
-      };
-      incus = {
-        image = "nixos-bootstrap";
-        memory = "4GiB";
-        cpus = 2;
-        persist_size = "100GiB";
-        nix_size = "60G";
-        # Optional GPU passthrough
-        # gpu_pci = "0000:01:00.0";
       };
     };
   };

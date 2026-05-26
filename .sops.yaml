@@ -1,9 +1,7 @@
 keys:
   - &minz-vultr-nix-0 age1zfx0aepvzs6sz7fp4ajvv9ktl2qa4vxeqz8tk67ypvclks9paqts52e0d2
 
-  - &minz-home-vm-0 age1tgcrtw9tg8ksl68l20w4wvz3s3zsxzm7w0erdsu9uf4ptgjvz5pqa7vpk8
-
-  - &minz-vm-nixos-0 age15ugvvz60kkxs9z920pdfx3ergwmctug90nxl00aq9zjcrl503ersrrwhmh
+  - &minz-home-nix-0 age129u59rl8hmj9ahvh62lglucu8lag65jasdd7yc2z5hfg8yletajs3n5psa
 
   - &minz-desktop age1m7d8ymts4dhvdz8fzllxwtxhy8h6q5dm4h5fvsxuv7f5t68cedeskh8ksy
 
@@ -14,16 +12,10 @@ creation_rules:
           - *minz-vultr-nix-0
           - *minz-desktop
 
-  - path_regex: secrets/minz-home-vm-0\.yaml$
+  - path_regex: secrets/minz-home-nix-0\.yaml$
     key_groups:
       - age:
-          - *minz-home-vm-0
-          - *minz-desktop
-
-  - path_regex: secrets/minz-vm-nixos-0\.yaml$
-    key_groups:
-      - age:
-          - *minz-vm-nixos-0
+          - *minz-home-nix-0
           - *minz-desktop
 
   - path_regex: secrets/rustfs-tofu\.env$
@@ -37,4 +29,3 @@ creation_rules:
       - age:
           - *minz-vultr-nix-0
           - *minz-desktop
-

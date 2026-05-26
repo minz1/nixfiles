@@ -6,13 +6,11 @@
 }:
 
 let
-  topology = (import ../../common/topology.nix);
-
+  topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   incusNetwork = topology.networks.incus_bridge;
   incusNodeNetwork = node.networks.incus_bridge;
   wgAddr = node.networks.mgmt.ip;
-
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
   incusClientCert = pkgs.writeText "incus-client.crt" (builtins.readFile ../../secrets/incus-client.crt);
 in
@@ -25,9 +23,19 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
-  # Proxmox VM — EFI variables are writable.
+  # Bare-metal EFI — canTouchEfiVariables is required for lanzaboote key enrollment.
   boot.loader.efi.canTouchEfiVariables = true;
+  # linuxPackages_latest required for Intel Arc A310 (xe driver, stable from ~6.8+).
   boot.kernelPackages = pkgs.linuxPackages_latest;
+  # Enable IOMMU for Arc A310 GPU passthrough to Incus VMs (used in Phase 5f).
+  boot.kernelParams = [
+    "intel_iommu=on"
+    "iommu=pt"
+  ];
+
+  # AppArmor enforces Incus's per-VM confinement profiles at the host kernel level.
+  # Without this the profiles are generated but not enforced.
+  security.apparmor.enable = true;
 
   networking.networkmanager.enable = true;
   networking.nftables.enable = true;
@@ -39,9 +47,6 @@ in
       port = node.services.ssh.port;
     }
   ];
-
-  services.qemuGuest.enable = true;
-  services.spice-vdagentd.enable = true;
 
   users.users.minz1 = {
     description = "Minz One";
@@ -62,10 +67,23 @@ in
     vim = "nvim";
   };
 
-  environment.persistence."/persist".directories = [
-    "/var/lib/incus"
-    "/var/lib/NetworkManager"
-  ];
+  # SATA SSD formatted ext4 and mounted at /var/lib/incus.
+  # This is a real mount — not managed by impermanence — so Incus VM volumes
+  # survive reboots without needing a /persist bind-mount.
+  disko.devices.disk.incus = {
+    device = node.storage.incus_disk;
+    content = {
+      type = "gpt";
+      partitions.data = {
+        size = "100%";
+        content = {
+          type = "filesystem";
+          format = "ext4";
+          mountpoint = "/var/lib/incus";
+        };
+      };
+    };
+  };
 
   virtualisation.incus = {
     enable = true;
