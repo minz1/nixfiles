@@ -7,6 +7,8 @@ keys:
 
   - &minz-obs-0 age1d24umdyn0v8gfdvrtxug02ddjfv38u5n5strm846mfu2q4fktgaq6ptlqd
 
+  - &minz-authentik-0 age1tk2thlt86mrl47d44u3f47v90mpp2w6f7ccmhzyjy9ycxtr7ne4qu3a73u
+
   - &minz-desktop age1m7d8ymts4dhvdz8fzllxwtxhy8h6q5dm4h5fvsxuv7f5t68cedeskh8ksy
 
 creation_rules:
@@ -32,6 +34,12 @@ creation_rules:
     key_groups:
       - age:
           - *minz-obs-0
+          - *minz-desktop
+
+  - path_regex: secrets/minz-authentik-0\.yaml$
+    key_groups:
+      - age:
+          - *minz-authentik-0
           - *minz-desktop
 
   - path_regex: secrets/rustfs-tofu\.env$

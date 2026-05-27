@@ -22,6 +22,10 @@
       inputs.disko.follows = "disko";
     };
     impermanence.url = "github:nix-community/impermanence";
+    authentik-nix = {
+      url = "github:nix-community/authentik-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     lanzaboote = {
       url = "github:nix-community/lanzaboote/v1.0.0";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -38,6 +42,7 @@
       disko,
       nixos-anywhere,
       impermanence,
+      authentik-nix,
       lanzaboote,
     }:
     let
@@ -148,7 +153,7 @@
           inherit system;
           specialArgs = {
             hostName = name;
-            inherit lanzaboote;
+            inherit lanzaboote authentik-nix;
           };
           modules = [
             sops-nix.nixosModules.sops

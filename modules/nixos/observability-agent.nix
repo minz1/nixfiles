@@ -14,7 +14,10 @@ in
     openFirewall = true;
   };
 
-  services.alloy.enable = enableAlloy;
+  services.alloy = {
+    enable = enableAlloy;
+    extraFlags = [ "--disable-reporting" ];
+  };
 
   environment.etc."alloy/config.alloy" = lib.mkIf enableAlloy {
     text = ''

@@ -101,7 +101,19 @@ in
         reporting_enabled = false;
         check_for_updates = false;
       };
-      # auth.generic_oauth placeholder — wired to authentik in phase 5e.
+      "auth.generic_oauth" = {
+        enabled = true;
+        name = "Authentik";
+        icon = "signin";
+        client_id = "grafana";
+        client_secret = "$__file{${config.sops.secrets.grafana_oauth_client_secret.path}}";
+        scopes = "openid email profile";
+        auth_url = "http://10.10.0.3:9000/application/o/authorize/";
+        token_url = "http://10.10.0.3:9000/application/o/token/";
+        api_url = "http://10.10.0.3:9000/application/o/userinfo/";
+        role_attribute_path = "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'";
+        allow_sign_up = true;
+      };
     };
     provision = {
       enable = true;
@@ -127,6 +139,11 @@ in
   };
 
   sops.secrets.grafana_secret_key = {
+    mode = "0400";
+    owner = "grafana";
+  };
+
+  sops.secrets.grafana_oauth_client_secret = {
     mode = "0400";
     owner = "grafana";
   };

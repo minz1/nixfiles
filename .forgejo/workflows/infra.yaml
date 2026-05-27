@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'tofu/**'
+      - 'tofu/infra/**'
       - 'common/topology.nix'
 
 jobs:
@@ -14,7 +14,7 @@ jobs:
       contents: read
     env:
       INCUS_CONF: /tmp/incus-conf
-      INCUS_REMOTE: minz-home-vm-0
+      INCUS_REMOTE: minz-home-nix-0
     steps:
       - uses: actions/checkout@v6
 
@@ -36,14 +36,14 @@ jobs:
       - name: Tofu init
         run: |
           set -a; source /run/secrets/tofu-env; set +a
-          export TOFU_DIR="$GITHUB_WORKSPACE/tofu"
+          export TOFU_DIR="$GITHUB_WORKSPACE/tofu/infra"
           nix shell nixpkgs#opentofu --command \
             tofu -chdir="$TOFU_DIR" init -input=false
 
       - name: Tofu apply
         run: |
           set -a; source /run/secrets/tofu-env; set +a
-          export TOFU_DIR="$GITHUB_WORKSPACE/tofu"
+          export TOFU_DIR="$GITHUB_WORKSPACE/tofu/infra"
           nix shell nixpkgs#opentofu --command \
             tofu -chdir="$TOFU_DIR" apply -auto-approve -input=false
 

@@ -118,6 +118,25 @@
       };
     };
 
+    minz-authentik-0 = {
+      os = "nixos";
+      sshUser = "minz1";
+      provisioner = "incus";
+      deployed = true;
+      incus = {
+        nix_size = "30G";
+        cpus = 2;
+        memory = "2GiB";
+      };
+      services = {
+        ssh.port = 22;
+        authentik.port = 9000;
+      };
+      networks.incus_bridge = {
+        ip = "10.10.0.3";
+      };
+    };
+
     minz-home-nix-0 = {
       os = "nixos";
       sshUser = "minz1";

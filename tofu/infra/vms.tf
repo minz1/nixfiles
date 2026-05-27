@@ -10,7 +10,7 @@ data "external" "topology" {
   program = [
     "nix", "eval", "--json", "--impure",
     "--expr",
-    "let nodes = import ../common/topology.nix; keys = import ../common/ssh-keys.nix; in { data = builtins.toJSON { inherit (nodes) nodes; sshKeys = keys.minz1; }; }",
+    "let nodes = import ../../common/topology.nix; keys = import ../../common/ssh-keys.nix; in { data = builtins.toJSON { inherit (nodes) nodes; sshKeys = keys.minz1; }; }",
   ]
 }
 

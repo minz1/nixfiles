@@ -14,7 +14,7 @@ terraform {
   backend "s3" {
     endpoint = "http://10.8.0.1:9000"
     bucket   = "tofu-state"
-    key      = "incus/terraform.tfstate"
+    key      = "infra/terraform.tfstate"
     region   = "us-east-1"
 
     skip_credentials_validation = true
