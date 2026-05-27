@@ -9,6 +9,10 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 5.0"
     }
+    sops = {
+      source  = "carlpett/sops"
+      version = ">= 0.7"
+    }
   }
 
   backend "s3" {
@@ -56,3 +60,6 @@ provider "incus" {
     protocol = "simplestreams"
   }
 }
+
+provider "sops" {}
+

@@ -120,14 +120,22 @@
           ./modules/profiles/bootstrap.nix
         ];
       };
+
+      bootstrapContainerImage = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ./modules/profiles/bootstrap-container.nix
+        ];
+      };
     in
     {
       nixosConfigurations = builtins.mapAttrs (
         name: _:
         let
           node = topology.nodes.${name} or { };
-          isVm = (node.provisioner or "") == "incus";
-          isBareMetal = !isVm && (node ? storage);
+          isContainer = (node.provisioner or "") == "incus" && (node.incus.incus_type or "virtual-machine") == "container";
+          isVm = (node.provisioner or "") == "incus" && !isContainer;
+          isBareMetal = !isVm && !isContainer && (node ? storage);
           vmModule =
             if isVm then
               [
@@ -135,6 +143,14 @@
                 impermanence.nixosModules.impermanence
                 ./modules/profiles/vm.nix
                 ./modules/nixos/impermanence.nix
+              ]
+            else
+              [ ];
+          containerModule =
+            if isContainer then
+              [
+                impermanence.nixosModules.impermanence
+                ./modules/profiles/container.nix
               ]
             else
               [ ];
@@ -162,6 +178,7 @@
             ./modules/nixos/base.nix
           ]
           ++ vmModule
+          ++ containerModule
           ++ baremetalModule
           ++ [
             (./hosts + "/${name}/configuration.nix")
@@ -193,13 +210,18 @@
       };
 
       packages.${system} = {
-        inherit (pkgs) decypharr;
+        inherit (pkgs) decypharr seerr-oidc;
         deploy-rs = deployPkgs.deploy-rs.deploy-rs;
         nixos-anywhere = nixos-anywhere.packages.${system}.nixos-anywhere;
         incus-bootstrap-image = pkgs.runCommand "nixos-bootstrap-incus" { } ''
           mkdir -p $out
           ln -s ${bootstrapImage.config.system.build.qemuImage}/nixos.qcow2 $out/nixos.qcow2
           ln -s ${bootstrapImage.config.system.build.metadata}/tarball/*.tar.xz $out/metadata.tar.xz
+        '';
+        incus-bootstrap-container-image = pkgs.runCommand "nixos-bootstrap-incus-container" { } ''
+          mkdir -p $out
+          ln -s ${bootstrapContainerImage.config.system.build.tarball}/tarball/*.tar.xz $out/rootfs.tar.xz
+          ln -s ${bootstrapContainerImage.config.system.build.metadata}/tarball/*.tar.xz $out/metadata.tar.xz
         '';
       };
     };

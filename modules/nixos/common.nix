@@ -10,6 +10,7 @@ in
       PasswordAuthentication = false;
       PermitRootLogin = "no";
     };
+    startWhenNeeded = false;
   };
 
   users.users.minz1 = {

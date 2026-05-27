@@ -31,7 +31,12 @@ locals {
 
   nixos_vms = {
     for name, node in local.vms : name => node
-    if try(node.os, "") == "nixos"
+    if try(node.os, "") == "nixos" && try(node.incus.incus_type, "virtual-machine") != "container"
+  }
+
+  nixos_containers = {
+    for name, node in local.vms : name => node
+    if try(node.os, "") == "nixos" && try(node.incus.incus_type, "virtual-machine") == "container"
   }
 
   other_vms = {
@@ -40,7 +45,7 @@ locals {
   }
 }
 
-# NixOS VMs
+# --- NixOS VMs ---
 
 resource "incus_instance" "vm" {
   for_each = local.nixos_vms
@@ -82,21 +87,94 @@ resource "incus_instance" "vm" {
       pool   = "default"
     }
   }
+}
 
-  # Optional GPU passthrough
+# --- NixOS containers ---
+
+data "sops_file" "container_host_keys" {
+  for_each    = local.nixos_containers
+  source_file = "${path.root}/../../secrets/${each.key}.yaml"
+}
+
+resource "incus_instance" "container" {
+  for_each = local.nixos_containers
+
+  name  = each.key
+  image = incus_image.bootstrap_container.fingerprint
+  type  = "container"
+
+  config = merge(
+    {
+      "limits.cpu"    = tostring(each.value.incus.cpus)
+      "limits.memory" = each.value.incus.memory
+    },
+    # NFS4 mounts require mount syscall interception in unprivileged containers.
+    try(each.value.incus.nfs_mounts, false) ? {
+      "security.syscalls.intercept.mount"         = "true"
+      "security.syscalls.intercept.mount.allowed" = "nfs4"
+    } : {}
+  )
+
+  device {
+    name = "eth0"
+    type = "nic"
+    properties = {
+      network        = local.incus_bridge_name
+      "ipv4.address" = each.value.networks.incus_bridge.ip
+    }
+  }
+
+  device {
+    name = "root"
+    type = "disk"
+    properties = {
+      path = "/"
+      pool = "default"
+      size = try(each.value.incus.root_size, "60GiB")
+    }
+  }
+
+  # GPU DRM passthrough via cgroup device allowlisting — no VFIO/IOMMU required.
   dynamic "device" {
-    for_each = try(each.value.incus.gpu_pci, null) != null ? [1] : []
+    for_each = try(each.value.incus.gpu, false) ? [1] : []
     content {
       name = "gpu"
-      type = "pci"
+      type = "gpu"
       properties = {
-        address = each.value.incus.gpu_pci
+        gputype = "physical"
       }
+    }
+  }
+
+  wait_for {
+    type = "ipv4"
+  }
+
+  # Inject the SSH host key so sops-nix can decrypt secrets on first deploy-rs activation.
+  file {
+    content            = data.sops_file.container_host_keys[each.key].data["ssh_host_ed25519_key"]
+    target_path        = "/etc/ssh/ssh_host_ed25519_key"
+    uid                = 0
+    gid                = 0
+    mode               = "0600"
+    create_directories = true
+  }
+
+  exec = {
+    # Derive the public key from the private key, then restart sshd to activate it.
+    # Exec blocks run in key order after all file uploads.
+    "00-derive-pubkey" = {
+      command = ["/bin/sh", "-c", "ssh-keygen -y -f /etc/ssh/ssh_host_ed25519_key > /etc/ssh/ssh_host_ed25519_key.pub && chmod 644 /etc/ssh/ssh_host_ed25519_key.pub"]
+      trigger = "once"
+    }
+    "01-restart-sshd" = {
+      command = ["/run/current-system/sw/bin/systemctl", "restart", "sshd"]
+      trigger = "once"
     }
   }
 }
 
-# Non-NixOS VMs
+# --- Non-NixOS VMs ---
 
 resource "incus_instance" "other_vm" {
   for_each = local.other_vms

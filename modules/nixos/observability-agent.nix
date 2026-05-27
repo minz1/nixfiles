@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 let
   topology = import ../../common/topology.nix;
@@ -62,7 +62,7 @@ in
   # is a symlink systemd creates at runtime). Persist the real path so the journal
   # read cursor survives reboots. /persist/var/lib/private is pre-created at 0700
   # by the fix-var-lib-private-perms activation script in impermanence.nix.
-  environment.persistence."/persist".directories = lib.mkIf enableAlloy [
+  environment.persistence."/persist".directories = lib.mkIf (enableAlloy && config.fileSystems ? "/persist") [
     {
       directory = "/var/lib/private/alloy";
       mode = "0700";

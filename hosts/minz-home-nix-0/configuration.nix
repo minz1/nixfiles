@@ -27,7 +27,8 @@ in
   boot.loader.efi.canTouchEfiVariables = true;
   # linuxPackages_latest required for Intel Arc A310 (xe driver, stable from ~6.8+).
   boot.kernelPackages = pkgs.linuxPackages_latest;
-  # Enable IOMMU for Arc A310 GPU passthrough to Incus VMs (used in Phase 5f).
+  # Enable IOMMU for general isolation. GPU access for jellyfin-0 uses DRM character
+  # device passthrough (not PCI passthrough) to avoid IOMMU group issues.
   boot.kernelParams = [
     "intel_iommu=on"
     "iommu=pt"
