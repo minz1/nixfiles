@@ -9,6 +9,7 @@ in
 {
   imports = [
     ./common.nix
+    ./observability-agent.nix
     ../../common/wireguard.nix
   ];
 

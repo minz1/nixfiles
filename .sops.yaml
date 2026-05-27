@@ -5,6 +5,8 @@ keys:
 
   - &minz-home-nix-0 age129u59rl8hmj9ahvh62lglucu8lag65jasdd7yc2z5hfg8yletajs3n5psa
 
+  - &minz-obs-0 age1d24umdyn0v8gfdvrtxug02ddjfv38u5n5strm846mfu2q4fktgaq6ptlqd
+
   - &minz-desktop age1m7d8ymts4dhvdz8fzllxwtxhy8h6q5dm4h5fvsxuv7f5t68cedeskh8ksy
 
 creation_rules:
@@ -24,6 +26,12 @@ creation_rules:
     key_groups:
       - age:
           - *minz-vultr-nix-1
+          - *minz-desktop
+
+  - path_regex: secrets/minz-obs-0\.yaml$
+    key_groups:
+      - age:
+          - *minz-obs-0
           - *minz-desktop
 
   - path_regex: secrets/rustfs-tofu\.env$

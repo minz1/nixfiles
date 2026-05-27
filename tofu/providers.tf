@@ -43,9 +43,9 @@ provider "incus" {
   generate_client_certificates = false
   accept_remote_certificate    = true
 
-  # Address/port sourced from topology.nix: nodes.minz-home-vm-0.{networks.mgmt.ip, services.incus.port}
+  # Address/port sourced from topology.nix: nodes.minz-home-nix-0.{networks.mgmt.ip, services.incus.port}
   remote {
-    name    = "minz-home-vm-0"
+    name    = "minz-home-nix-0"
     address = "https://10.8.0.5:8443"
   }
 

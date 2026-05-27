@@ -97,6 +97,27 @@
       };
     };
 
+    minz-obs-0 = {
+      os = "nixos";
+      sshUser = "minz1";
+      provisioner = "incus";
+      deployed = true;
+      incus = {
+        nix_size = "30G";
+        cpus = 2;
+        memory = "2GiB";
+      };
+      services = {
+        ssh.port = 22;
+        prometheus.port = 9090;
+        loki.port = 3100;
+        grafana.port = 3000;
+      };
+      networks.incus_bridge = {
+        ip = "10.10.0.2";
+      };
+    };
+
     minz-home-nix-0 = {
       os = "nixos";
       sshUser = "minz1";

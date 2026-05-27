@@ -9,7 +9,7 @@ let
   topology = import ../../common/topology.nix;
   node = topology.nodes.${hostName} or (throw "No topology entry for ${hostName}");
   vmIp = node.networks.incus_bridge.ip;
-  nixSize = node.incus.nix_size or "60GiB";
+  nixSize = node.incus.nix_size or "60G";
 in
 {
   imports = [
