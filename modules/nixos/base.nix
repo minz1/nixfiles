@@ -19,7 +19,7 @@ in
 
   systemd.services.sshd.after = lib.mkIf hasMgmt [ "wireguard-${mgmtNetwork.interface}.service" ];
   systemd.services.sshd.wants = lib.mkIf hasMgmt [ "wireguard-${mgmtNetwork.interface}.service" ];
-  sops.defaultSopsFile = lib.mkIf hasMgmt (../../secrets + "/${config.networking.hostName}.yaml");
+  sops.defaultSopsFile = ../../secrets + "/${config.networking.hostName}.yaml";
 
   networking.useNetworkd = true;
   networking.useDHCP = false;

@@ -12,7 +12,9 @@ let
   incusNodeNetwork = node.networks.incus_bridge;
   wgAddr = node.networks.mgmt.ip;
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
-  incusClientCert = pkgs.writeText "incus-client.crt" (builtins.readFile ../../secrets/incus-client.crt);
+  incusClientCert = pkgs.writeText "incus-client.crt" (
+    builtins.readFile ../../secrets/incus-client.crt
+  );
 in
 {
   imports = [
@@ -27,6 +29,7 @@ in
   boot.loader.efi.canTouchEfiVariables = true;
   # linuxPackages_latest required for Intel Arc A310 (xe driver, stable from ~6.8+).
   boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.supportedFilesystems = [ "nfs" ];
   # Enable IOMMU for general isolation. GPU access for jellyfin-0 uses DRM character
   # device passthrough (not PCI passthrough) to avoid IOMMU group issues.
   boot.kernelParams = [
@@ -43,7 +46,10 @@ in
 
   systemd.network = {
     netdevs."10-vlan10" = {
-      netdevConfig = { Name = "vlan10"; Kind = "vlan"; };
+      netdevConfig = {
+        Name = "vlan10";
+        Kind = "vlan";
+      };
       vlanConfig.Id = 10;
     };
     networks."20-eno1" = {
@@ -147,6 +153,39 @@ in
       ];
     };
   };
+
+  # --- NFS mounts from minz-arr-0 ---
+  # These are mounted on the host and then bind-mounted into the unprivileged
+  # jellyfin container via Incus disk devices. This avoids the need for
+  # mount syscall interception and relaxes security profiles inside the container.
+  fileSystems."/mnt/nfs/data" = {
+    device = "10.10.0.4:/data";
+    fsType = "nfs4";
+    options = [
+      "ro"
+      "noatime"
+      "soft"
+      "timeo=30"
+      "_netdev"
+    ];
+  };
+
+  fileSystems."/mnt/nfs/decypharr" = {
+    device = "10.10.0.4:/mnt/decypharr";
+    fsType = "nfs4";
+    options = [
+      "ro"
+      "noatime"
+      "soft"
+      "timeo=30"
+      "_netdev"
+    ];
+  };
+
+  systemd.tmpfiles.rules = [
+    "d /mnt/nfs/data          0755 root root -"
+    "d /mnt/nfs/decypharr     0755 root root -"
+  ];
 
   systemd.services.incus-add-tofu-cert = {
     description = "Add tofu-automation client certificate to Incus trust store";

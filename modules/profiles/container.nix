@@ -1,4 +1,8 @@
-{ lib, modulesPath, ... }:
+{
+  lib,
+  modulesPath,
+  ...
+}:
 
 {
   imports = [
@@ -19,21 +23,26 @@
     linkConfig.RequiredForOnline = "routable";
   };
 
-  services.openssh.listenAddresses = [ { addr = "0.0.0.0"; port = 22; } ];
+  services.openssh.listenAddresses = [
+    {
+      addr = "0.0.0.0";
+      port = 22;
+    }
+  ];
   networking.firewall.allowedTCPPorts = [ 22 ];
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
-  # filesystems.nix already excludes /sys for containers. Extend that logic:
-  # the container host manages all remaining pseudo-filesystems, so disable
-  # them here to prevent the specialfs activation snippet from trying to
-  # remount them via fsconfig() — a syscall blocked in unprivileged containers.
-  boot.specialFileSystems = {
-    "/dev".enable      = lib.mkForce false;
-    "/dev/pts".enable  = lib.mkForce false;
-    "/dev/shm".enable  = lib.mkForce false;
-    "/proc".enable     = lib.mkForce false;
-    "/run".enable      = lib.mkForce false;
-    "/run/keys".enable = lib.mkForce false;
-  };
+  # Container root is Incus-managed and persists across reboots, so
+  # /var/lib/nixos is never lost. The impermanence UID/GID warning is a
+  # false positive here — disable it fleet-wide for containers.
+  environment.persistence."/persist".enableWarnings = false;
+
+  # Enable udev to provide 'udevadm'. lxc-container.nix uses this to trigger
+  # device events, which systemd-networkd requires to fully initialize eth0
+  # for IPv4 DHCP in unprivileged containers.
+  services.udev.enable = lib.mkForce true;
+
+  # Disable wait-online to prevent 2-minute boot hangs.
+  systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
 }

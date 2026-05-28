@@ -8,7 +8,6 @@
 let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
-  arrIp = topology.nodes."minz-arr-0".networks.incus_bridge.ip;
   jellyfinPort = node.services.jellyfin.port;
 in
 {
@@ -17,7 +16,6 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
-  sops.defaultSopsFile = ../../secrets/minz-jellyfin-0.yaml;
   sops.secrets.jellyfin_admin_password.mode = "0400";
   services.jellyfin-init = {
     enable = true;
@@ -56,47 +54,9 @@ in
   };
   systemd.services.seerr.environment.OIDC_ALLOW_INSECURE = "true";
 
-  # --- NFS mounts from minz-arr-0 ---
-  # Both paths must be mounted at the same absolute paths as on arr-0 so that
-  # symlinks from /data/library → /data/downloads → /mnt/decypharr resolve.
-  # NFS4 mount syscall interception is enabled in the Incus container config.
-  fileSystems."/data" = {
-    device = "${arrIp}:/data";
-    fsType = "nfs";
-    options = [
-      "ro"
-      "nfsvers=4"
-      "noatime"
-      "_netdev"
-      "x-systemd.automount"
-      "x-systemd.idle-timeout=600"
-    ];
-  };
-
-  fileSystems."/mnt/decypharr" = {
-    device = "${arrIp}:/mnt/decypharr";
-    fsType = "nfs";
-    options = [
-      "ro"
-      "nfsvers=4"
-      "noatime"
-      "_netdev"
-      "x-systemd.automount"
-      "x-systemd.idle-timeout=600"
-    ];
-  };
-
-  # rpc_pipefs (sunrpc) cannot be mounted in an unprivileged container.
-  # suppressedSystemUnits only covers upstream/NixOS-defined units — this unit
-  # comes from nfs-utils via systemd.packages, so a ConditionVirtualization
-  # drop-in is the right approach (same pattern as systemd-remount-fs).
-  systemd.units."var-lib-nfs-rpc_pipefs.mount" = {
-    overrideStrategy = "asDropin";
-    text = ''
-      [Unit]
-      ConditionVirtualization=!container
-    '';
-  };
+  # --- Storage (Incus-managed mounts) ---
+  # /data and /mnt/decypharr are passed in as Incus disk devices from the host.
+  # This avoids syscall interception issues in unprivileged containers.
 
   systemd.tmpfiles.rules = [
     "d /data          0755 root root -"

@@ -1,9 +1,8 @@
-{ hostName, ... }:
+{ hostName, config, ... }:
 
 let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
-  jellyfinIp = topology.nodes."minz-jellyfin-0".networks.incus_bridge.ip;
 in
 {
   imports = [
@@ -13,6 +12,11 @@ in
 
   networking.hostName = hostName;
   system.stateVersion = "25.11";
+
+  sops.secrets.sonarr_api_key = { };
+  sops.secrets.radarr_api_key = { };
+  sops.secrets.prowlarr_api_key = { };
+  sops.secrets.aiostreams_env.owner = "oci";
 
   services.rootless-podman = {
     enable = true;
@@ -32,16 +36,19 @@ in
     enable = true;
     openFirewall = true;
   };
+  systemd.services.sonarr.serviceConfig.EnvironmentFile = config.sops.secrets.sonarr_api_key.path;
 
   services.radarr = {
     enable = true;
     openFirewall = true;
   };
+  systemd.services.radarr.serviceConfig.EnvironmentFile = config.sops.secrets.radarr_api_key.path;
 
   services.prowlarr = {
     enable = true;
     openFirewall = true;
   };
+  systemd.services.prowlarr.serviceConfig.EnvironmentFile = config.sops.secrets.prowlarr_api_key.path;
 
   services.bazarr = {
     enable = true;
@@ -80,23 +87,24 @@ in
     aiostreams = {
       image = "viren070/aiostreams:latest";
       ports = [ "127.0.0.1:8080:8080" ];
+      # BASE_URL updated to public URL in 5g (Caddy)
+      environment.BASE_URL = "http://10.10.0.4:8080";
+      environmentFiles = [ config.sops.secrets.aiostreams_env.path ];
       podman.user = "oci";
     };
   };
 
   # --- NFS server ---
   # Exports /data (library + downloads) and /mnt/decypharr (VFS) to
-  # minz-jellyfin-0. jellyfin follows the full symlink chain:
-  #   /data/library/… → /data/downloads/… → /mnt/decypharr/…
-  # so both exports must be mounted at the same absolute paths on the client.
-  #
-  # Note: /mnt/decypharr is a user-space FUSE mount. root bypasses DAC on
-  # Linux so nfsd can read it without allow_other; verify on first deploy.
+  # the Incus host (minz-home-nix-0). The host then bind-mounts these into
+  # the unprivileged jellyfin container to avoid mount syscall issues.
   services.nfs.server = {
     enable = true;
     exports = ''
-      /data          ${jellyfinIp}(ro,no_subtree_check,fsid=1)
-      /mnt/decypharr ${jellyfinIp}(ro,no_subtree_check,fsid=2)
+      # insecure: required for unprivileged container ports
+      # all_squash: mitigates spoofing by forcing all requests to nobody (UID 99)
+      /data          10.10.0.1(ro,no_subtree_check,fsid=1,insecure,all_squash,anonuid=99,anongid=99)
+      /mnt/decypharr 10.10.0.1(ro,no_subtree_check,fsid=2,insecure,all_squash,anonuid=99,anongid=99)
     '';
   };
 

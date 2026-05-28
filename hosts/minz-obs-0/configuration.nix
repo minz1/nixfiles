@@ -1,4 +1,9 @@
-{ hostName, config, lib, ... }:
+{
+  hostName,
+  config,
+  lib,
+  ...
+}:
 
 let
   topology = import ../../common/topology.nix;
@@ -9,18 +14,17 @@ let
   grafanaPort = node.services.grafana.port;
 
   nixosNodes = lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
-  nodeExporterTargets = lib.mapAttrsToList (_: n:
-    let ip = if n.networks ? incus_bridge
-             then n.networks.incus_bridge.ip
-             else n.networks.mgmt.ip;
-    in "${ip}:9100"
+  nodeExporterTargets = lib.mapAttrsToList (
+    _: n:
+    let
+      ip = if n.networks ? incus_bridge then n.networks.incus_bridge.ip else n.networks.mgmt.ip;
+    in
+    "${ip}:9100"
   ) nixosNodes;
 in
 {
   networking.hostName = hostName;
   system.stateVersion = "25.11";
-
-  sops.defaultSopsFile = ../../secrets/minz-obs-0.yaml;
 
   services.prometheus = {
     enable = true;
@@ -29,15 +33,15 @@ in
     scrapeConfigs = [
       {
         job_name = "node";
-        static_configs = [{ targets = nodeExporterTargets; }];
+        static_configs = [ { targets = nodeExporterTargets; } ];
       }
       {
         job_name = "prometheus";
-        static_configs = [{ targets = [ "127.0.0.1:${toString promPort}" ]; }];
+        static_configs = [ { targets = [ "127.0.0.1:${toString promPort}" ]; } ];
       }
       {
         job_name = "loki";
-        static_configs = [{ targets = [ "127.0.0.1:${toString lokiPort}" ]; }];
+        static_configs = [ { targets = [ "127.0.0.1:${toString lokiPort}" ]; } ];
       }
     ];
   };
@@ -148,7 +152,12 @@ in
     owner = "grafana";
   };
 
-  swapDevices = [{ device = "/persist/swapfile"; size = 2048; }];
+  swapDevices = [
+    {
+      device = "/persist/swapfile";
+      size = 2048;
+    }
+  ];
 
   networking.firewall.allowedTCPPorts = [
     promPort

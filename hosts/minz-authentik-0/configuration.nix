@@ -1,4 +1,9 @@
-{ hostName, config, authentik-nix, ... }:
+{
+  hostName,
+  config,
+  authentik-nix,
+  ...
+}:
 
 let
   topology = import ../../common/topology.nix;
@@ -11,8 +16,6 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
-  sops.defaultSopsFile = ../../secrets/minz-authentik-0.yaml;
-
   sops.secrets.authentik_env.mode = "0400";
 
   services.authentik = {
@@ -24,13 +27,26 @@ in
     };
   };
 
-  swapDevices = [ { device = "/persist/swapfile"; size = 2048; } ];
+  swapDevices = [
+    {
+      device = "/persist/swapfile";
+      size = 2048;
+    }
+  ];
 
   networking.firewall.allowedTCPPorts = [ authentikPort ];
 
   environment.persistence."/persist".directories = [
     # DynamicUser: real state is at /var/lib/private/authentik; /var/lib/authentik is a symlink.
-    { directory = "/var/lib/private/authentik"; mode = "0700"; }
-    { directory = "/var/lib/postgresql"; user = "postgres"; group = "postgres"; mode = "0750"; }
+    {
+      directory = "/var/lib/private/authentik";
+      mode = "0700";
+    }
+    {
+      directory = "/var/lib/postgresql";
+      user = "postgres";
+      group = "postgres";
+      mode = "0750";
+    }
   ];
 }

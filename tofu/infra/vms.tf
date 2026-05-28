@@ -103,17 +103,11 @@ resource "incus_instance" "container" {
   image = incus_image.bootstrap_container.fingerprint
   type  = "container"
 
-  config = merge(
-    {
-      "limits.cpu"    = tostring(each.value.incus.cpus)
-      "limits.memory" = each.value.incus.memory
-    },
-    # NFS4 mounts require mount syscall interception in unprivileged containers.
-    try(each.value.incus.nfs_mounts, false) ? {
-      "security.syscalls.intercept.mount"         = "true"
-      "security.syscalls.intercept.mount.allowed" = "nfs4"
-    } : {}
-  )
+  config = {
+    "limits.cpu"       = tostring(each.value.incus.cpus)
+    "limits.memory"    = each.value.incus.memory
+    "security.nesting" = try(each.value.incus.nesting, false)
+  }
 
   device {
     name = "eth0"
@@ -133,6 +127,34 @@ resource "incus_instance" "container" {
       size = try(each.value.incus.root_size, "60GiB")
     }
   }
+
+  # --- Storage (NFS-backed disk devices) ---
+  # These are mounted on the host (/mnt/nfs/...) and bind-mounted into the container.
+  # This avoids syscall interception issues in unprivileged containers.
+  dynamic "device" {
+    for_each = try(each.value.incus.nfs_mounts, false) ? [1] : []
+    content {
+      name = "data"
+      type = "disk"
+      properties = {
+        source = "/mnt/nfs/data"
+        path   = "/data"
+      }
+    }
+  }
+
+  dynamic "device" {
+    for_each = try(each.value.incus.nfs_mounts, false) ? [1] : []
+    content {
+      name = "decypharr"
+      type = "disk"
+      properties = {
+        source = "/mnt/nfs/decypharr"
+        path   = "/mnt/decypharr"
+      }
+    }
+  }
+
 
   # GPU DRM passthrough via cgroup device allowlisting — no VFIO/IOMMU required.
   dynamic "device" {

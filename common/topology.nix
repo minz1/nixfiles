@@ -153,6 +153,7 @@
         memory = "4GiB";
         gpu = true;
         nfs_mounts = true;
+        nesting = true;
       };
       services = {
         ssh.port = 22;
