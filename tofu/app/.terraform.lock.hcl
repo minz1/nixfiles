@@ -1,6 +1,75 @@
 # This file is maintained automatically by "tofu init".
 # Manual edits may be lost in future updates.
 
+provider "registry.opentofu.org/devopsarr/prowlarr" {
+  version     = "3.2.1"
+  constraints = "~> 3.2"
+  hashes = [
+    "h1:tM7MtXkm2tPiG7mWV6wcVkQaqdo0Yeu/8BCpL2MCqek=",
+    "zh:0d37e70e3104e69ed38f22675ef893df445fc1988da99a928bd576e181db5fb6",
+    "zh:0d776682ef78ef01b5542e69138e55d3b53b67fa3faaa3db5a4319799944d39a",
+    "zh:1ff54720bb754c5b24e577eb22d8756edee779e7c764188e6f53f5a6432931c6",
+    "zh:30d13d0246db3962d159f0a6c71cb1fb5215eb205905e3b3d507c28a55b0e929",
+    "zh:619f7051634693a482741cfe9c6f2bce138662cad9b305c7dbeea8742eea0ab8",
+    "zh:6c57ac508eb4418229f45e28f04706b2b72fdb835ea060443a8000b5b12ce3c9",
+    "zh:6e8d10c7048fe72e58c37bf8fb7b1f9e5980f67ae46bae77d34ae381f4aed241",
+    "zh:890df766e9b839623b1f0437355032a3c006226a6c200cd911e15ee1a9014e9f",
+    "zh:8c00ba84caf8714e9e03bd148a9423d4d2e22570c8bf00c3c50fb3735fa57c08",
+    "zh:95d52ba75e28c785a7a19393540d4e1b9b1d3480f31a376f875038c1078ef7fa",
+    "zh:96df6af86047fe43dd6496034d1025be70e2fd953f3389b7219db459b91379b6",
+    "zh:a552da4a984865e59cf9127c372cd46435ad2c6eaa3128d493119330047b2323",
+    "zh:b0b5b9dc4f70b5e2df814c78d4996a5376ac9f48e5968461a0dbefb7966ea1d5",
+    "zh:bf6bdfd73308609e3ffc93a426635d505a8e99bb33b7f51e6197b5f74c31c3c9",
+    "zh:dd369ae9029cb57538ca99b3d86e9d679a731c2c8ab1e3b20cee380ab1a95b56",
+  ]
+}
+
+provider "registry.opentofu.org/devopsarr/radarr" {
+  version     = "2.3.5"
+  constraints = "~> 2.3"
+  hashes = [
+    "h1:wrU8A9nJHJ1W1VUSGC9O/J7AUJQOyY1OvKMDuL4W4Kw=",
+    "zh:18cb2579f9312aee8d17ffa938664f71c9376abea0a6da3d053ebdaef66a2f62",
+    "zh:19dbdff678f6f5b90da2f61ef4b1afed619a317474b344f9de15db35c57e2e47",
+    "zh:21af82e9cdd7b85f6a943655675bae1d330d225e6c4c683f9bbabfc938280228",
+    "zh:26bebd01c85d457dbe7e80978456695f00396ed830878b0151d495a4ce7ef4ba",
+    "zh:66eba536cf2b5de49c62386e65910347cb4deac6cdf9bec920a1090db6a8a5a4",
+    "zh:6905bbfbec2b7d67cab381c6491c018163e7cb410e55bfedc598ada378643c56",
+    "zh:78bdf398fe1db2c63c2ccc9da1b8fc27fb711ae831bef91e3ea198d7d684dc98",
+    "zh:890df766e9b839623b1f0437355032a3c006226a6c200cd911e15ee1a9014e9f",
+    "zh:8cff19564bf543894fbbca5c936f47fa9446724cefbaa2f63dedd79feb3ca52a",
+    "zh:94be12c4165d5fda164aff3e7b600e9dab40528563a0758dd198c9ace69437b6",
+    "zh:9c22c104248cb8022935df1674404bded46a4f4f54daf6ba96ee800316eb95b9",
+    "zh:a5d217038373d605531537ebaecae8ba136b8c7198a50c6a47c6932cb8485737",
+    "zh:c244be13b67eecbd395b123986343e77f168dc07eaaf888bc8206db2ba4a6cfc",
+    "zh:cee38aa1920f5d37ea56421b0ea57ebcefde87b0c57a61c5aa6476d4f185291a",
+    "zh:e95c3c4caad13cf1e4e37b721205d09564978d514f42ccb56d7ea94a498dad7e",
+  ]
+}
+
+provider "registry.opentofu.org/devopsarr/sonarr" {
+  version     = "3.4.2"
+  constraints = "~> 3.4"
+  hashes = [
+    "h1:2XcXWqATWjGrdkC4lngY4LvqUgwxfy5pjpLWRlNVYcY=",
+    "zh:01d675253aef5586b165bc4749d006f91cda6ce65b24842c7911cc178fe7e09d",
+    "zh:2da242ee58c1726cff9ce9260bc94756bc8a775a717da5aec8e9a8bf60578ac6",
+    "zh:30acc52a3a31ac75387728c27b3193f0419dcb72ee7488e8dbcd407884921205",
+    "zh:47adaba9c7915c832a9d8dfb5d0a18dd08b60fd7c531a810b2642ab75d200ee1",
+    "zh:551b580729cd82cc7a303d836985286e79a26062f02629bf51081ba2e4edf471",
+    "zh:5e5c5b1614cf0c61aa154543da1d5bda295a405fda52746d9193b0b8db922ddb",
+    "zh:65ebe76847129677f747364ee20591f01f5df4a67b06c5dff1bf53b813ec613a",
+    "zh:67db823f6016e345f2cbceb5300d0cce595bdeb0da32b15a1743724f0a4f978f",
+    "zh:75f119f674b3b0988133d38c1645e97cf6f0aee62a4131dfd62c8462636c2a94",
+    "zh:7ca3d6cfd4ccc2a9fb008ca93362c97a98f2ae98b55a56a7902fd33030d64179",
+    "zh:82033841c5a3fceecc1e3b84ef7328f027e2bb4bf63dfc24886510fed9d8a843",
+    "zh:890df766e9b839623b1f0437355032a3c006226a6c200cd911e15ee1a9014e9f",
+    "zh:9aee54de9fcce6ef4f6b4f4f394a5628690d7d4849b03cd996ff991f8b29433a",
+    "zh:cda3fd66138de23856f869549aa06c82ce1f899474bc133d29d8463bfa032b16",
+    "zh:e4f8a67b8d08702056073a5ac8928dbb991767a52d3f36c3726399df0b5f2b96",
+  ]
+}
+
 provider "registry.opentofu.org/goauthentik/authentik" {
   version     = "2026.2.0"
   constraints = "~> 2026.2"
@@ -19,5 +88,27 @@ provider "registry.opentofu.org/goauthentik/authentik" {
     "zh:be7af8b9eb61b0eb5053f14360e5a68caeb32c115efe8e1b583f2e7c91352a2a",
     "zh:e11726812a1b2caf6b6784a3d074d1f50e3d406e9629c02096a001e5a5979331",
     "zh:e39183d10d8158ccab51208f4f727c7419b1b1e596f4feb23dc42aebb36d01e3",
+  ]
+}
+
+provider "registry.opentofu.org/josh-archer/seerr" {
+  version     = "0.19.3"
+  constraints = "~> 0.19"
+  hashes = [
+    "h1:cOPF3ZPsjg+7gShXCQBh8Qmcieusz731FRdy3MRj7n0=",
+    "zh:09080f46a4a02f7e8f4646a33351bd2f17373a56c1b33e2ede3df59b30f430c5",
+    "zh:1421aec8c4df3da941677171b9acf9dd3cc77e8749358eaa6ad26209240a971a",
+    "zh:368f6e071061152374a60ae8d9a911d61aa14826bcca2125999ef975c1da6b87",
+    "zh:4cee037a1e6169a1a0adbec36247ada062d9b2d7c610d753f315904ae2429d63",
+    "zh:53694ebde581ee7d43e4574abffb36da8298849e451f66dfe43d3117e8150abc",
+    "zh:5884b6d7e11bd20e17987df0f101a5f74b96e3aeaf74bf7692225743390b278f",
+    "zh:6de486347c4384d6e36e7f008bc6ac51f51bb214ead16ae621cb018b31730ccd",
+    "zh:75d708d7a5fe85c3c2624ba5b781e012247638e377b134089b988526f69340d2",
+    "zh:890df766e9b839623b1f0437355032a3c006226a6c200cd911e15ee1a9014e9f",
+    "zh:badfbef6e796a75751934ea1adcbb285e3efa807ad137f6f9f67cd50f67d60bb",
+    "zh:bcce6c3e91a84d295847f6e71c7a8b7a8917a43443c9f72be0aeb89d79980b47",
+    "zh:ca5aba647833ec712eb46c42588c94f953a358a6425e63c49c4852980ef7273e",
+    "zh:fb72de66b7fc984dcb351b791a1bf20366dfd87f9cb5bbf1ead1f4307dbacf37",
+    "zh:fde5e4dda9977d94018a6875851b30e7ef00551498662fa5419743ce7c2edb53",
   ]
 }

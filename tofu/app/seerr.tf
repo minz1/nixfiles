@@ -8,13 +8,9 @@
 #   4. From each arr: Settings → General → API key → TF_VAR_{sonarr,radarr}_api_key
 #   5. just tofu app-plan && just tofu app-apply
 
-resource "seerr_jellyfin_settings" "default" {
-  name    = "Jellyfin"
-  ip      = "127.0.0.1"
-  port    = 8096
-  use_ssl = false
-  api_key = var.jellyfin_api_key
-}
+# seerr_jellyfin_settings omitted: provider always sends read-only `name` field
+# causing API 400. The wizard already configured the Jellyfin connection and
+# API key correctly; no tofu management needed for this singleton.
 
 # quality_profile_id = 1 ("Any") is the sonarr default on fresh install.
 # Update to the recyclarr-managed TRaSH profile ID once recyclarr has run.

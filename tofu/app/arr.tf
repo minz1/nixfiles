@@ -44,23 +44,25 @@ resource "radarr_root_folder" "movies" {
 }
 
 resource "radarr_media_management" "radarr" {
-  hardlinks_copy           = false
-  create_empty_folders     = false
-  delete_empty_folders     = true
-  enable_media_info        = true
-  import_extra_files       = false
-  set_permissions          = false
-  skip_free_space_check    = true
-  minimum_free_space       = 100
-  recycle_bin_days         = 0
-  chmod_folder             = "755"
-  chown_group              = "media"
-  download_propers_repacks = "preferAndUpgrade"
-  extra_file_extensions    = "srt"
-  file_date                = "none"
-  recycle_bin_path         = ""
-  rescan_after_refresh     = "always"
+  copy_using_hardlinks                        = false
+  create_empty_movie_folders                  = false
+  delete_empty_folders                        = true
+  enable_media_info                           = true
+  import_extra_files                          = false
+  set_permissions_linux                       = false
+  skip_free_space_check_when_importing        = true
+  minimum_free_space_when_importing           = 100
+  recycle_bin_cleanup_days                    = 0
+  chmod_folder                                = "755"
+  chown_group                                 = "media"
+  download_propers_and_repacks                = "preferAndUpgrade"
+  extra_file_extensions                       = "srt"
+  file_date                                   = "none"
+  recycle_bin                                 = ""
+  rescan_after_refresh                        = "always"
   auto_unmonitor_previously_downloaded_movies = false
+  auto_rename_folders                         = false
+  paths_default_static                        = false
 }
 
 resource "radarr_download_client_qbittorrent" "decypharr" {
@@ -75,10 +77,15 @@ resource "radarr_download_client_qbittorrent" "decypharr" {
 # --- Prowlarr ---
 
 # Flaresolverr runs as a container on arr-0, localhost-only.
+resource "prowlarr_tag" "flaresolverr" {
+  label = "flaresolverr"
+}
+
 resource "prowlarr_indexer_proxy_flaresolverr" "flaresolverr" {
-  name        = "flaresolverr"
-  host        = "http://127.0.0.1:8191"
+  name            = "flaresolverr"
+  host            = "http://127.0.0.1:8191"
   request_timeout = 60
+  tags            = [prowlarr_tag.flaresolverr.id]
 }
 
 # Wire Prowlarr → Sonarr. TV sync categories (5xxx = TV).

@@ -30,6 +30,7 @@
       url = "github:nix-community/lanzaboote/v1.0.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
   };
 
   outputs =
@@ -44,6 +45,7 @@
       impermanence,
       authentik-nix,
       lanzaboote,
+      quadlet-nix,
     }:
     let
       system = "x86_64-linux";
@@ -173,6 +175,7 @@
           };
           modules = [
             sops-nix.nixosModules.sops
+            quadlet-nix.nixosModules.quadlet
             rustfs.nixosModules.rustfs
             { services.rustfs.package = rustfs.packages.${system}.default; }
             ./modules/nixos/base.nix

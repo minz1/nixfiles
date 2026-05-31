@@ -47,11 +47,13 @@ provider "authentik" {
 
 # API keys sourced from TF_VAR_* in secrets/tofu.env.
 # URLs: topology.nix nodes.minz-arr-0.networks.incus_bridge.ip + service ports.
-variable "sonarr_api_key" { sensitive = true }
-variable "radarr_api_key" { sensitive = true }
+variable "sonarr_api_key"   { sensitive = true }
+variable "radarr_api_key"   { sensitive = true }
 variable "prowlarr_api_key" { sensitive = true }
-variable "jellyfin_api_key" { sensitive = true }
-variable "seerr_api_key" { sensitive = true }
+variable "seerr_api_key"    { sensitive = true }
+variable "althub_api_key"        { sensitive = true }
+variable "torbox_api_key"        { sensitive = true }
+variable "torrentio_debrid_key"  { sensitive = true }
 
 provider "sonarr" {
   url     = "http://10.10.0.4:8989"

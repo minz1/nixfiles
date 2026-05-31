@@ -16,7 +16,7 @@ in
   sops.secrets.sonarr_api_key = { };
   sops.secrets.radarr_api_key = { };
   sops.secrets.prowlarr_api_key = { };
-  sops.secrets.aiostreams_env.owner = "oci";
+  sops.secrets.seadexerr_env.owner = "oci";
 
   services.rootless-podman = {
     enable = true;
@@ -48,7 +48,12 @@ in
     enable = true;
     openFirewall = true;
   };
-  systemd.services.prowlarr.serviceConfig.EnvironmentFile = config.sops.secrets.prowlarr_api_key.path;
+  systemd.services.prowlarr.serviceConfig = {
+    EnvironmentFile = config.sops.secrets.prowlarr_api_key.path;
+    # Recreate the Custom definitions symlink before each start so a nix store
+    # hash change after deploy doesn't leave a stale pointer.
+    ExecStartPre = "+/bin/sh -c 'mkdir -p /var/lib/private/prowlarr/Definitions && ln -sfT ${../../config/prowlarr/indexers} /var/lib/private/prowlarr/Definitions/Custom'";
+  };
 
   services.bazarr = {
     enable = true;
@@ -66,33 +71,80 @@ in
     port = node.services.decypharr.port;
   };
 
-  # --- OCI containers (rootless podman, user: oci / uid: 902) ---
+  # --- OCI containers (rootless Quadlet, user: oci / uid: 902) ---
+  #
+  # zilean-pod: shared network namespace for zilean + postgres.
+  #   postgres is unreachable from outside the pod; zilean connects via localhost.
   # flaresolverr: Cloudflare bypass proxy for Prowlarr — localhost only
-  # zilean:       DMM debrid indexer for Prowlarr — localhost only
-  # aiostreams:   Debrid stream aggregator — internal for now, exposed via Caddy in 5g
+  # seadexerr:    SeaDex anime best-release Torznab — localhost only
 
-  virtualisation.oci-containers.containers = {
-    flaresolverr = {
-      image = "ghcr.io/flaresolverr/flaresolverr:latest";
-      ports = [ "127.0.0.1:8191:8191" ];
-      environment.LOG_LEVEL = "info";
-      podman.user = "oci";
+  virtualisation.quadlet =
+    let
+      inherit (config.virtualisation.quadlet) pods containers;
+    in
+    {
+      pods.zilean = {
+        rootlessConfig.uid = 902;
+        podConfig.publishPorts = [ "127.0.0.1:8181:8181" ];
+      };
+
+      containers = {
+        zilean-postgres = {
+          rootlessConfig.uid = 902;
+          containerConfig = {
+            image = "docker.io/library/postgres:16-alpine";
+            pod = pods.zilean.ref;
+            volumes = [ "/persist/zilean-pg:/var/lib/postgresql/data" ];
+            environments = {
+              POSTGRES_DB = "zilean";
+              POSTGRES_USER = "zilean";
+              POSTGRES_PASSWORD = "zilean";
+            };
+          };
+        };
+
+        zilean-app = {
+          rootlessConfig.uid = 902;
+          containerConfig = {
+            image = "ipromknight/zilean:latest";
+            pod = pods.zilean.ref;
+            volumes = [ "/persist/zilean:/app/data" ];
+            environments = {
+              POSTGRES_PASSWORD = "zilean";
+              "Zilean__Database__ConnectionString" =
+                "Host=localhost;Database=zilean;Username=zilean;Password=zilean;"
+                + "Include Error Detail=true;Timeout=30;CommandTimeout=3600;";
+            };
+          };
+          unitConfig = {
+            After = [ containers."zilean-postgres".ref ];
+            Requires = [ containers."zilean-postgres".ref ];
+          };
+        };
+
+        flaresolverr = {
+          rootlessConfig.uid = 902;
+          containerConfig = {
+            image = "ghcr.io/flaresolverr/flaresolverr:latest";
+            publishPorts = [ "127.0.0.1:8191:8191" ];
+            environments.LOG_LEVEL = "info";
+          };
+        };
+
+        seadexerr = {
+          rootlessConfig.uid = 902;
+          containerConfig = {
+            image = "ghcr.io/ryder-c/seadexerr:latest";
+            publishPorts = [ "127.0.0.1:6868:6767" ];
+            environments = {
+              SONARR_BASE_URL = "http://127.0.0.1:8989/";
+              RADARR_BASE_URL = "http://127.0.0.1:7878/";
+            };
+            environmentFiles = [ config.sops.secrets.seadexerr_env.path ];
+          };
+        };
+      };
     };
-    zilean = {
-      image = "ipromknight/zilean:latest";
-      ports = [ "127.0.0.1:8181:8181" ];
-      volumes = [ "/persist/zilean:/app/data" ];
-      podman.user = "oci";
-    };
-    aiostreams = {
-      image = "viren070/aiostreams:latest";
-      ports = [ "127.0.0.1:8080:8080" ];
-      # BASE_URL updated to public URL in 5g (Caddy)
-      environment.BASE_URL = "http://10.10.0.4:8080";
-      environmentFiles = [ config.sops.secrets.aiostreams_env.path ];
-      podman.user = "oci";
-    };
-  };
 
   # --- NFS server ---
   # Exports /data (library + downloads) and /mnt/decypharr (VFS) to
@@ -109,8 +161,12 @@ in
   };
 
   # --- Filesystem layout ---
+  # Prowlarr custom Cardigann definitions: symlink /var/lib/private/prowlarr/Definitions/Custom
+  # to the Nix store so the content is immutable and validated at build time.
+  # DynamicUser stores state at /var/lib/private/prowlarr; root can write there.
   systemd.tmpfiles.rules = [
     "d /persist/zilean            0700 oci    oci    -"
+    "d /persist/zilean-pg         0700 oci    oci    -"
     "d /data                     0755 root   root   -"
     "d /data/downloads           0775 root   media  -"
     "d /data/downloads/sonarr    0775 sonarr media  -"
@@ -118,6 +174,8 @@ in
     "d /data/library             0775 root   media  -"
     "d /data/library/tv          0775 sonarr media  -"
     "d /data/library/movies      0775 radarr media  -"
+    "d /var/lib/private/prowlarr/Definitions 0755 root root -"
+    "L+ /var/lib/private/prowlarr/Definitions/Custom - - - - ${../../config/prowlarr/indexers}"
   ];
 
   networking.firewall.allowedTCPPorts = [

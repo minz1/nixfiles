@@ -50,9 +50,7 @@ in
   services.seerr = {
     enable = true;
     openFirewall = true;
-    package = pkgs.seerr-oidc;
   };
-  systemd.services.seerr.environment.OIDC_ALLOW_INSECURE = "true";
 
   # --- Storage (Incus-managed mounts) ---
   # /data and /mnt/decypharr are passed in as Incus disk devices from the host.
