@@ -80,12 +80,16 @@ in
 
   virtualisation.quadlet =
     let
-      inherit (config.virtualisation.quadlet) pods containers;
+      inherit (config.virtualisation.quadlet) pods containers volumes;
     in
     {
       pods.zilean = {
         rootlessConfig.uid = 902;
         podConfig.publishPorts = [ "127.0.0.1:8181:8181" ];
+      };
+
+      volumes.zilean-pg = {
+        rootlessConfig.uid = 902;
       };
 
       containers = {
@@ -94,7 +98,7 @@ in
           containerConfig = {
             image = "docker.io/library/postgres:16-alpine";
             pod = pods.zilean.ref;
-            volumes = [ "/persist/zilean-pg:/var/lib/postgresql/data" ];
+            volumes = [ "${volumes.zilean-pg.ref}:/var/lib/postgresql/data" ];
             environments = {
               POSTGRES_DB = "zilean";
               POSTGRES_USER = "zilean";
@@ -166,7 +170,6 @@ in
   # DynamicUser stores state at /var/lib/private/prowlarr; root can write there.
   systemd.tmpfiles.rules = [
     "d /persist/zilean            0700 oci    oci    -"
-    "d /persist/zilean-pg         0700 oci    oci    -"
     "d /data                     0755 root   root   -"
     "d /data/downloads           0775 root   media  -"
     "d /data/downloads/sonarr    0775 sonarr media  -"

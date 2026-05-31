@@ -20,6 +20,10 @@ resource "prowlarr_indexer" "zilean" {
     { name = "apiPath", text_value = "/torznab/api" },
     { name = "apiKey",  text_value = "" },
   ]
+
+  lifecycle {
+    ignore_changes = [fields]
+  }
 }
 
 # --- Torrent indexers ---
@@ -44,10 +48,14 @@ resource "prowlarr_indexer" "leet" {
   fields = [
     { name = "definitionFile", text_value = "1337x" },
   ]
+
+  lifecycle {
+    ignore_changes = [fields]
+  }
 }
 
 resource "prowlarr_indexer" "yts" {
-  enable          = true
+  enable          = false
   name            = "YTS"
   implementation  = data.prowlarr_indexer_schema.yts.implementation
   config_contract = data.prowlarr_indexer_schema.yts.config_contract
@@ -58,6 +66,10 @@ resource "prowlarr_indexer" "yts" {
   fields = [
     { name = "definitionFile", text_value = "yts" },
   ]
+
+  lifecycle {
+    ignore_changes = [fields]
+  }
 }
 
 resource "prowlarr_indexer" "eztv" {
@@ -73,10 +85,14 @@ resource "prowlarr_indexer" "eztv" {
   fields = [
     { name = "definitionFile", text_value = "eztv" },
   ]
+
+  lifecycle {
+    ignore_changes = [fields]
+  }
 }
 
 resource "prowlarr_indexer" "torrentgalaxy" {
-  enable          = true
+  enable          = false
   name            = "TorrentGalaxyClone"
   implementation  = data.prowlarr_indexer_schema.torrentgalaxy.implementation
   config_contract = data.prowlarr_indexer_schema.torrentgalaxy.config_contract
@@ -86,7 +102,12 @@ resource "prowlarr_indexer" "torrentgalaxy" {
 
   fields = [
     { name = "definitionFile", text_value = "torrentgalaxyclone" },
+    { name = "baseUrl", text_value = "https://torrentgalaxy.to" },
   ]
+
+  lifecycle {
+    ignore_changes = [fields]
+  }
 }
 
 resource "prowlarr_indexer" "nyaa" {
@@ -129,7 +150,7 @@ resource "prowlarr_indexer" "animetosho" {
 # --- Local/custom Cardigann indexers (definitions in config/prowlarr/indexers/) ---
 
 resource "prowlarr_indexer" "torbox" {
-  enable          = true
+  enable          = false
   name            = "TorBox"
   implementation  = "Cardigann"
   config_contract = "CardigannSettings"
@@ -171,7 +192,7 @@ resource "prowlarr_indexer" "torrentio" {
 # Runs on arr-0 at 127.0.0.1:6868. SeaDex custom format in Sonarr (score 5000):
 #   Settings → Custom Formats → Add → Indexer Flag Condition → Flag: Freeleech25
 resource "prowlarr_indexer" "seadexerr" {
-  enable          = true
+  enable          = false
   name            = "Seadexerr"
   implementation  = "Torznab"
   config_contract = "TorznabSettings"
@@ -184,6 +205,10 @@ resource "prowlarr_indexer" "seadexerr" {
     { name = "apiPath", text_value = "/api" },
     { name = "apiKey",  text_value = "" },
   ]
+
+  lifecycle {
+    ignore_changes = [fields]
+  }
 }
 
 # --- Usenet indexers ---
