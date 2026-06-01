@@ -182,6 +182,8 @@ in
       "soft"
       "timeo=30"
       "_netdev"
+      "rsize=1048576"
+      "nfsvers=4.2"
     ];
   };
 
