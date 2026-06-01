@@ -1,4 +1,4 @@
-{ hostName, config, ... }:
+{ hostName, config, lib, ... }:
 
 let
   topology = import ../../common/topology.nix;
@@ -16,7 +16,27 @@ in
   sops.secrets.sonarr_api_key = { };
   sops.secrets.radarr_api_key = { };
   sops.secrets.prowlarr_api_key = { };
-  sops.secrets.seadexerr_env.owner = "oci";
+
+  # Derive env-file and container-env formats from the bare API key values.
+  # seadexerr_env is gone from sops — both keys it contained come from here.
+  sops.templates.sonarr-env = {
+    content = "SONARR__AUTH__APIKEY=${config.sops.placeholder.sonarr_api_key}";
+    owner = "sonarr";
+    mode = "0400";
+  };
+  sops.templates.radarr-env = {
+    content = "RADARR__AUTH__APIKEY=${config.sops.placeholder.radarr_api_key}";
+    owner = "radarr";
+    mode = "0400";
+  };
+  sops.templates.seadexerr-env = {
+    content = ''
+      SONARR_API_KEY=${config.sops.placeholder.sonarr_api_key}
+      RADARR_API_KEY=${config.sops.placeholder.radarr_api_key}
+    '';
+    owner = "oci";
+    mode = "0400";
+  };
 
   services.rootless-podman = {
     enable = true;
@@ -36,13 +56,13 @@ in
     enable = true;
     openFirewall = true;
   };
-  systemd.services.sonarr.serviceConfig.EnvironmentFile = config.sops.secrets.sonarr_api_key.path;
+  systemd.services.sonarr.serviceConfig.EnvironmentFile = config.sops.templates.sonarr-env.path;
 
   services.radarr = {
     enable = true;
     openFirewall = true;
   };
-  systemd.services.radarr.serviceConfig.EnvironmentFile = config.sops.secrets.radarr_api_key.path;
+  systemd.services.radarr.serviceConfig.EnvironmentFile = config.sops.templates.radarr-env.path;
 
   services.prowlarr = {
     enable = true;
@@ -61,6 +81,25 @@ in
   };
 
   services.recyclarr.enable = true;
+
+  # sops renders the config with real API keys at runtime, same pattern as
+  # sonarr-env / radarr-env. ExecStart override points recyclarr at this
+  # file instead of the default /var/lib/recyclarr/config.yml (which the
+  # nixpkgs module's genJqSecretsReplacement writes as empty JSON).
+  sops.templates.recyclarr-env = {
+    content = ''
+      SONARR_API_KEY=${config.sops.placeholder.sonarr_api_key}
+      RADARR_API_KEY=${config.sops.placeholder.radarr_api_key}
+    '';
+    owner = "recyclarr";
+    mode = "0400";
+  };
+
+  systemd.services.recyclarr.serviceConfig = {
+    ExecStart = lib.mkForce
+      "${config.services.recyclarr.package}/bin/recyclarr sync --config ${../../config/recyclarr/recyclarr.yml}";
+    EnvironmentFile = config.sops.templates.recyclarr-env.path;
+  };
 
   # --- Decypharr ---
 
@@ -144,7 +183,7 @@ in
               SONARR_BASE_URL = "http://127.0.0.1:8989/";
               RADARR_BASE_URL = "http://127.0.0.1:7878/";
             };
-            environmentFiles = [ config.sops.secrets.seadexerr_env.path ];
+            environmentFiles = [ config.sops.templates.seadexerr-env.path ];
           };
         };
       };

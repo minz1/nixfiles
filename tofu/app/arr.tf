@@ -88,6 +88,24 @@ resource "prowlarr_indexer_proxy_flaresolverr" "flaresolverr" {
   tags            = [prowlarr_tag.flaresolverr.id]
 }
 
+# Seadex custom format — marks anime releases flagged Freeleech25 by seadexerr.
+# Score (+5000) is set manually in Sonarr: Settings → Quality Profiles →
+# Remux-1080p - Anime (recyclarr preserves it via reset_unmatched_scores.except).
+resource "sonarr_custom_format" "seadex" {
+  include_custom_format_when_renaming = false
+  name                                = "Seadex"
+
+  specifications = [
+    {
+      name           = "Freeleech25"
+      implementation = "IndexerFlagSpecification"
+      negate         = false
+      required       = false
+      value          = "8"
+    }
+  ]
+}
+
 # Wire Prowlarr → Sonarr. TV sync categories (5xxx = TV).
 resource "prowlarr_application_sonarr" "sonarr" {
   name         = "Sonarr"
