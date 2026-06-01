@@ -38,10 +38,10 @@ buildGoModule rec {
   ];
   postInstall = ''
     wrapProgram $out/bin/decypharr \
-      --prefix PATH : ${
+      --prefix PATH : /run/wrappers/bin \
+      --suffix PATH : ${
         lib.makeBinPath [
           rclone
-          fuse3
           ffmpeg-headless
         ]
       }

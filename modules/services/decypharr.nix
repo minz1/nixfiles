@@ -24,6 +24,12 @@ in
       description = "Path to the media directory that decypharr can read/write.";
     };
 
+    downloadPath = lib.mkOption {
+      type = lib.types.str;
+      default = "/data/downloads";
+      description = "Path where decypharr writes category symlinks (must match download_folder in config.json).";
+    };
+
     port = lib.mkOption {
       type = lib.types.port;
       default = 8282;
@@ -60,14 +66,11 @@ in
         # Shared mount propagation so FUSE mounts are visible outside the service namespace.
         MountFlags = "shared";
 
-        ReadWritePaths = [ cfg.mediaPath "/var/lib/decypharr" ];
+        ReadWritePaths = [ cfg.mediaPath cfg.downloadPath "/var/lib/decypharr" ];
 
-        CapabilityBoundingSet = [ "CAP_SYS_ADMIN" ];
-        AmbientCapabilities = [ "CAP_SYS_ADMIN" ];
         DeviceAllow = [ "/dev/fuse rw" ];
         PrivateDevices = false;
 
-        NoNewPrivileges = true;
         ProtectSystem = "strict";
         ProtectHome = true;
         ProtectKernelTunables = true;

@@ -12,8 +12,6 @@
 # causing API 400. The wizard already configured the Jellyfin connection and
 # API key correctly; no tofu management needed for this singleton.
 
-# quality_profile_id = 1 ("Any") is the sonarr default on fresh install.
-# Update to the recyclarr-managed TRaSH profile ID once recyclarr has run.
 resource "seerr_sonarr_server" "default" {
   name                  = "Sonarr"
   hostname              = "10.10.0.4"
@@ -23,10 +21,9 @@ resource "seerr_sonarr_server" "default" {
   active_directory      = "/data/library/tv"
   is_default            = true
   enable_season_folders = true
-  quality_profile_id    = 1
+  quality_profile_id    = 7 # WEB-2160p (Combined)
 }
 
-# quality_profile_id = 1 ("Any") is the radarr default on fresh install.
 resource "seerr_radarr_server" "default" {
   name               = "Radarr"
   hostname           = "10.10.0.4"
@@ -35,7 +32,7 @@ resource "seerr_radarr_server" "default" {
   api_key            = var.radarr_api_key
   active_directory   = "/data/library/movies"
   is_default         = true
-  quality_profile_id = 1
+  quality_profile_id = 7 # Remux 2160p (Combined)
 }
 
 # --- Seerr OIDC in Authentik ---
