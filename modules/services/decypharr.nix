@@ -62,21 +62,13 @@ in
         WorkingDirectory = "/var/lib/decypharr";
         Restart = "on-failure";
         RestartSec = 5;
+        StateDirectory = "decypharr";
 
-        # Shared mount propagation so FUSE mounts are visible outside the service namespace.
-        MountFlags = "shared";
-
-        ReadWritePaths = [ cfg.mediaPath cfg.downloadPath "/var/lib/decypharr" ];
-
+        # FUSE requires access to /dev/fuse; namespace isolation would prevent
+        # mount propagation to the host, so sandbox options are kept minimal here.
+        # Non-namespace hardening (NoNewPrivileges, SystemCallFilter, etc.) added in Phase 2.
         DeviceAllow = [ "/dev/fuse rw" ];
         PrivateDevices = false;
-
-        ProtectSystem = "strict";
-        ProtectHome = true;
-        ProtectKernelTunables = true;
-        ProtectKernelModules = true;
-        ProtectControlGroups = true;
-        StateDirectory = "decypharr";
       };
     };
 

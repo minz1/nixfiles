@@ -23,7 +23,8 @@ in
   };
 
   # Intel Arc A310 DRM passthrough — cgroup device allowlisting via Incus (no VFIO needed).
-  # VAAPI hardware transcoding: Dashboard → Playback → Transcoding → VA-API Device: /dev/dri/renderD128
+  # renderD128 = iGPU (no AV1); renderD129 = Arc A310 (full AV1/HEVC/VP9).
+  # VAAPI hardware transcoding: Dashboard → Playback → Transcoding → VA-API Device: /dev/dri/renderD129
   hardware.graphics.enable = true;
   hardware.graphics.extraPackages = with pkgs; [
     intel-media-driver
