@@ -29,6 +29,7 @@ in
   hardware.graphics.extraPackages = with pkgs; [
     intel-media-driver
     intel-compute-runtime
+    vpl-gpu-rt # Required for Intel Arc (DG2) QuickSync support
   ];
 
   # jellyfin needs render+video group membership to access /dev/dri/renderD128 in the container.

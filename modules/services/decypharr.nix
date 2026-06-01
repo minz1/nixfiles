@@ -69,6 +69,11 @@ in
         # Non-namespace hardening (NoNewPrivileges, SystemCallFilter, etc.) added in Phase 2.
         DeviceAllow = [ "/dev/fuse rw" ];
         PrivateDevices = false;
+
+        # Re-export NFS shares after the FUSE mount is ready so the kernel NFS server
+        # picks up the new mount instead of exporting the underlying directory.
+        # Uses '+' to run as root despite the User=decypharr setting.
+        ExecStartPost = "+${pkgs.nfs-utils}/bin/exportfs -ar";
       };
     };
 

@@ -1,4 +1,9 @@
-{ hostName, config, lib, ... }:
+{
+  hostName,
+  config,
+  lib,
+  ...
+}:
 
 let
   topology = import ../../common/topology.nix;
@@ -96,8 +101,7 @@ in
   };
 
   systemd.services.recyclarr.serviceConfig = {
-    ExecStart = lib.mkForce
-      "${config.services.recyclarr.package}/bin/recyclarr sync --config ${../../config/recyclarr/recyclarr.yml}";
+    ExecStart = lib.mkForce "${config.services.recyclarr.package}/bin/recyclarr sync --config ${../../config/recyclarr/recyclarr.yml}";
     EnvironmentFile = config.sops.templates.recyclarr-env.path;
   };
 
@@ -201,6 +205,12 @@ in
       /data          10.10.0.1(ro,no_subtree_check,fsid=1,insecure,all_squash,anonuid=99,anongid=99)
       /mnt/decypharr 10.10.0.1(ro,no_subtree_check,fsid=2,insecure,all_squash,anonuid=99,anongid=99)
     '';
+  };
+
+  # Ensure NFS server starts after decypharr so it exports the FUSE mount, not the underlying dir.
+  systemd.services.nfs-server = {
+    wants = [ "decypharr.service" ];
+    after = [ "decypharr.service" ];
   };
 
   # --- Filesystem layout ---

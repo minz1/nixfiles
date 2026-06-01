@@ -32,9 +32,12 @@ in
   boot.supportedFilesystems = [ "nfs" ];
   # Enable IOMMU for general isolation. GPU access for jellyfin-0 uses DRM character
   # device passthrough (not PCI passthrough) to avoid IOMMU group issues.
+  # Use i915 for stability on Small BAR (No ReBAR) hardware.
+  # enable_guc=3: required for Arc (DG2) to enable hardware scheduling and power management.
   boot.kernelParams = [
     "intel_iommu=on"
     "iommu=pt"
+    "i915.enable_guc=3"
   ];
 
   # AppArmor enforces Incus's per-VM confinement profiles at the host kernel level.
