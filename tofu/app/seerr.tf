@@ -22,6 +22,10 @@ resource "seerr_sonarr_server" "default" {
   is_default            = true
   enable_season_folders = true
   quality_profile_id    = 7 # WEB-2160p (Combined)
+  extra_payload_json    = jsonencode({
+    activeAnimeProfileId = 8 # [Anime] Remux-1080p
+    animeSeriesType      = "anime"
+  })
 }
 
 resource "seerr_radarr_server" "default" {

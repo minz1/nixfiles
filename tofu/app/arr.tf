@@ -37,6 +37,18 @@ resource "sonarr_download_client_qbittorrent" "decypharr" {
   tv_category = "tv-sonarr"
 }
 
+resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
+  name        = "decypharr Usenet"
+  enable      = true
+  priority    = 1
+  host        = "127.0.0.1"
+  port        = 8282
+  url_base    = "/sabnzbd"
+  username    = "http://127.0.0.1:8989"
+  password    = var.sonarr_api_key
+  tv_category = "sonarr"
+}
+
 # --- Radarr ---
 
 resource "radarr_root_folder" "movies" {
@@ -66,12 +78,24 @@ resource "radarr_media_management" "radarr" {
 }
 
 resource "radarr_download_client_qbittorrent" "decypharr" {
-  name            = "decypharr"
-  enable          = true
-  priority        = 1
-  host            = "127.0.0.1"
-  port            = 8282
-  movie_category  = "radarr"
+  name           = "decypharr"
+  enable         = true
+  priority       = 1
+  host           = "127.0.0.1"
+  port           = 8282
+  movie_category = "radarr"
+}
+
+resource "radarr_download_client_sabnzbd" "decypharr_usenet" {
+  name           = "decypharr Usenet"
+  enable         = true
+  priority       = 1
+  host           = "127.0.0.1"
+  port           = 8282
+  url_base       = "/sabnzbd"
+  username       = "http://127.0.0.1:7878"
+  password       = var.radarr_api_key
+  movie_category = "radarr"
 }
 
 # --- Prowlarr ---

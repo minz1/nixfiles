@@ -55,7 +55,7 @@ resource "prowlarr_indexer" "leet" {
 }
 
 resource "prowlarr_indexer" "yts" {
-  enable          = false
+  enable          = true
   name            = "YTS"
   implementation  = data.prowlarr_indexer_schema.yts.implementation
   config_contract = data.prowlarr_indexer_schema.yts.config_contract
