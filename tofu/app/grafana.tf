@@ -24,7 +24,7 @@ resource "authentik_provider_oauth2" "grafana" {
   allowed_redirect_uris = [
     {
       matching_mode = "strict"
-      url           = "http://10.10.0.2:3000/login/generic_oauth"
+      url           = "https://grafana.minz1.com/login/generic_oauth"
     }
   ]
 }

@@ -92,8 +92,8 @@ in
       server = {
         http_addr = "0.0.0.0";
         http_port = grafanaPort;
-        domain = vmIp;
-        root_url = "http://${vmIp}:${toString grafanaPort}/";
+        domain = "grafana.minz1.com";
+        root_url = "https://grafana.minz1.com/";
       };
       security = {
         admin_user = "admin";
