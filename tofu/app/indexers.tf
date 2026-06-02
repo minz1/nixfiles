@@ -117,7 +117,7 @@ resource "prowlarr_indexer" "nyaa" {
   config_contract = data.prowlarr_indexer_schema.nyaa.config_contract
   protocol        = data.prowlarr_indexer_schema.nyaa.protocol
   app_profile_id  = 1
-  priority        = 25
+  priority        = 5
 
   fields = [
     { name = "definitionFile", text_value = "nyaasi" },
@@ -135,7 +135,7 @@ resource "prowlarr_indexer" "animetosho" {
   config_contract = data.prowlarr_indexer_schema.animetosho.config_contract
   protocol        = data.prowlarr_indexer_schema.animetosho.protocol
   app_profile_id  = 1
-  priority        = 25
+  priority        = 5
 
   fields = [
     { name = "baseUrl", text_value = "https://feed.animetosho.org" },
@@ -175,7 +175,7 @@ resource "prowlarr_indexer" "torrentio" {
   config_contract = "CardigannSettings"
   protocol        = "torrent"
   app_profile_id  = 1
-  priority        = 25
+  priority        = 1
 
   fields = [
     { name = "definitionFile",      text_value = "torrentio" },
@@ -207,7 +207,10 @@ resource "prowlarr_indexer" "seadexerr" {
   ]
 
   lifecycle {
-    ignore_changes = [fields]
+    # fields: don't overwrite UI tweaks (category mappings etc.)
+    # enable: user enables manually via Prowlarr UI once anime exists in Sonarr library
+    #         (seadexerr returns no results on blank test query with empty library)
+    ignore_changes = [fields, enable]
   }
 }
 

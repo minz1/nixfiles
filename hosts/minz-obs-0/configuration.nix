@@ -8,7 +8,6 @@
 let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
-  vmIp = node.networks.incus_bridge.ip;
   promPort = node.services.prometheus.port;
   lokiPort = node.services.loki.port;
   grafanaPort = node.services.grafana.port;
