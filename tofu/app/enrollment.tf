@@ -33,6 +33,15 @@ resource "authentik_stage_prompt_field" "inv_username" {
   order     = 100
 }
 
+resource "authentik_stage_prompt_field" "inv_display_name" {
+  name      = "inv-enrollment-display-name"
+  field_key = "name"
+  label     = "Display Name (optional)"
+  type      = "text"
+  required  = false
+  order     = 150
+}
+
 resource "authentik_stage_prompt_field" "inv_email" {
   name      = "inv-enrollment-email"
   field_key = "email"
@@ -64,6 +73,7 @@ resource "authentik_stage_prompt" "invitation_enrollment" {
   name = "invitation-enrollment-prompt"
   fields = [
     authentik_stage_prompt_field.inv_username.id,
+    authentik_stage_prompt_field.inv_display_name.id,
     authentik_stage_prompt_field.inv_email.id,
     authentik_stage_prompt_field.inv_password.id,
     authentik_stage_prompt_field.inv_password_repeat.id,
