@@ -178,6 +178,7 @@
       services = {
         ssh.port = 22;
         authentik.port = 9000;
+        ldap.port = 3389;
       };
       networks.incus_bridge = {
         ip = "10.10.0.3";

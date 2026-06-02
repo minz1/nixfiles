@@ -9,6 +9,7 @@ let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   authentikPort = node.services.authentik.port;
+  ldapPort = node.services.ldap.port;
 in
 {
   imports = [ authentik-nix.nixosModules.default ];
@@ -17,6 +18,16 @@ in
   system.stateVersion = "25.11";
 
   sops.secrets.authentik_env.mode = "0400";
+  sops.secrets.authentik_ldap_token.mode = "0400";
+
+  sops.templates.authentik-ldap-env = {
+    content = ''
+      AUTHENTIK_HOST=http://localhost:${toString authentikPort}
+      AUTHENTIK_INSECURE=false
+      AUTHENTIK_TOKEN=${config.sops.placeholder.authentik_ldap_token}
+    '';
+    mode = "0400";
+  };
 
   services.authentik = {
     enable = true;
@@ -35,6 +46,11 @@ in
     };
   };
 
+  services.authentik-ldap = {
+    enable = true;
+    environmentFile = config.sops.templates.authentik-ldap-env.path;
+  };
+
   swapDevices = [
     {
       device = "/persist/swapfile";
@@ -42,7 +58,10 @@ in
     }
   ];
 
-  networking.firewall.allowedTCPPorts = [ authentikPort ];
+  networking.firewall.allowedTCPPorts = [
+    authentikPort
+    ldapPort
+  ];
 
   environment.persistence."/persist".directories = [
     # DynamicUser: real state is at /var/lib/private/authentik; /var/lib/authentik is a symlink.
