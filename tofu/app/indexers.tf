@@ -214,9 +214,9 @@ resource "prowlarr_indexer" "seadexerr" {
 # --- Usenet indexers ---
 
 # Althub is a Newznab-compatible indexer; no schema data source needed.
-resource "prowlarr_indexer" "althub" {
+resource "prowlarr_indexer" "nzbgeek" {
   enable          = true
-  name            = "Althub"
+  name            = "NZBgeek"
   implementation  = "Newznab"
   config_contract = "NewznabSettings"
   protocol        = "usenet"
@@ -226,9 +226,9 @@ resource "prowlarr_indexer" "althub" {
   redirect = true
 
   fields = [
-    { name = "baseUrl", text_value = "https://althub.co.za" },
+    { name = "baseUrl", text_value = "https://api.nzbgeek.info" },
     { name = "apiPath", text_value = "/api" },
-    { name = "apiKey",  sensitive_value = var.althub_api_key },
+    { name = "apiKey",  sensitive_value = var.nzbgeek_api_key },
   ]
 
   lifecycle {

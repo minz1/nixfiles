@@ -113,4 +113,10 @@ in
 
   # All WG interfaces carry internal traffic and are trusted.
   networking.firewall.trustedInterfaces = lib.mapAttrsToList (_: netCfg: netCfg.interface) wireguardNetworks;
+
+  # sshd must start after all WireGuard interfaces are up — otherwise it fails
+  # to bind if configured to listen on a WireGuard IP, then races to success
+  # on a later restart attempt.
+  systemd.services.sshd.after = lib.mapAttrsToList (_: netCfg: "wireguard-${netCfg.interface}.service") wireguardNetworks;
+  systemd.services.sshd.wants = lib.mapAttrsToList (_: netCfg: "wireguard-${netCfg.interface}.service") wireguardNetworks;
 }

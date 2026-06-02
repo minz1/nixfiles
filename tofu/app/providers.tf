@@ -51,7 +51,7 @@ variable "sonarr_api_key"   { sensitive = true }
 variable "radarr_api_key"   { sensitive = true }
 variable "prowlarr_api_key" { sensitive = true }
 variable "seerr_api_key"    { sensitive = true }
-variable "althub_api_key"        { sensitive = true }
+variable "nzbgeek_api_key"       { sensitive = true }
 variable "torbox_api_key"        { sensitive = true }
 variable "torrentio_debrid_key"  { sensitive = true }
 
