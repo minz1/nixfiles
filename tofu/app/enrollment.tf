@@ -70,11 +70,19 @@ resource "authentik_stage_prompt" "invitation_enrollment" {
   ]
 }
 
+resource "authentik_stage_email" "invitation_enrollment" {
+  name                = "invitation-enrollment-email"
+  use_global_settings = true
+  template            = "email/account_confirmation.html"
+  subject             = "Confirm your account"
+  token_expiry        = "minutes=30"
+}
+
 resource "authentik_stage_user_write" "invitation_enrollment" {
   name                     = "invitation-enrollment-write"
   create_users_as_inactive = false
   user_creation_mode       = "always_create"
-  user_type                = "external"
+  user_type                = "internal"
 }
 
 resource "authentik_stage_user_login" "invitation_enrollment" {
@@ -93,14 +101,20 @@ resource "authentik_flow_stage_binding" "inv_enroll_prompt" {
   order  = 10
 }
 
+resource "authentik_flow_stage_binding" "inv_enroll_email" {
+  target = authentik_flow.invitation_enrollment.uuid
+  stage  = authentik_stage_email.invitation_enrollment.id
+  order  = 20
+}
+
 resource "authentik_flow_stage_binding" "inv_enroll_write" {
   target = authentik_flow.invitation_enrollment.uuid
   stage  = authentik_stage_user_write.invitation_enrollment.id
-  order  = 20
+  order  = 30
 }
 
 resource "authentik_flow_stage_binding" "inv_enroll_login" {
   target = authentik_flow.invitation_enrollment.uuid
   stage  = authentik_stage_user_login.invitation_enrollment.id
-  order  = 30
+  order  = 40
 }

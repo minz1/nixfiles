@@ -24,6 +24,14 @@ in
     settings = {
       disable_startup_analytics = true;
       avatars = "none";
+      email = {
+        host = "smtp.resend.com";
+        port = 587;
+        username = "resend";
+        use_tls = true;
+        use_ssl = false;
+        from = "noreply@minz1.com";
+      };
     };
   };
 
