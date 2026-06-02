@@ -56,17 +56,17 @@ variable "torbox_api_key"        { sensitive = true }
 variable "torrentio_debrid_key"  { sensitive = true }
 
 provider "sonarr" {
-  url     = "http://10.10.0.4:8989"
+  url     = "http://10.10.0.4:8989/sonarr"
   api_key = var.sonarr_api_key
 }
 
 provider "radarr" {
-  url     = "http://10.10.0.4:7878"
+  url     = "http://10.10.0.4:7878/radarr"
   api_key = var.radarr_api_key
 }
 
 provider "prowlarr" {
-  url     = "http://10.10.0.4:9696"
+  url     = "http://10.10.0.4:9696/prowlarr"
   api_key = var.prowlarr_api_key
 }
 

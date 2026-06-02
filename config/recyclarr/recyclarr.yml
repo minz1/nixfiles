@@ -4,7 +4,7 @@
 
 sonarr:
   sonarr-main:
-    base_url: http://127.0.0.1:8989
+    base_url: http://127.0.0.1:8989/sonarr
     api_key: !env_var SONARR_API_KEY
     quality_definition:
       type: series
@@ -38,7 +38,7 @@ sonarr:
 
 radarr:
   radarr-main:
-    base_url: http://127.0.0.1:7878
+    base_url: http://127.0.0.1:7878/radarr
     api_key: !env_var RADARR_API_KEY
     quality_definition:
       type: movie

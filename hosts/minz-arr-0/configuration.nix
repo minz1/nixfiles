@@ -34,6 +34,30 @@ in
     owner = "radarr";
     mode = "0400";
   };
+  # DynamicUser service: EnvironmentFile is read by systemd as root before the
+  # dynamic UID is allocated, so root:root 0400 is the correct owner/mode.
+  sops.templates.prowlarr-env = {
+    content = "PROWLARR__AUTH__APIKEY=${config.sops.placeholder.prowlarr_api_key}";
+    mode = "0400";
+  };
+  sops.secrets.zilean_db_password = { };
+
+  # Quadlet containers run as uid 902 (oci); EnvironmentFile is read by Podman
+  # before exec, so owner must match the rootless uid.
+  sops.templates.zilean-postgres-env = {
+    content = "POSTGRES_PASSWORD=${config.sops.placeholder.zilean_db_password}";
+    owner = "oci";
+    mode = "0400";
+  };
+  sops.templates.zilean-app-env = {
+    content = ''
+      POSTGRES_PASSWORD=${config.sops.placeholder.zilean_db_password}
+      Zilean__Database__ConnectionString=Host=localhost;Database=zilean;Username=zilean;Password=${config.sops.placeholder.zilean_db_password};Include Error Detail=true;Timeout=30;CommandTimeout=3600;
+    '';
+    owner = "oci";
+    mode = "0400";
+  };
+
   sops.templates.seadexerr-env = {
     content = ''
       SONARR_API_KEY=${config.sops.placeholder.sonarr_api_key}
@@ -60,24 +84,50 @@ in
   services.sonarr = {
     enable = true;
     openFirewall = true;
+    settings.server.urlBase = "/sonarr";
+    environmentFiles = [ config.sops.templates.sonarr-env.path ];
   };
-  systemd.services.sonarr.serviceConfig.EnvironmentFile = config.sops.templates.sonarr-env.path;
 
   services.radarr = {
     enable = true;
     openFirewall = true;
+    settings.server.urlBase = "/radarr";
+    environmentFiles = [ config.sops.templates.radarr-env.path ];
   };
-  systemd.services.radarr.serviceConfig.EnvironmentFile = config.sops.templates.radarr-env.path;
 
   services.prowlarr = {
     enable = true;
     openFirewall = true;
+    settings.server.urlBase = "/prowlarr";
+    environmentFiles = [ config.sops.templates.prowlarr-env.path ];
   };
   systemd.services.prowlarr.serviceConfig = {
-    EnvironmentFile = config.sops.secrets.prowlarr_api_key.path;
     # Recreate the Custom definitions symlink before each start so a nix store
     # hash change after deploy doesn't leave a stale pointer.
     ExecStartPre = "+/bin/sh -c 'mkdir -p /var/lib/private/prowlarr/Definitions && ln -sfT ${../../config/prowlarr/indexers} /var/lib/private/prowlarr/Definitions/Custom'";
+
+    # nixpkgs prowlarr module only adds DynamicUser; add full hardening parity with sonarr.
+    CapabilityBoundingSet = "";
+    NoNewPrivileges = true;
+    ProtectHome = true;
+    ProtectClock = true;
+    ProtectKernelLogs = true;
+    PrivateTmp = true;
+    PrivateDevices = true;
+    PrivateUsers = true;
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    ProtectControlGroups = true;
+    RestrictSUIDSGID = true;
+    RemoveIPC = true;
+    ProtectHostname = true;
+    ProtectProc = "invisible";
+    RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+    RestrictNamespaces = true;
+    RestrictRealtime = true;
+    LockPersonality = true;
+    SystemCallArchitectures = "native";
+    SystemCallFilter = [ "@system-service" "~@privileged" "~@debug" "~@mount" "@chown" ];
   };
 
   services.bazarr = {
@@ -145,8 +195,8 @@ in
             environments = {
               POSTGRES_DB = "zilean";
               POSTGRES_USER = "zilean";
-              POSTGRES_PASSWORD = "zilean";
             };
+            environmentFiles = [ config.sops.templates.zilean-postgres-env.path ];
           };
         };
 
@@ -156,12 +206,7 @@ in
             image = "ipromknight/zilean:latest";
             pod = pods.zilean.ref;
             volumes = [ "/persist/zilean:/app/data" ];
-            environments = {
-              POSTGRES_PASSWORD = "zilean";
-              "Zilean__Database__ConnectionString" =
-                "Host=localhost;Database=zilean;Username=zilean;Password=zilean;"
-                + "Include Error Detail=true;Timeout=30;CommandTimeout=3600;";
-            };
+            environmentFiles = [ config.sops.templates.zilean-app-env.path ];
           };
           unitConfig = {
             After = [ containers."zilean-postgres".ref ];
@@ -183,9 +228,11 @@ in
           containerConfig = {
             image = "ghcr.io/ryder-c/seadexerr:latest";
             publishPorts = [ "127.0.0.1:6868:6767" ];
+            # 127.0.0.1 is the container's own loopback, not the host.
+            # Use the incus_bridge IP so the container can reach arr services.
             environments = {
-              SONARR_BASE_URL = "http://127.0.0.1:8989/";
-              RADARR_BASE_URL = "http://127.0.0.1:7878/";
+              SONARR_BASE_URL = "http://${node.networks.incus_bridge.ip}:${toString node.services.sonarr.port}/sonarr/";
+              RADARR_BASE_URL = "http://${node.networks.incus_bridge.ip}:${toString node.services.radarr.port}/radarr/";
             };
             environmentFiles = [ config.sops.templates.seadexerr-env.path ];
           };
@@ -233,7 +280,7 @@ in
   networking.firewall.allowedTCPPorts = [
     2049 # NFS
     node.services.decypharr.port
-    node.services.bazarr.port
+    # bazarr omitted: services.bazarr.openFirewall = true already covers it
   ];
 
   swapDevices = [

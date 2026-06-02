@@ -16,6 +16,7 @@ resource "seerr_sonarr_server" "default" {
   name                  = "Sonarr"
   hostname              = "10.10.0.4"
   port                  = 8989
+  base_url              = "/sonarr"
   use_ssl               = false
   api_key               = var.sonarr_api_key
   active_directory      = "/data/library/tv"
@@ -32,6 +33,7 @@ resource "seerr_radarr_server" "default" {
   name               = "Radarr"
   hostname           = "10.10.0.4"
   port               = 7878
+  base_url           = "/radarr"
   use_ssl            = false
   api_key            = var.radarr_api_key
   active_directory   = "/data/library/movies"

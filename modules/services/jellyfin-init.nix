@@ -58,7 +58,6 @@ in
         echo "jellyfin-init: waiting for Jellyfin to be ready..."
         for i in {1..60}; do
           if curl -sf "$url/System/Info/Public" > /dev/null 2>&1; then
-            # Also check if the startup wizard is actually accessible
             if curl -sf "$url/Startup/User" > /dev/null 2>&1 || [ "$(curl -s -o /dev/null -w "%{http_code}" "$url/Startup/User")" = "401" ]; then
               echo "jellyfin-init: Jellyfin is ready."
               break
@@ -79,7 +78,9 @@ in
         echo "jellyfin-init: setting initial configuration..."
         curl -sf -X POST "$url/Startup/Configuration" \
           -H "Content-Type: application/json" \
-          -d "{\"ServerName\":\"${cfg.serverName}\",\"UICulture\":\"en-US\",\"MetadataCountryCode\":\"US\",\"PreferredMetadataLanguage\":\"en\"}"
+          -d "$(jq -n \
+                --arg name "${cfg.serverName}" \
+                '{ServerName: $name, UICulture: "en-US", MetadataCountryCode: "US", PreferredMetadataLanguage: "en"}')"
 
         echo "jellyfin-init: initializing user creation..."
         curl -sf -X GET "$url/Startup/User" > /dev/null
@@ -87,7 +88,10 @@ in
         echo "jellyfin-init: creating admin user..."
         curl -sf -X POST "$url/Startup/User" \
           -H "Content-Type: application/json" \
-          -d "{\"Name\":\"${cfg.adminUser}\",\"Password\":\"$password\",\"ConfirmPassword\":\"$password\"}"
+          -d "$(jq -n \
+                --arg name "${cfg.adminUser}" \
+                --arg pass "$password" \
+                '{Name: $name, Password: $pass, ConfirmPassword: $pass}')"
 
         echo "jellyfin-init: configuring remote access..."
         curl -sf -X POST "$url/Startup/RemoteAccess" \

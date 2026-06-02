@@ -44,7 +44,7 @@ resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
   host        = "127.0.0.1"
   port        = 8282
   url_base    = "/sabnzbd"
-  username    = "http://127.0.0.1:8989"
+  username    = "http://127.0.0.1:8989/sonarr"
   password    = var.sonarr_api_key
   tv_category = "sonarr"
 }
@@ -93,7 +93,7 @@ resource "radarr_download_client_sabnzbd" "decypharr_usenet" {
   host           = "127.0.0.1"
   port           = 8282
   url_base       = "/sabnzbd"
-  username       = "http://127.0.0.1:7878"
+  username       = "http://127.0.0.1:7878/radarr"
   password       = var.radarr_api_key
   movie_category = "radarr"
 }
@@ -134,8 +134,8 @@ resource "sonarr_custom_format" "seadex" {
 resource "prowlarr_application_sonarr" "sonarr" {
   name         = "Sonarr"
   sync_level   = "addOnly"
-  base_url     = "http://127.0.0.1:8989"
-  prowlarr_url = "http://127.0.0.1:9696"
+  base_url     = "http://127.0.0.1:8989/sonarr"
+  prowlarr_url = "http://127.0.0.1:9696/prowlarr"
   api_key      = var.sonarr_api_key
   sync_categories = [
     5000, # TV
@@ -152,8 +152,8 @@ resource "prowlarr_application_sonarr" "sonarr" {
 resource "prowlarr_application_radarr" "radarr" {
   name         = "Radarr"
   sync_level   = "addOnly"
-  base_url     = "http://127.0.0.1:7878"
-  prowlarr_url = "http://127.0.0.1:9696"
+  base_url     = "http://127.0.0.1:7878/radarr"
+  prowlarr_url = "http://127.0.0.1:9696/prowlarr"
   api_key      = var.radarr_api_key
   sync_categories = [
     2000, # Movies

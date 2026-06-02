@@ -1,11 +1,5 @@
-{ config, lib, ... }:
+{ config, ... }:
 
-let
-  topology = import ../../common/topology.nix;
-  mgmtNetwork = topology.networks.mgmt;
-  hostNode = topology.nodes.${config.networking.hostName} or { networks = { }; };
-  hasMgmt = hostNode.networks ? mgmt;
-in
 {
   imports = [
     ./common.nix
@@ -17,8 +11,6 @@ in
 
   sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
-  systemd.services.sshd.after = lib.mkIf hasMgmt [ "wireguard-${mgmtNetwork.interface}.service" ];
-  systemd.services.sshd.wants = lib.mkIf hasMgmt [ "wireguard-${mgmtNetwork.interface}.service" ];
   sops.defaultSopsFile = ../../secrets + "/${config.networking.hostName}.yaml";
 
   networking.useNetworkd = true;
