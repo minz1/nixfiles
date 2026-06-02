@@ -73,3 +73,38 @@ output "seerr_client_secret" {
   value     = authentik_provider_oauth2.seerr.client_secret
   sensitive = true
 }
+
+resource "seerr_notification_email" "main" {
+  enabled      = true
+  embed_poster = false
+  notification_types = [
+    "MEDIA_APPROVED",
+    "MEDIA_AVAILABLE",
+    "MEDIA_DECLINED",
+    "MEDIA_AUTO_APPROVED",
+  ]
+  email = {
+    email_from  = "noreply@minz1.com"
+    smtp_host   = "smtp.resend.com"
+    smtp_port   = 587
+    require_tls = true
+    auth_user   = "resend"
+    auth_pass   = var.seerr_smtp_password
+    sender_name = "Seerr"
+  }
+}
+
+resource "seerr_notification_discord" "main" {
+  enabled      = true
+  embed_poster = true
+  notification_types = [
+    "MEDIA_APPROVED",
+    "MEDIA_AVAILABLE",
+    "MEDIA_DECLINED",
+    "MEDIA_AUTO_APPROVED",
+  ]
+  discord = {
+    webhook_url     = var.seerr_discord_webhook
+    enable_mentions = false
+  }
+}
