@@ -29,6 +29,7 @@ let
   sonarrPort   = arrNode.services.sonarr.port;
   radarrPort   = arrNode.services.radarr.port;
   prowlarrPort = arrNode.services.prowlarr.port;
+  bazarrPort   = arrNode.services.bazarr.port;
 
   # Path where the firewall bouncer API key is written by the crowdsec ExecStartPre
   # script and persisted across reboots in the crowdsec state directory.
@@ -247,6 +248,11 @@ in
           handle /prowlarr* {
             import forward_auth_authentik
             reverse_proxy http://${arrIp}:${toString prowlarrPort}
+          }
+
+          handle /bazarr* {
+            import forward_auth_authentik
+            reverse_proxy http://${arrIp}:${toString bazarrPort}
           }
 
           handle {

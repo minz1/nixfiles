@@ -12,6 +12,10 @@
 # causing API 400. The wizard already configured the Jellyfin connection and
 # API key correctly; no tofu management needed for this singleton.
 
+resource "seerr_main_settings" "main" {
+  local_login = false
+}
+
 resource "seerr_sonarr_server" "default" {
   name                  = "Sonarr"
   hostname              = "10.10.0.4"

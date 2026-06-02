@@ -118,6 +118,9 @@ in
         role_attribute_path = "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'";
         allow_sign_up = true;
       };
+      "auth" = {
+        disable_login_form = true;
+      };
     };
     provision = {
       enable = true;
