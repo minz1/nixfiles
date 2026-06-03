@@ -9,3 +9,13 @@ resource "incus_storage_volume" "persist" {
     size = try(each.value.incus.persist_size, "100GiB")
   }
 }
+
+resource "incus_storage_volume" "arr_cache" {
+  name         = "minz-arr-0-cache"
+  pool         = "default"
+  content_type = "block"
+
+  config = {
+    size = "100GiB"
+  }
+}

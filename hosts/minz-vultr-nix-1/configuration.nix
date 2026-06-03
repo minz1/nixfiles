@@ -108,10 +108,9 @@ in
       tr=${pkgs.coreutils}/bin/tr
       chmod=${pkgs.coreutils}/bin/chmod
 
-      if ! $cscli bouncers list 2>/dev/null | $grep -q "caddy-bouncer"; then
-        $cscli bouncers add "caddy-bouncer" \
-          --key "$($tr -d '[:space:]' < ${config.sops.secrets.crowdsec_caddy_api_key.path})"
-      fi
+      $cscli bouncers delete "caddy-bouncer" 2>/dev/null || true
+      $cscli bouncers add "caddy-bouncer" \
+        --key "$($tr -d '[:space:]' < ${config.sops.secrets.crowdsec_caddy_api_key.path})"
 
       if ! $cscli bouncers list 2>/dev/null | $grep -q "nftables-bouncer" \
           || [ ! -f "${fwBouncerKeyFile}" ]; then
@@ -207,7 +206,9 @@ in
             -Server
           }
           crowdsec
-          reverse_proxy http://${jellyfinIp}:${toString jellyfinPort}
+          reverse_proxy http://${jellyfinIp}:${toString jellyfinPort} {
+            flush_interval -1
+          }
         '';
       };
 

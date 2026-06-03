@@ -87,6 +87,18 @@ resource "incus_instance" "vm" {
       pool   = "default"
     }
   }
+
+  dynamic "device" {
+    for_each = each.key == "minz-arr-0" ? [1] : []
+    content {
+      name = "cache"
+      type = "disk"
+      properties = {
+        source = incus_storage_volume.arr_cache.name
+        pool   = "default"
+      }
+    }
+  }
 }
 
 # --- NixOS containers ---

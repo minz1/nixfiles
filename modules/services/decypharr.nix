@@ -79,8 +79,8 @@ in
         RestrictNamespaces = true;
         LockPersonality = true;
 
-        # Re-export after FUSE mount so NFS server sees the VFS, not the underlying dir.
-        ExecStartPost = "+${pkgs.nfs-utils}/bin/exportfs -ar";
+        # Restart nfs-server after FUSE mount so NFS clients see the live VFS, not a stale cache.
+        ExecStartPost = "+${pkgs.systemd}/bin/systemctl restart nfs-server";
       };
     };
 

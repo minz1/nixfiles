@@ -161,6 +161,9 @@ in
     port = node.services.decypharr.port;
   };
 
+  systemd.services.decypharr.serviceConfig.ExecStartPre =
+    "+${pkgs.coreutils}/bin/chown decypharr:decypharr /var/cache/decypharr";
+
   virtualisation.quadlet =
     let
       inherit (config.virtualisation.quadlet) pods containers volumes;
@@ -264,6 +267,12 @@ in
     node.services.decypharr.port
     # bazarr omitted: services.bazarr.openFirewall = true already covers it
   ];
+
+  fileSystems."/var/cache/decypharr" = {
+    device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_cache";
+    fsType = "ext4";
+    options = [ "noatime" "nofail" ];
+  };
 
   swapDevices = [
     {
