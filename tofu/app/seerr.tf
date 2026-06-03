@@ -1,7 +1,8 @@
 # seerr_jellyfin_settings omitted: provider sends read-only `name` field causing API 400.
 
 resource "seerr_main_settings" "main" {
-  local_login = false
+  local_login  = false
+  trust_proxy  = true
 }
 
 resource "seerr_sonarr_server" "default" {

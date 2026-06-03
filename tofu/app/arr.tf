@@ -8,7 +8,7 @@ resource "sonarr_media_management" "sonarr" {
   hardlinks_copy              = false
   create_empty_folders        = false
   delete_empty_folders        = true
-  enable_media_info           = true
+  enable_media_info           = false
   import_extra_files          = false
   set_permissions             = false
   skip_free_space_check       = true
@@ -54,7 +54,7 @@ resource "radarr_media_management" "radarr" {
   copy_using_hardlinks                        = false
   create_empty_movie_folders                  = false
   delete_empty_folders                        = true
-  enable_media_info                           = true
+  enable_media_info                           = false
   import_extra_files                          = false
   set_permissions_linux                       = false
   skip_free_space_check_when_importing        = true
