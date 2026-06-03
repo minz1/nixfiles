@@ -12,33 +12,36 @@ let
   wgAddr = node.networks.mgmt.ip;
 
   authentikNode = topology.nodes.minz-authentik-0;
-  authentikIp   = authentikNode.networks.incus_bridge.ip;
+  authentikIp = authentikNode.networks.incus_bridge.ip;
   authentikPort = authentikNode.services.authentik.port;
 
-  obsNode     = topology.nodes.minz-obs-0;
-  obsIp       = obsNode.networks.incus_bridge.ip;
+  obsNode = topology.nodes.minz-obs-0;
+  obsIp = obsNode.networks.incus_bridge.ip;
   grafanaPort = obsNode.services.grafana.port;
 
   jellyfinNode = topology.nodes.minz-jellyfin-0;
-  jellyfinIp   = jellyfinNode.networks.incus_bridge.ip;
+  jellyfinIp = jellyfinNode.networks.incus_bridge.ip;
   jellyfinPort = jellyfinNode.services.jellyfin.port;
-  seerrPort    = jellyfinNode.services.seerr.port;
+  seerrPort = jellyfinNode.services.seerr.port;
 
   servicesNode = topology.nodes.minz-services-0;
-  memosIp      = servicesNode.networks.incus_bridge.ip;
-  memosPort    = servicesNode.services.memos.port;
+  memosIp = servicesNode.networks.incus_bridge.ip;
+  memosPort = servicesNode.services.memos.port;
 
-  arrNode      = topology.nodes.minz-arr-0;
-  arrIp        = arrNode.networks.incus_bridge.ip;
-  sonarrPort   = arrNode.services.sonarr.port;
-  radarrPort   = arrNode.services.radarr.port;
+  arrNode = topology.nodes.minz-arr-0;
+  arrIp = arrNode.networks.incus_bridge.ip;
+  sonarrPort = arrNode.services.sonarr.port;
+  radarrPort = arrNode.services.radarr.port;
   prowlarrPort = arrNode.services.prowlarr.port;
-  bazarrPort   = arrNode.services.bazarr.port;
+  bazarrPort = arrNode.services.bazarr.port;
 
   fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
 in
 {
   imports = [ ./hardware-configuration.nix ];
+
+  # deprioritize wg0 to ensure edge traffic is isolated
+  networking.wireguard.interfaces.wg0.metric = 100;
 
   networking.hostName = hostName;
   system.stateVersion = "25.11";
@@ -137,12 +140,16 @@ in
     openFirewall = true;
 
     # doInstallCheck=false: plugin path check false-negatives on subpackage imports.
-    package = (pkgs.caddy.withPlugins {
-      plugins = [
-        "github.com/hslatman/caddy-crowdsec-bouncer/http@v0.13.1"
-      ];
-      hash = "sha256-hYfokre7FwhKp6OB3/I6zH+EzXb4yoIc9JiV9b5j87Y=";
-    }).overrideAttrs (_: { doInstallCheck = false; });
+    package =
+      (pkgs.caddy.withPlugins {
+        plugins = [
+          "github.com/hslatman/caddy-crowdsec-bouncer/http@v0.13.1"
+        ];
+        hash = "sha256-hYfokre7FwhKp6OB3/I6zH+EzXb4yoIc9JiV9b5j87Y=";
+      }).overrideAttrs
+        (_: {
+          doInstallCheck = false;
+        });
 
     globalConfig = ''
       order crowdsec first
