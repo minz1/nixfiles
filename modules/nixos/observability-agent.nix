@@ -58,10 +58,7 @@ in
     "systemd-journal"
   ];
 
-  # DynamicUser stores state at /var/lib/private/alloy (not /var/lib/alloy, which
-  # is a symlink systemd creates at runtime). Persist the real path so the journal
-  # read cursor survives reboots. /persist/var/lib/private is pre-created at 0700
-  # by the fix-var-lib-private-perms activation script in impermanence.nix.
+  # alloy is DynamicUser — persist /var/lib/private/alloy (the real path), not the /var/lib/alloy symlink.
   environment.persistence."/persist".directories = lib.mkIf (enableAlloy && config.fileSystems ? "/persist") [
     {
       directory = "/var/lib/private/alloy";

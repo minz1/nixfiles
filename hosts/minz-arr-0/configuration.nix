@@ -22,8 +22,6 @@ in
   sops.secrets.radarr_api_key = { };
   sops.secrets.prowlarr_api_key = { };
 
-  # Derive env-file and container-env formats from the bare API key values.
-  # seadexerr_env is gone from sops — both keys it contained come from here.
   sops.templates.sonarr-env = {
     content = "SONARR__AUTH__APIKEY=${config.sops.placeholder.sonarr_api_key}";
     owner = "sonarr";
@@ -42,8 +40,7 @@ in
   };
   sops.secrets.zilean_db_password = { };
 
-  # Quadlet containers run as uid 902 (oci); EnvironmentFile is read by Podman
-  # before exec, so owner must match the rootless uid.
+  # Quadlet EnvironmentFile is read by Podman before exec — owner must match the rootless uid (oci/902).
   sops.templates.zilean-postgres-env = {
     content = "POSTGRES_PASSWORD=${config.sops.placeholder.zilean_db_password}";
     owner = "oci";
@@ -73,13 +70,10 @@ in
     uid = 902;
   };
 
-  # Shared group — sonarr, radarr, bazarr, decypharr all need /data rw
   users.groups.media = { };
   users.users.sonarr.extraGroups = [ "media" ];
   users.users.radarr.extraGroups = [ "media" ];
   users.users.bazarr.extraGroups = [ "media" ];
-
-  # --- Arr services ---
 
   services.sonarr = {
     enable = true;
@@ -102,8 +96,7 @@ in
     environmentFiles = [ config.sops.templates.prowlarr-env.path ];
   };
   systemd.services.prowlarr.serviceConfig = {
-    # Recreate the Custom definitions symlink before each start so a nix store
-    # hash change after deploy doesn't leave a stale pointer.
+    # Recreate symlink on each start so stale Nix store paths don't persist after deploy.
     ExecStartPre = "+/bin/sh -c 'mkdir -p /var/lib/private/prowlarr/Definitions && ln -sfT ${../../config/prowlarr/indexers} /var/lib/private/prowlarr/Definitions/Custom'";
 
     # nixpkgs prowlarr module only adds DynamicUser; add full hardening parity with sonarr.
@@ -137,10 +130,6 @@ in
 
   services.recyclarr.enable = true;
 
-  # sops renders the config with real API keys at runtime, same pattern as
-  # sonarr-env / radarr-env. ExecStart override points recyclarr at this
-  # file instead of the default /var/lib/recyclarr/config.yml (which the
-  # nixpkgs module's genJqSecretsReplacement writes as empty JSON).
   sops.templates.recyclarr-env = {
     content = ''
       SONARR_API_KEY=${config.sops.placeholder.sonarr_api_key}
@@ -155,21 +144,12 @@ in
     EnvironmentFile = config.sops.templates.recyclarr-env.path;
   };
 
-  # --- Decypharr ---
-
   services.decypharr = {
     enable = true;
     mediaPath = "/mnt/decypharr";
     mediaGroup = "media";
     port = node.services.decypharr.port;
   };
-
-  # --- OCI containers (rootless Quadlet, user: oci / uid: 902) ---
-  #
-  # zilean-pod: shared network namespace for zilean + postgres.
-  #   postgres is unreachable from outside the pod; zilean connects via localhost.
-  # flaresolverr: Cloudflare bypass proxy for Prowlarr — localhost only
-  # seadexerr:    SeaDex anime best-release Torznab — localhost only
 
   virtualisation.quadlet =
     let
@@ -228,8 +208,7 @@ in
           containerConfig = {
             image = "ghcr.io/ryder-c/seadexerr:latest";
             publishPorts = [ "127.0.0.1:6868:6767" ];
-            # 127.0.0.1 is the container's own loopback, not the host.
-            # Use the incus_bridge IP so the container can reach arr services.
+            # incus_bridge IP because 127.0.0.1 is the container's own loopback.
             environments = {
               SONARR_BASE_URL = "http://${node.networks.incus_bridge.ip}:${toString node.services.sonarr.port}/sonarr/";
               RADARR_BASE_URL = "http://${node.networks.incus_bridge.ip}:${toString node.services.radarr.port}/radarr/";
@@ -240,10 +219,7 @@ in
       };
     };
 
-  # --- NFS server ---
-  # Exports /data (library + downloads) and /mnt/decypharr (VFS) to
-  # the Incus host (minz-home-nix-0). The host then bind-mounts these into
-  # the unprivileged jellyfin container to avoid mount syscall issues.
+  # Exports bind-mounted into jellyfin-0 by the Incus host to avoid mount syscall issues in unprivileged containers.
   services.nfs.server = {
     enable = true;
     exports = ''
@@ -260,10 +236,6 @@ in
     after = [ "decypharr.service" ];
   };
 
-  # --- Filesystem layout ---
-  # Prowlarr custom Cardigann definitions: symlink /var/lib/private/prowlarr/Definitions/Custom
-  # to the Nix store so the content is immutable and validated at build time.
-  # DynamicUser stores state at /var/lib/private/prowlarr; root can write there.
   systemd.tmpfiles.rules = [
     "d /persist/zilean            0700 oci    oci    -"
     "d /data                     0755 root   root   -"

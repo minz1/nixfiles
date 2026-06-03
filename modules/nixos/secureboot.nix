@@ -22,10 +22,7 @@
     };
   };
 
-  # Generate Secure Boot keys on first boot if they don't exist, mirroring
-  # how openssh generates host keys. nixos-anywhere runs activation before
-  # bootloader install, so keys exist when lzbt install runs. On subsequent
-  # deploy-rs deploys the keys are already present and this is a no-op.
+  # Generate Secure Boot keys on first boot; idempotent on subsequent deploys.
   system.activationScripts.securebootKeygen = {
     text = ''
       if [ ! -f /persist/secureboot/keys/db/db.key ]; then

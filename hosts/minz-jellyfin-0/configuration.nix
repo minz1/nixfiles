@@ -22,9 +22,7 @@ in
     adminPasswordFile = config.sops.secrets.jellyfin_admin_password.path;
   };
 
-  # Intel Arc A310 DRM passthrough — cgroup device allowlisting via Incus (no VFIO needed).
-  # renderD128 = iGPU (no AV1); renderD129 = Arc A310 (full AV1/HEVC/VP9).
-  # VAAPI hardware transcoding: Dashboard → Playback → Transcoding → VA-API Device: /dev/dri/renderD129
+  # Arc A310 DRM passthrough via Incus cgroup allowlist; VAAPI device: /dev/dri/renderD129
   hardware.graphics.enable = true;
   hardware.graphics.extraPackages = with pkgs; [
     intel-media-driver
@@ -38,26 +36,17 @@ in
     "video"
   ];
 
-  # --- Jellyfin ---
-  # SSO plugin (9p4/jellyfin-plugin-sso) wired up in 5g alongside Caddy/authentik.
   services.jellyfin = {
     enable = true;
     openFirewall = true;
   };
 
-  # --- Seerr (media request manager, formerly jellyseerr) ---
-  # seerr-oidc: fork with OIDC login (michaelhthomas feat/oidc-login-basic).
-  # OIDC is off by default; activate in 5g once Caddy provides HTTPS redirect URIs.
-  # OIDC_ALLOW_INSECURE=true is needed because authentik runs on plain HTTP internally.
   services.seerr = {
     enable = true;
     openFirewall = true;
   };
 
-  # --- Storage (Incus-managed mounts) ---
-  # /data and /mnt/decypharr are passed in as Incus disk devices from the host.
-  # This avoids syscall interception issues in unprivileged containers.
-
+  # /data and /mnt/decypharr are Incus disk devices from the host; no mount syscall inside container.
   systemd.tmpfiles.rules = [
     "d /data          0755 root root -"
     "d /mnt/decypharr 0755 root root -"

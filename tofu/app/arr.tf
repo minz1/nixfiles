@@ -1,5 +1,3 @@
-# --- Sonarr ---
-
 resource "sonarr_root_folder" "tv" {
   path = "/data/library/tv"
 }
@@ -33,7 +31,6 @@ resource "sonarr_download_client_qbittorrent" "decypharr" {
   priority = 1
   host     = "127.0.0.1"
   port     = 8282
-  # decypharr uses the category to route downloads to the right subfolder
   tv_category = "tv-sonarr"
 }
 
@@ -48,8 +45,6 @@ resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
   password    = var.sonarr_api_key
   tv_category = "sonarr"
 }
-
-# --- Radarr ---
 
 resource "radarr_root_folder" "movies" {
   path = "/data/library/movies"
@@ -98,9 +93,6 @@ resource "radarr_download_client_sabnzbd" "decypharr_usenet" {
   movie_category = "radarr"
 }
 
-# --- Prowlarr ---
-
-# Flaresolverr runs as a container on arr-0, localhost-only.
 resource "prowlarr_tag" "flaresolverr" {
   label = "flaresolverr"
 }
@@ -112,9 +104,7 @@ resource "prowlarr_indexer_proxy_flaresolverr" "flaresolverr" {
   tags            = [prowlarr_tag.flaresolverr.id]
 }
 
-# Seadex custom format — marks anime releases flagged Freeleech25 by seadexerr.
-# Score (+5000) is set manually in Sonarr: Settings → Quality Profiles →
-# Remux-1080p - Anime (recyclarr preserves it via reset_unmatched_scores.except).
+# Seadex: marks Freeleech25 releases; set score +5000 manually in Sonarr quality profiles.
 resource "sonarr_custom_format" "seadex" {
   include_custom_format_when_renaming = false
   name                                = "Seadex"
@@ -130,7 +120,6 @@ resource "sonarr_custom_format" "seadex" {
   ]
 }
 
-# Wire Prowlarr → Sonarr. TV sync categories (5xxx = TV).
 resource "prowlarr_application_sonarr" "sonarr" {
   name         = "Sonarr"
   sync_level   = "addOnly"
@@ -148,7 +137,6 @@ resource "prowlarr_application_sonarr" "sonarr" {
   anime_sync_categories = [5070]
 }
 
-# Wire Prowlarr → Radarr. Movie sync categories (2xxx = Movies).
 resource "prowlarr_application_radarr" "radarr" {
   name         = "Radarr"
   sync_level   = "addOnly"

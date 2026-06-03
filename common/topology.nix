@@ -125,6 +125,7 @@
       deployed = true;
       incus = {
         nix_size = "30G";
+        persist_size = "240GiB";
         cpus = 4;
         memory = "4GiB";
       };
@@ -182,6 +183,26 @@
       };
       networks.incus_bridge = {
         ip = "10.10.0.3";
+      };
+    };
+
+    minz-services-0 = {
+      os = "nixos";
+      sshUser = "minz1";
+      provisioner = "incus";
+      deployed = true;
+      incus = {
+        incus_type = "container";
+        root_size = "20GiB";
+        cpus = 1;
+        memory = "512MiB";
+      };
+      services = {
+        ssh.port = 22;
+        memos.port = 5230;
+      };
+      networks.incus_bridge = {
+        ip = "10.10.0.6";
       };
     };
 

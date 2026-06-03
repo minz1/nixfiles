@@ -30,18 +30,14 @@ in
   # linuxPackages_latest required for Intel Arc A310 (xe driver, stable from ~6.8+).
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.supportedFilesystems = [ "nfs" ];
-  # Enable IOMMU for general isolation. GPU access for jellyfin-0 uses DRM character
-  # device passthrough (not PCI passthrough) to avoid IOMMU group issues.
-  # Use i915 for stability on Small BAR (No ReBAR) hardware.
-  # enable_guc=3: required for Arc (DG2) to enable hardware scheduling and power management.
+  # i915 for stability on Small BAR hardware; enable_guc=3 required for Arc DG2 scheduling.
   boot.kernelParams = [
     "intel_iommu=on"
     "iommu=pt"
     "i915.enable_guc=3"
   ];
 
-  # AppArmor enforces Incus's per-VM confinement profiles at the host kernel level.
-  # Without this the profiles are generated but not enforced.
+  # Without AppArmor, Incus confinement profiles are generated but not enforced.
   security.apparmor.enable = true;
 
   networking.nftables.enable = true;
@@ -93,9 +89,7 @@ in
     vim = "nvim";
   };
 
-  # SATA SSD formatted ext4 and mounted at /var/lib/incus.
-  # This is a real mount — not managed by impermanence — so Incus VM volumes
-  # survive reboots without needing a /persist bind-mount.
+  # Real mount, not impermanence — Incus VM volumes survive reboots here.
   disko.devices.disk.incus = {
     device = node.storage.incus_disk;
     content = {
@@ -157,10 +151,7 @@ in
     };
   };
 
-  # --- NFS mounts from minz-arr-0 ---
-  # These are mounted on the host and then bind-mounted into the unprivileged
-  # jellyfin container via Incus disk devices. This avoids the need for
-  # mount syscall interception and relaxes security profiles inside the container.
+  # NFS from arr-0, bind-mounted into jellyfin-0 via Incus disk devices.
   fileSystems."/mnt/nfs/data" = {
     device = "10.10.0.4:/data";
     fsType = "nfs4";

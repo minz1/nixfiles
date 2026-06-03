@@ -2,8 +2,6 @@ data "authentik_source" "inbuilt" {
   managed = "goauthentik.io/sources/inbuilt"
 }
 
-# ---- Enrollment flow — new users (invite → register → email confirm → login) ----
-
 resource "authentik_stage_invitation" "enrollment" {
   name                             = "${var.app_name}-enrollment-invitation"
   continue_flow_without_invitation = false
@@ -122,12 +120,6 @@ resource "authentik_flow_stage_binding" "enroll_login" {
   stage  = authentik_stage_user_login.enrollment.id
   order  = 40
 }
-
-# ---- Join flow — existing users (authenticate → join group) ----
-#
-# URL: https://auth.minz1.com/if/flow/<app_name>-join/
-# join_require_invitation=true  → send an invitation link to control who can join
-# join_require_invitation=false → anyone with an existing account can open the URL
 
 resource "authentik_stage_invitation" "join" {
   name                             = "${var.app_name}-join-invitation"

@@ -64,24 +64,18 @@ in
         RestartSec = 5;
         StateDirectory = "decypharr";
 
-        # FUSE requires access to /dev/fuse; namespace isolation would prevent
-        # mount propagation to the host, so sandbox options are kept minimal here.
-        # No ProtectSystem/ProtectHome/BindPaths — they break FUSE propagation.
+        # Sandbox is minimal: FUSE mount propagation requires no namespace isolation.
         DeviceAllow = [ "/dev/fuse rw" ];
         PrivateDevices = false;
         UMask = "0002";
 
-        # NoNewPrivileges and CapabilityBoundingSet cannot be used here:
-        # fusermount3 is setuid-root and an empty bounding set strips all
-        # capabilities even after setuid, both break the FUSE mount.
+        # fusermount3 is setuid-root; NoNewPrivileges/CapabilityBoundingSet break it.
         SystemCallFilter = [ "@system-service" "mount" "umount2" ];
         RestrictAddressFamilies = "AF_INET AF_INET6 AF_UNIX";
         RestrictNamespaces = true;
         LockPersonality = true;
 
-        # Re-export NFS shares after the FUSE mount is ready so the kernel NFS server
-        # picks up the new mount instead of exporting the underlying directory.
-        # Uses '+' to run as root despite the User=decypharr setting.
+        # Re-export after FUSE mount so NFS server sees the VFS, not the underlying dir.
         ExecStartPost = "+${pkgs.nfs-utils}/bin/exportfs -ar";
       };
     };

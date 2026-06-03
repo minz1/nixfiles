@@ -1,11 +1,4 @@
-# --- Prowlarr Indexers ---
-#
-# Standard indexers use data sources to pull implementation/config_contract
-# from the live Prowlarr instance — avoids hardcoding stale values.
-# Zilean is a local Torznab service and is hardcoded accordingly.
-
-# --- Zilean (local DMM debrid Torznab service on arr-0) ---
-# Runs at 127.0.0.1:8181 on arr-0; highest priority for debrid cache hits.
+# Local Torznab on arr-0 at 127.0.0.1:8181; priority 1 for debrid cache hits.
 resource "prowlarr_indexer" "zilean" {
   enable          = true
   name            = "Zilean"
@@ -25,8 +18,6 @@ resource "prowlarr_indexer" "zilean" {
     ignore_changes = [fields]
   }
 }
-
-# --- Torrent indexers ---
 
 data "prowlarr_indexer_schema" "leet"          { name = "1337x" }
 data "prowlarr_indexer_schema" "yts"           { name = "YTS" }
@@ -147,8 +138,6 @@ resource "prowlarr_indexer" "animetosho" {
   }
 }
 
-# --- Local/custom Cardigann indexers (definitions in config/prowlarr/indexers/) ---
-
 resource "prowlarr_indexer" "torbox" {
   enable          = false
   name            = "TorBox"
@@ -188,9 +177,7 @@ resource "prowlarr_indexer" "torrentio" {
   }
 }
 
-# Seadexerr: local Torznab service exposing SeaDex best-release anime index.
-# Runs on arr-0 at 127.0.0.1:6868. SeaDex custom format in Sonarr (score 5000):
-#   Settings → Custom Formats → Add → Indexer Flag Condition → Flag: Freeleech25
+# SeaDex best-release anime Torznab on arr-0:6868; disabled until anime exists in Sonarr library.
 resource "prowlarr_indexer" "seadexerr" {
   enable          = false
   name            = "Seadexerr"
@@ -207,16 +194,11 @@ resource "prowlarr_indexer" "seadexerr" {
   ]
 
   lifecycle {
-    # fields: don't overwrite UI tweaks (category mappings etc.)
-    # enable: user enables manually via Prowlarr UI once anime exists in Sonarr library
-    #         (seadexerr returns no results on blank test query with empty library)
+    # fields/enable: user-managed; enable via Prowlarr UI once anime library is populated.
     ignore_changes = [fields, enable]
   }
 }
 
-# --- Usenet indexers ---
-
-# Althub is a Newznab-compatible indexer; no schema data source needed.
 resource "prowlarr_indexer" "nzbgeek" {
   enable          = true
   name            = "NZBgeek"

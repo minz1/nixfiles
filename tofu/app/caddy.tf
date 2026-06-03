@@ -1,5 +1,3 @@
-# --- Arr forward-auth via authentik proxy ---
-
 resource "authentik_group" "arr_admins" {
   name = "arr-admins"
 }
@@ -25,14 +23,7 @@ resource "authentik_policy_binding" "arrs_access" {
   order  = 0
 }
 
-# Embedded proxy outpost — handles forward-auth for Caddy at
-# /outpost.goauthentik.io/auth/caddy. The embedded outpost is auto-created
-# by authentik on first startup; this resource manages it declaratively.
-#
-# First apply: if authentik's auto-created outpost conflicts, import it first:
-#   sops exec-env secrets/tofu.env \
-#     'tofu -chdir=tofu/app import authentik_outpost.proxy <uuid>'
-# UUID is visible in authentik Admin → System → Outposts → authentik Embedded Outpost
+# Manages the embedded outpost authentik creates on first startup; import it if it already exists (see ops.md).
 resource "authentik_outpost" "proxy" {
   name = "authentik Embedded Outpost"
   type = "proxy"

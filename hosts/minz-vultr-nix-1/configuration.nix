@@ -24,6 +24,10 @@ let
   jellyfinPort = jellyfinNode.services.jellyfin.port;
   seerrPort    = jellyfinNode.services.seerr.port;
 
+  servicesNode = topology.nodes.minz-services-0;
+  memosIp      = servicesNode.networks.incus_bridge.ip;
+  memosPort    = servicesNode.services.memos.port;
+
   arrNode      = topology.nodes.minz-arr-0;
   arrIp        = arrNode.networks.incus_bridge.ip;
   sonarrPort   = arrNode.services.sonarr.port;
@@ -31,8 +35,6 @@ let
   prowlarrPort = arrNode.services.prowlarr.port;
   bazarrPort   = arrNode.services.bazarr.port;
 
-  # Path where the firewall bouncer API key is written by the crowdsec ExecStartPre
-  # script and persisted across reboots in the crowdsec state directory.
   fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
 in
 {
@@ -61,9 +63,6 @@ in
     }
   ];
 
-  # --- Secrets ---
-  # crowdsec_caddy_api_key: generate with `openssl rand -hex 32`, add to
-  # secrets/minz-vultr-nix-1.yaml before first deploy.
   sops.secrets.crowdsec_caddy_api_key = { };
 
   sops.templates.crowdsec-caddy-env = {
@@ -72,7 +71,6 @@ in
     mode = "0400";
   };
 
-  # --- CrowdSec ---
   services.crowdsec = {
     enable = true;
     settings = {
@@ -99,15 +97,7 @@ in
     ];
   };
 
-  # Register both bouncers in a single root (+) ExecStartPre before the LAPI
-  # starts. cscli writes directly to the SQLite DB so no HTTP LAPI is needed.
-  #
-  # The firewall bouncer key is written to fwBouncerKeyFile (in the persisted
-  # crowdsec state dir) so the bouncer service can read it via LoadCredential.
-  # Using registerBouncer.enable on the bouncer module is avoided because that
-  # creates a separate register service that declares StateDirectory="crowdsec",
-  # which conflicts with the symlink already created by the crowdsec service
-  # (status=238/STATE_DIRECTORY).
+  # cscli writes to the SQLite DB directly (no HTTP LAPI needed); registerBouncer.enable would conflict with the DynamicUser symlink (status=238).
   systemd.services.crowdsec.serviceConfig.ExecStartPre = [
     "+${pkgs.writeShellScript "crowdsec-register-bouncers" ''
       cscli=/run/current-system/sw/bin/cscli
@@ -141,15 +131,12 @@ in
   # nftables required for the firewall bouncer's nftables backend.
   networking.nftables.enable = true;
 
-  # --- Caddy ---
   services.caddy = {
     enable = true;
     email = "emerytang@gmail.com";
     openFirewall = true;
 
-    # The install check looks for the plugin path in Go build info. For subpackage
-    # imports (/http), build info records the root module path instead, causing a
-    # false-negative. Override to skip it; the binary IS correct.
+    # doInstallCheck=false: plugin path check false-negatives on subpackage imports.
     package = (pkgs.caddy.withPlugins {
       plugins = [
         "github.com/hslatman/caddy-crowdsec-bouncer/http@v0.13.1"
@@ -158,7 +145,6 @@ in
     }).overrideAttrs (_: { doInstallCheck = false; });
 
     globalConfig = ''
-      # Required: declare crowdsec's ordering position before any route uses it.
       order crowdsec first
 
       crowdsec {
@@ -226,6 +212,14 @@ in
         '';
       };
 
+      "memos.minz1.com" = {
+        extraConfig = ''
+          import security_headers
+          crowdsec
+          reverse_proxy http://${memosIp}:${toString memosPort}
+        '';
+      };
+
       "arr.minz1.com" = {
         extraConfig = ''
           import security_headers
@@ -268,7 +262,6 @@ in
   systemd.services.caddy.after = lib.mkAfter [ "crowdsec.service" ];
   systemd.services.caddy.requires = [ "crowdsec.service" ];
 
-  # --- Impermanence ---
   environment.persistence."/persist".directories = [
     {
       directory = "/var/lib/caddy";

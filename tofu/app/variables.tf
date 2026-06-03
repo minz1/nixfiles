@@ -15,3 +15,5 @@ variable "seerr_discord_webhook" {
   type        = string
   sensitive   = true
 }
+
+variable "jellyfin_api_key" { sensitive = true }
