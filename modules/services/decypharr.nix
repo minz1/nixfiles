@@ -70,7 +70,11 @@ in
         UMask = "0002";
 
         # fusermount3 is setuid-root; NoNewPrivileges/CapabilityBoundingSet break it.
-        SystemCallFilter = [ "@system-service" "mount" "umount2" ];
+        SystemCallFilter = [
+          "@system-service"
+          "mount"
+          "umount2"
+        ];
         RestrictAddressFamilies = "AF_INET AF_INET6 AF_UNIX";
         RestrictNamespaces = true;
         LockPersonality = true;

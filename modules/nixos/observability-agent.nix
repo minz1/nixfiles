@@ -59,10 +59,12 @@ in
   ];
 
   # alloy is DynamicUser — persist /var/lib/private/alloy (the real path), not the /var/lib/alloy symlink.
-  environment.persistence."/persist".directories = lib.mkIf (enableAlloy && config.fileSystems ? "/persist") [
-    {
-      directory = "/var/lib/private/alloy";
-      mode = "0700";
-    }
-  ];
+  environment.persistence."/persist".directories =
+    lib.mkIf (enableAlloy && config.fileSystems ? "/persist")
+      [
+        {
+          directory = "/var/lib/private/alloy";
+          mode = "0700";
+        }
+      ];
 }

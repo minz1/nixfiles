@@ -97,7 +97,9 @@ in
   sops.secrets = builtins.listToAttrs (
     lib.mapAttrsToList (networkName: _: {
       name = "wg_private_${networkName}";
-      value = { mode = "0400"; };
+      value = {
+        mode = "0400";
+      };
     }) wireguardNetworks
   );
 
@@ -105,18 +107,27 @@ in
   networking.firewall.allowedUDPPorts = lib.flatten (
     lib.mapAttrsToList (
       networkName: networkConfig:
-      let currentNetCfg = currentNode.networks.${networkName};
-      in lib.optional (currentNetCfg.role == "server")
-        (currentNetCfg.listenPort or networkConfig.listenPort or 51820)
+      let
+        currentNetCfg = currentNode.networks.${networkName};
+      in
+      lib.optional (currentNetCfg.role == "server") (
+        currentNetCfg.listenPort or networkConfig.listenPort or 51820
+      )
     ) wireguardNetworks
   );
 
   # All WG interfaces carry internal traffic and are trusted.
-  networking.firewall.trustedInterfaces = lib.mapAttrsToList (_: netCfg: netCfg.interface) wireguardNetworks;
+  networking.firewall.trustedInterfaces = lib.mapAttrsToList (
+    _: netCfg: netCfg.interface
+  ) wireguardNetworks;
 
   # sshd must start after all WireGuard interfaces are up — otherwise it fails
   # to bind if configured to listen on a WireGuard IP, then races to success
   # on a later restart attempt.
-  systemd.services.sshd.after = lib.mapAttrsToList (_: netCfg: "wireguard-${netCfg.interface}.service") wireguardNetworks;
-  systemd.services.sshd.wants = lib.mapAttrsToList (_: netCfg: "wireguard-${netCfg.interface}.service") wireguardNetworks;
+  systemd.services.sshd.after = lib.mapAttrsToList (
+    _: netCfg: "wireguard-${netCfg.interface}.service"
+  ) wireguardNetworks;
+  systemd.services.sshd.wants = lib.mapAttrsToList (
+    _: netCfg: "wireguard-${netCfg.interface}.service"
+  ) wireguardNetworks;
 }

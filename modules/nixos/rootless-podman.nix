@@ -37,10 +37,20 @@ in
       home = "/var/lib/${cfg.user}";
       createHome = true;
       linger = true;
-      subUidRanges = [{ startUid = 100000; count = 65536; }];
-      subGidRanges = [{ startGid = 100000; count = 65536; }];
+      subUidRanges = [
+        {
+          startUid = 100000;
+          count = 65536;
+        }
+      ];
+      subGidRanges = [
+        {
+          startGid = 100000;
+          count = 65536;
+        }
+      ];
     };
-    users.groups.${cfg.group} = {};
+    users.groups.${cfg.group} = { };
 
     virtualisation.podman = {
       enable = true;

@@ -135,7 +135,8 @@
         name: _:
         let
           node = topology.nodes.${name} or { };
-          isContainer = (node.provisioner or "") == "incus" && (node.incus.incus_type or "virtual-machine") == "container";
+          isContainer =
+            (node.provisioner or "") == "incus" && (node.incus.incus_type or "virtual-machine") == "container";
           isVm = (node.provisioner or "") == "incus" && !isContainer;
           isBareMetal = !isVm && !isContainer && (node ? storage);
           vmModule =
@@ -211,6 +212,8 @@
           deployPkgs.deploy-rs.deploy-rs
         ];
       };
+
+      formatter.${system} = pkgs.nixfmt;
 
       packages.${system} = {
         inherit (pkgs) decypharr seerr-oidc;

@@ -115,12 +115,22 @@ in
     RemoveIPC = true;
     ProtectHostname = true;
     ProtectProc = "invisible";
-    RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+    RestrictAddressFamilies = [
+      "AF_INET"
+      "AF_INET6"
+      "AF_UNIX"
+    ];
     RestrictNamespaces = true;
     RestrictRealtime = true;
     LockPersonality = true;
     SystemCallArchitectures = "native";
-    SystemCallFilter = [ "@system-service" "~@privileged" "~@debug" "~@mount" "@chown" ];
+    SystemCallFilter = [
+      "@system-service"
+      "~@privileged"
+      "~@debug"
+      "~@mount"
+      "@chown"
+    ];
   };
 
   services.bazarr = {
