@@ -1,72 +1,53 @@
 # nixfiles
 
-minz1's NixOS infrastructure — declarative, sops-encrypted, deploy-rs deployed.
-
 ## Hosts
 
-| Host | Role | Address |
+| Host | Role | Network |
 |------|------|---------|
-| `minz-vultr-nix-0` | VPN server, Forgejo, CI runner | `10.8.0.1` |
-| `minz-home-vm-0` | Incus host, OpenTofu orchestrator | `10.8.0.5` |
-| `minz-vm-nixos-0` | Incus VM — Decypharr | `10.10.0.11` |
+| `minz-vultr-nix-0` | WireGuard hub, Forgejo, CI runner, S3 state backend | `10.8.0.1` |
+| `minz-vultr-nix-1` | Edge ingress (Caddy TLS termination) | `10.8.0.6` / `10.9.0.1` |
+| `minz-home-nix-0` | Bare metal, Incus host | `10.8.0.5` / `10.10.0.1` |
+| `minz-obs-0` | Prometheus, Loki, Grafana | `10.10.0.2` |
+| `minz-authentik-0` | Authentik SSO + LDAP | `10.10.0.3` |
+| `minz-arr-0` | Sonarr, Radarr, Prowlarr, Bazarr, Decypharr | `10.10.0.4` |
+| `minz-jellyfin-0` | Jellyfin, Seerr | `10.10.0.5` |
+| `minz-services-0` | Memos | `10.10.0.6` |
 
-## Deployment
+Incus VMs/containers run on `minz-home-nix-0` bridged at `10.10.0.0/24`.
+
+## Usage
 
 ```bash
-# Deploy a single host
-just deploy <hostname>
+nix develop                          # enter dev shell
 
-# Deploy all hosts
-just deploy-all
+just deploy node <host>              # deploy one host
+just deploy all                      # deploy all hosts
 
-# Provision / update Incus VMs via OpenTofu
-just tofu-plan
-just tofu-apply
+just tofu infra-plan                 # plan Incus VM lifecycle
+just tofu infra-apply
+just tofu app-plan                   # plan app config (Authentik, DNS, etc.)
+just tofu app-apply
 ```
 
 ## Structure
 
 ```
-nixfiles/
-├── common/           # Shared data (topology, SSH keys, WireGuard config)
-├── docs/             # Architecture decisions and design notes
-├── hosts/            # Per-host NixOS configurations
-├── modules/          # Reusable NixOS modules
-│   ├── common.nix    # Shared baseline (openssh, users, sudo, neovim)
-│   ├── base.nix      # Live-host baseline (WireGuard, sops, firewall)
-│   ├── base-vm.nix   # Incus VM baseline (networking, disk layout)
-│   └── services/     # Service modules (decypharr, ...)
-├── pkgs/             # Custom package overlays
-├── secrets/          # sops-encrypted secret files
-└── tofu/             # OpenTofu configurations (Incus VM lifecycle)
+common/     topology, SSH keys
+hosts/      per-host NixOS configurations
+modules/    reusable NixOS modules (profiles, services)
+pkgs/       custom package overlays
+secrets/    sops-encrypted secrets (per-host + shared)
+tofu/       OpenTofu — infra/ (Incus VMs) and app/ (Authentik, arr stack)
 ```
 
-## Secrets management
+## Secrets
 
-This project uses [sops](https://github.com/getsops/sops) with [sops-nix](https://github.com/Mic92/sops-nix). Each host's SSH ed25519 host key is used as its age decryption identity — no separate key management required.
-
-### Local setup
+Each host decrypts its own secrets using its SSH ed25519 host key as an age identity. New host ceremony:
 
 ```bash
-# Generate an age key from your local SSH key and export it for sops
-mkdir -p ~/.config/sops/age
-ssh-to-age -private-key -i ~/.ssh/id_ed25519 -o ~/.config/sops/age/keys.txt
-export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
+just bootstrap keygen <host>      # generate SSH host key in RAM, print age pubkey
+# add age pubkey to .sops.yaml, then:
+just bootstrap store-key <host>   # encrypt key into secrets/<host>.yaml
+just bootstrap install-vm <host>  # provision via nixos-anywhere (VMs)
+just deploy node <host>
 ```
-
-### Adding a new host
-
-1. Provision the machine
-2. Grab its SSH host public key: `sudo cat /etc/ssh/ssh_host_ed25519_key.pub`
-3. Convert to age: `ssh-to-age < host_key.pub`
-4. Add the age key to `.sops.yaml` and run `sops updatekeys secrets/<host>.yaml`
-5. `just deploy <hostname>`
-
-### Secrets files
-
-| File | Type | Description |
-|------|------|-------------|
-| `secrets/<host>.yaml` | sops-encrypted | Per-host secrets (WireGuard key, service tokens) |
-| `secrets/incus-client.yaml` | sops-encrypted | Incus TLS client private key |
-| `secrets/incus-client.crt` | plaintext | Incus TLS client certificate (public, safe to commit) |
-| `secrets/rustfs-tofu.env` | sops-encrypted | RustFS S3 credentials for OpenTofu state backend |
