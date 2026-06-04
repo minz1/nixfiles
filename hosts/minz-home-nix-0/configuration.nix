@@ -178,6 +178,11 @@ in
     ];
   };
 
+  # Intel I219 (e1000e) hardware unit hang fix — TSO/GSO cause tx ring stalls.
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="net", KERNEL=="eno1", RUN+="${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off"
+  '';
+
   systemd.tmpfiles.rules = [
     "d /mnt/nfs/data          0755 root root -"
     "d /mnt/nfs/decypharr     0755 root root -"

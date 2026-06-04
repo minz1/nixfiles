@@ -1,4 +1,18 @@
-# seerr_jellyfin_settings omitted: provider sends read-only `name` field causing API 400.
+resource "seerr_api_object" "jellyfin_settings" {
+  path          = "/api/v1/settings/jellyfin"
+  read_method   = "GET"
+  create_method = "POST"
+  update_method = "POST"
+  skip_delete   = true
+
+  request_body_json = jsonencode({
+    ip               = "127.0.0.1"
+    port             = 8096
+    useSsl           = false
+    apiKey           = var.jellyfin_api_key
+    externalHostname = "https://jellyfin.minz1.com"
+  })
+}
 
 resource "seerr_main_settings" "main" {
   local_login  = false
