@@ -189,7 +189,7 @@ in
 
     dfs = {
       cacheDir = "/var/cache/decypharr";
-      diskCacheSize = "90G";
+      diskCacheSize = "85G";
       chunkSize = "10MB";
     };
 
@@ -348,9 +348,13 @@ in
   };
 
   # The cache volume ext4 root is root:root after mkfs; fix ownership before decypharr starts.
-  systemd.services.decypharr.serviceConfig.ExecStartPre = lib.mkAfter [
-    "+${pkgs.coreutils}/bin/chown decypharr:decypharr /var/cache/decypharr"
-  ];
+  systemd.services.decypharr.serviceConfig = {
+    ExecStartPre = lib.mkAfter [
+      "+${pkgs.coreutils}/bin/chown decypharr:decypharr /var/cache/decypharr"
+    ];
+    IOWeight = 100;
+    OOMScoreAdjust = 500;
+  };
 
   virtualisation.quadlet =
     let
