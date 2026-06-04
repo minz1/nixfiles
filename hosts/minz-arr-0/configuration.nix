@@ -189,7 +189,7 @@ in
 
     dfs = {
       cacheDir = "/var/cache/decypharr";
-      diskCacheSize = "50G";
+      diskCacheSize = "85G";
       chunkSize = "10MB";
     };
 
