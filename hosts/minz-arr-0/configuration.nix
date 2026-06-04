@@ -179,6 +179,7 @@ in
     enable = true;
     openFirewall = true;
     extraGroups = [ "media" ];
+    mediaGroup = "media";
     useAuth = false;
 
     port = node.services.decypharr.port;
@@ -440,7 +441,6 @@ in
     "d /mnt/decypharr               0775 root   media  -"
     "d /persist/zilean               0700 oci    oci    -"
     "d /data                         0755 root   root   -"
-    "d /data/downloads               0775 root   media  -"
     "d /data/downloads/sonarr        2775 sonarr media  -"
     "d /data/downloads/radarr        2775 radarr media  -"
     "d /data/library                 0775 root   media  -"
