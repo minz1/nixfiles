@@ -2,6 +2,7 @@
   hostName,
   config,
   lib,
+  pkgs,
   ...
 }:
 
@@ -11,7 +12,6 @@ let
 in
 {
   imports = [
-    ../../modules/services/decypharr.nix
     ../../modules/nixos/rootless-podman.nix
   ];
 
@@ -21,6 +21,12 @@ in
   sops.secrets.sonarr_api_key = { };
   sops.secrets.radarr_api_key = { };
   sops.secrets.prowlarr_api_key = { };
+  sops.secrets.decypharr_rd_api_key = { };
+  sops.secrets.decypharr_rd_download_key = { };
+  sops.secrets.decypharr_torbox_api_key = { };
+  sops.secrets.decypharr_torbox_download_key = { };
+  sops.secrets.decypharr_usenet_username = { };
+  sops.secrets.decypharr_usenet_password = { };
 
   sops.templates.sonarr-env = {
     content = "SONARR__AUTH__APIKEY=${config.sops.placeholder.sonarr_api_key}";
@@ -61,6 +67,21 @@ in
       RADARR_API_KEY=${config.sops.placeholder.radarr_api_key}
     '';
     owner = "oci";
+    mode = "0400";
+  };
+
+  sops.templates.decypharr-env = {
+    content = ''
+      DECYPHARR_DEBRIDS__0__API_KEY=${config.sops.placeholder.decypharr_rd_api_key}
+      DECYPHARR_DEBRIDS__0__DOWNLOAD_API_KEYS__0=${config.sops.placeholder.decypharr_rd_download_key}
+      DECYPHARR_DEBRIDS__1__API_KEY=${config.sops.placeholder.decypharr_torbox_api_key}
+      DECYPHARR_DEBRIDS__1__DOWNLOAD_API_KEYS__0=${config.sops.placeholder.decypharr_torbox_download_key}
+      DECYPHARR_ARRS__0__TOKEN=${config.sops.placeholder.sonarr_api_key}
+      DECYPHARR_ARRS__1__TOKEN=${config.sops.placeholder.radarr_api_key}
+      DECYPHARR_USENET__PROVIDERS__0__USERNAME=${config.sops.placeholder.decypharr_usenet_username}
+      DECYPHARR_USENET__PROVIDERS__0__PASSWORD=${config.sops.placeholder.decypharr_usenet_password}
+    '';
+    owner = "decypharr";
     mode = "0400";
   };
 
@@ -156,13 +177,179 @@ in
 
   services.decypharr = {
     enable = true;
-    mediaPath = "/mnt/decypharr";
-    mediaGroup = "media";
+    openFirewall = true;
+    extraGroups = [ "media" ];
+    useAuth = false;
+
     port = node.services.decypharr.port;
+    downloadFolder = "/data/downloads";
+    maxDownloads = 10;
+    removeStalledAfter = "10m";
+
+    dfs = {
+      cacheDir = "/var/cache/decypharr";
+      diskCacheSize = "90G";
+      chunkSize = "10MB";
+    };
+
+    usenet = {
+      maxConnections = 15;
+      readAhead = "16MB";
+      processingTimeout = "10m";
+      availabilitySamplePercent = 10;
+      maxConcurrentNZB = 2;
+    };
+
+    environmentFiles = [ config.sops.templates.decypharr-env.path ];
+
+    settings = {
+      categories = [
+        "sonarr"
+        "radarr"
+      ];
+      folder_naming = "original_no_ext";
+      default_download_action = "symlink";
+
+      mount = {
+        type = "dfs";
+        mount_path = "/mnt/decypharr";
+      };
+
+      debrids = [
+        {
+          provider = "realdebrid";
+          name = "realdebrid";
+          rate_limit = "250/minute";
+          minimum_free_slot = 1;
+          torrents_refresh_interval = "10m";
+          download_links_refresh_interval = "40m";
+          workers = 100;
+          auto_expire_links_after = "3d";
+        }
+        {
+          provider = "torbox";
+          name = "torbox";
+          rate_limit = "250/minute";
+          minimum_free_slot = 1;
+          torrents_refresh_interval = "10m";
+          download_links_refresh_interval = "40m";
+          workers = 100;
+          auto_expire_links_after = "3d";
+        }
+      ];
+
+      arrs = [
+        {
+          name = "sonarr";
+          host = "http://127.0.0.1:8989/sonarr";
+          download_uncached = false;
+        }
+        {
+          name = "radarr";
+          host = "http://127.0.0.1:7878/radarr";
+          download_uncached = false;
+        }
+      ];
+
+      usenet = {
+        providers = [
+          {
+            host = "news.newshosting.com";
+            port = 563;
+            max_connections = 30;
+            ssl = true;
+            priority = 1;
+          }
+        ];
+        disk_buffer_path = "/var/lib/decypharr/usenet/streams";
+      };
+
+      allowed_file_types = [
+        "3gp"
+        "ac3"
+        "aiff"
+        "alac"
+        "amr"
+        "ape"
+        "asf"
+        "asx"
+        "avc"
+        "avi"
+        "bin"
+        "bivx"
+        "dat"
+        "divx"
+        "dts"
+        "dv"
+        "dvr-ms"
+        "flac"
+        "fli"
+        "flv"
+        "ifo"
+        "m2ts"
+        "m2v"
+        "m3u"
+        "m4a"
+        "m4p"
+        "m4v"
+        "mid"
+        "midi"
+        "mk3d"
+        "mka"
+        "mkv"
+        "mov"
+        "mp2"
+        "mp3"
+        "mp4"
+        "mpa"
+        "mpeg"
+        "mpg"
+        "nrg"
+        "nsv"
+        "nuv"
+        "ogg"
+        "ogm"
+        "ogv"
+        "pva"
+        "qt"
+        "ra"
+        "rm"
+        "rmvb"
+        "strm"
+        "svq3"
+        "ts"
+        "ty"
+        "viv"
+        "vob"
+        "voc"
+        "vp3"
+        "wav"
+        "webm"
+        "wma"
+        "wmv"
+        "wpl"
+        "wtv"
+        "wv"
+        "xvid"
+      ];
+
+      repair = {
+        enabled = true;
+        source = "arr";
+        schedule = "24h";
+        workers = 5;
+        nntp_connection_percent = 20;
+        strategy = "per_entry";
+        recheck_interval = "168h";
+        auto_repair = true;
+      };
+    };
   };
 
-  systemd.services.decypharr.serviceConfig.ExecStartPre =
-    "+${pkgs.coreutils}/bin/chown decypharr:decypharr /var/cache/decypharr";
+  # The cache volume ext4 root is root:root after mkfs; fix ownership before decypharr starts.
+  systemd.services.decypharr.serviceConfig.ExecStartPre = lib.mkAfter [
+    "+${pkgs.coreutils}/bin/chown decypharr:decypharr /var/cache/decypharr"
+  ];
 
   virtualisation.quadlet =
     let
@@ -250,28 +437,31 @@ in
   };
 
   systemd.tmpfiles.rules = [
-    "d /persist/zilean            0700 oci    oci    -"
-    "d /data                     0755 root   root   -"
-    "d /data/downloads           0775 root   media  -"
-    "d /data/downloads/sonarr    2775 sonarr media  -"
-    "d /data/downloads/radarr    2775 radarr media  -"
-    "d /data/library             0775 root   media  -"
-    "d /data/library/tv          0775 sonarr media  -"
-    "d /data/library/movies      0775 radarr media  -"
+    "d /mnt/decypharr               0775 root   media  -"
+    "d /persist/zilean               0700 oci    oci    -"
+    "d /data                         0755 root   root   -"
+    "d /data/downloads               0775 root   media  -"
+    "d /data/downloads/sonarr        2775 sonarr media  -"
+    "d /data/downloads/radarr        2775 radarr media  -"
+    "d /data/library                 0775 root   media  -"
+    "d /data/library/tv              0775 sonarr media  -"
+    "d /data/library/movies          0775 radarr media  -"
     "d /var/lib/private/prowlarr/Definitions 0755 root root -"
     "L+ /var/lib/private/prowlarr/Definitions/Custom - - - - ${../../config/prowlarr/indexers}"
   ];
 
   networking.firewall.allowedTCPPorts = [
     2049 # NFS
-    node.services.decypharr.port
-    # bazarr omitted: services.bazarr.openFirewall = true already covers it
+    # decypharr port opened by services.decypharr.openFirewall
   ];
 
   fileSystems."/var/cache/decypharr" = {
     device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_cache";
     fsType = "ext4";
-    options = [ "noatime" "nofail" ];
+    options = [
+      "noatime"
+      "nofail"
+    ];
   };
 
   swapDevices = [

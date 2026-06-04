@@ -31,6 +31,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
+    decypharr.url = "github:minz1/decypharr/minz";
   };
 
   outputs =
@@ -46,6 +47,7 @@
       authentik-nix,
       lanzaboote,
       quadlet-nix,
+      decypharr,
     }:
     let
       system = "x86_64-linux";
@@ -179,6 +181,7 @@
             quadlet-nix.nixosModules.quadlet
             rustfs.nixosModules.rustfs
             { services.rustfs.package = rustfs.packages.${system}.default; }
+            decypharr.nixosModules.default
             ./modules/nixos/base.nix
           ]
           ++ vmModule
@@ -216,7 +219,8 @@
       formatter.${system} = pkgs.nixfmt;
 
       packages.${system} = {
-        inherit (pkgs) decypharr seerr-oidc;
+        inherit (pkgs) seerr-oidc;
+        decypharr = decypharr.packages.${system}.default;
         deploy-rs = deployPkgs.deploy-rs.deploy-rs;
         nixos-anywhere = nixos-anywhere.packages.${system}.nixos-anywhere;
         incus-bootstrap-image = pkgs.runCommand "nixos-bootstrap-incus" { } ''
