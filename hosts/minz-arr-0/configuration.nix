@@ -189,7 +189,7 @@ in
 
     dfs = {
       cacheDir = "/var/cache/decypharr";
-      diskCacheSize = "85G";
+      diskCacheSize = "50G";
       chunkSize = "10MB";
     };
 
@@ -424,6 +424,13 @@ in
       };
     };
 
+  # Ensure NFS server starts after decypharr so it exports the live FUSE mount, not an empty dir.
+  # Also prevents deadlock if decypharr stops while NFS clients have files open.
+  systemd.services.nfs-server = {
+    wants = [ "decypharr.service" ];
+    after = [ "decypharr.service" ];
+  };
+
   # Exports bind-mounted into jellyfin-0 by the Incus host to avoid mount syscall issues in unprivileged containers.
   services.nfs.server = {
     enable = true;
@@ -435,11 +442,6 @@ in
     '';
   };
 
-  # Ensure NFS server starts after decypharr so it exports the FUSE mount, not the underlying dir.
-  systemd.services.nfs-server = {
-    wants = [ "decypharr.service" ];
-    after = [ "decypharr.service" ];
-  };
 
   systemd.tmpfiles.rules = [
     "d /mnt/decypharr               0775 root   media  -"
