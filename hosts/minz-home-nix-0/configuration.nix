@@ -151,42 +151,10 @@ in
     };
   };
 
-  # NFS from arr-0, bind-mounted into jellyfin-0 via Incus disk devices.
-  fileSystems."/mnt/nfs/data" = {
-    device = "10.10.0.4:/data";
-    fsType = "nfs4";
-    options = [
-      "ro"
-      "noatime"
-      "soft"
-      "timeo=30"
-      "_netdev"
-    ];
-  };
-
-  fileSystems."/mnt/nfs/decypharr" = {
-    device = "10.10.0.4:/mnt/decypharr";
-    fsType = "nfs4";
-    options = [
-      "ro"
-      "noatime"
-      "soft"
-      "timeo=30"
-      "_netdev"
-      "rsize=1048576"
-      "nfsvers=4.2"
-    ];
-  };
-
   # Intel I219 (e1000e) hardware unit hang fix — TSO/GSO cause tx ring stalls.
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="net", KERNEL=="eno1", RUN+="${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off"
   '';
-
-  systemd.tmpfiles.rules = [
-    "d /mnt/nfs/data          0755 root root -"
-    "d /mnt/nfs/decypharr     0755 root root -"
-  ];
 
   systemd.services.incus-add-tofu-cert = {
     description = "Add tofu-automation client certificate to Incus trust store";

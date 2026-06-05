@@ -19,21 +19,18 @@ let
   obsIp = obsNode.networks.incus_bridge.ip;
   grafanaPort = obsNode.services.grafana.port;
 
-  jellyfinNode = topology.nodes.minz-jellyfin-0;
-  jellyfinIp = jellyfinNode.networks.incus_bridge.ip;
-  jellyfinPort = jellyfinNode.services.jellyfin.port;
-  seerrPort = jellyfinNode.services.seerr.port;
+  mediaNode = topology.nodes.minz-media-0;
+  mediaIp = mediaNode.networks.incus_bridge.ip;
+  jellyfinPort = mediaNode.services.jellyfin.port;
+  seerrPort = mediaNode.services.seerr.port;
+  sonarrPort = mediaNode.services.sonarr.port;
+  radarrPort = mediaNode.services.radarr.port;
+  prowlarrPort = mediaNode.services.prowlarr.port;
+  bazarrPort = mediaNode.services.bazarr.port;
 
   servicesNode = topology.nodes.minz-services-0;
   memosIp = servicesNode.networks.incus_bridge.ip;
   memosPort = servicesNode.services.memos.port;
-
-  arrNode = topology.nodes.minz-arr-0;
-  arrIp = arrNode.networks.incus_bridge.ip;
-  sonarrPort = arrNode.services.sonarr.port;
-  radarrPort = arrNode.services.radarr.port;
-  prowlarrPort = arrNode.services.prowlarr.port;
-  bazarrPort = arrNode.services.bazarr.port;
 
   fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
 in
@@ -206,7 +203,7 @@ in
             -Server
           }
           crowdsec
-          reverse_proxy http://${jellyfinIp}:${toString jellyfinPort} {
+          reverse_proxy http://${mediaIp}:${toString jellyfinPort} {
             flush_interval -1
           }
         '';
@@ -216,7 +213,7 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy http://${jellyfinIp}:${toString seerrPort}
+          reverse_proxy http://${mediaIp}:${toString seerrPort}
         '';
       };
 
@@ -239,22 +236,22 @@ in
 
           handle /sonarr* {
             import forward_auth_authentik
-            reverse_proxy http://${arrIp}:${toString sonarrPort}
+            reverse_proxy http://${mediaIp}:${toString sonarrPort}
           }
 
           handle /radarr* {
             import forward_auth_authentik
-            reverse_proxy http://${arrIp}:${toString radarrPort}
+            reverse_proxy http://${mediaIp}:${toString radarrPort}
           }
 
           handle /prowlarr* {
             import forward_auth_authentik
-            reverse_proxy http://${arrIp}:${toString prowlarrPort}
+            reverse_proxy http://${mediaIp}:${toString prowlarrPort}
           }
 
           handle /bazarr* {
             import forward_auth_authentik
-            reverse_proxy http://${arrIp}:${toString bazarrPort}
+            reverse_proxy http://${mediaIp}:${toString bazarrPort}
           }
 
           handle {

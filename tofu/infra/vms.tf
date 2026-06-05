@@ -168,6 +168,19 @@ resource "incus_instance" "container" {
   }
 
 
+  dynamic "device" {
+    for_each = each.key == "minz-media-0" ? [1] : []
+    content {
+      name = "cache"
+      type = "disk"
+      properties = {
+        source = incus_storage_volume.media_cache.name
+        pool   = "default"
+        path   = "/var/cache/decypharr"
+      }
+    }
+  }
+
   # GPU DRM passthrough via cgroup device allowlisting — no VFIO/IOMMU required.
   dynamic "device" {
     for_each = try(each.value.incus.gpu, false) ? [1] : []

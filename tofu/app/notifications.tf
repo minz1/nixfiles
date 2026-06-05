@@ -1,5 +1,5 @@
 locals {
-  jellyfin_host = "10.10.0.5"
+  jellyfin_host = "127.0.0.1"
   jellyfin_port = 8096
 }
 

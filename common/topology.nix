@@ -166,6 +166,34 @@
       };
     };
 
+    minz-media-0 = {
+      os = "nixos";
+      sshUser = "minz1";
+      provisioner = "incus";
+      deployed = true;
+      incus = {
+        incus_type = "container";
+        root_size = "60GiB";
+        cpus = 4;
+        memory = "8GiB";
+        gpu = true;
+        nesting = true;
+      };
+      services = {
+        ssh.port = 22;
+        jellyfin.port = 8096;
+        seerr.port = 5055;
+        decypharr.port = 8282;
+        sonarr.port = 8989;
+        radarr.port = 7878;
+        prowlarr.port = 9696;
+        bazarr.port = 6767;
+      };
+      networks.incus_bridge = {
+        ip = "10.10.0.7";
+      };
+    };
+
     minz-authentik-0 = {
       os = "nixos";
       sshUser = "minz1";

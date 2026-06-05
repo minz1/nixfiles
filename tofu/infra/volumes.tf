@@ -19,3 +19,12 @@ resource "incus_storage_volume" "arr_cache" {
     size = "100GiB"
   }
 }
+
+resource "incus_storage_volume" "media_cache" {
+  name = "minz-media-0-cache"
+  pool = "default"
+
+  config = {
+    size = "100GiB"
+  }
+}
