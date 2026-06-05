@@ -187,10 +187,8 @@ in
     maxDownloads = 10;
     removeStalledAfter = "10m";
 
-    dfs = {
-      cacheDir = "/var/cache/decypharr";
-      diskCacheSize = "85G";
-      chunkSize = "10MB";
+    rclone = {
+      vfsCacheMode = "off";
     };
 
     usenet = {
@@ -212,7 +210,7 @@ in
       default_download_action = "symlink";
 
       mount = {
-        type = "dfs";
+        type = "rclone";
         mount_path = "/mnt/decypharr";
       };
 
@@ -441,7 +439,6 @@ in
       /mnt/decypharr 10.10.0.1(ro,no_subtree_check,fsid=2,insecure,all_squash,anonuid=99,anongid=99)
     '';
   };
-
 
   systemd.tmpfiles.rules = [
     "d /mnt/decypharr               0775 root   media  -"
