@@ -32,6 +32,7 @@
     };
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
     decypharr.url = "github:minz1/decypharr/minz";
+    authentik-cert-sync.url = "github:minz1/authentik-cert-sync";
   };
 
   outputs =
@@ -48,6 +49,7 @@
       lanzaboote,
       quadlet-nix,
       decypharr,
+      authentik-cert-sync,
     }:
     let
       system = "x86_64-linux";
@@ -57,6 +59,7 @@
       # Shared overlay list — used for both the top-level pkgs and per-host nixpkgs.overlays.
       overlays = [
         rustfs.overlays.default
+        authentik-cert-sync.overlays.default
         overlay
       ];
 
@@ -174,7 +177,7 @@
           inherit system;
           specialArgs = {
             hostName = name;
-            inherit lanzaboote authentik-nix;
+            inherit lanzaboote authentik-nix authentik-cert-sync;
           };
           modules = [
             sops-nix.nixosModules.sops

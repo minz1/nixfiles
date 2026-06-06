@@ -13,6 +13,12 @@
 
   sops.defaultSopsFile = ../../secrets + "/${config.networking.hostName}.yaml";
 
+  # NOTE: this causes a build error until hosts/minz-pki-0/root_ca.crt is
+  # replaced with the real CA cert from `step ca init`.
+  security.pki.certificates = [
+    (builtins.readFile ../../hosts/minz-pki-0/root_ca.crt)
+  ];
+
   networking.useNetworkd = true;
   networking.useDHCP = false;
 

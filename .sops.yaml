@@ -13,6 +13,8 @@ keys:
 
   - &minz-services-0 age1j0z95pw98qdhwnah9kcn3f8tkae299u7jsxd72gp329jfql425xswyvq8m
 
+  - &minz-pki-0 age1ngn0ednmg3kspm6css3xhr23m95s8surqadmvrs3wkarkqukmdksvsaa06
+
   - &minz-desktop age1m7d8ymts4dhvdz8fzllxwtxhy8h6q5dm4h5fvsxuv7f5t68cedeskh8ksy
 
 creation_rules:
@@ -56,6 +58,12 @@ creation_rules:
     key_groups:
       - age:
           - *minz-services-0
+          - *minz-desktop
+
+  - path_regex: secrets/minz-pki-0\.yaml$
+    key_groups:
+      - age:
+          - *minz-pki-0
           - *minz-desktop
 
   - path_regex: secrets/tofu\.env$

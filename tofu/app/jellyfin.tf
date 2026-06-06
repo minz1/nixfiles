@@ -36,12 +36,17 @@ resource "authentik_user" "ldap_bind" {
   roles    = [authentik_rbac_role.ldap_searcher.id]
 }
 
+data "authentik_certificate_key_pair" "ldap_outpost" {
+  name = "ldap-outpost"
+}
+
 resource "authentik_provider_ldap" "jellyfin" {
   name        = "jellyfin-ldap"
   bind_flow   = data.authentik_flow.default_authentication.id
   unbind_flow = data.authentik_flow.default_invalidation.id
   base_dn     = "dc=ldap,dc=goauthentik,dc=io"
   search_mode = "cached"
+  certificate = data.authentik_certificate_key_pair.ldap_outpost.id
 }
 
 resource "authentik_application" "jellyfin" {

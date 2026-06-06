@@ -2,6 +2,7 @@
   hostName,
   config,
   authentik-nix,
+  authentik-cert-sync,
   ...
 }:
 
@@ -12,13 +13,17 @@ let
   ldapPort = node.services.ldap.port;
 in
 {
-  imports = [ authentik-nix.nixosModules.default ];
+  imports = [
+    authentik-nix.nixosModules.default
+    authentik-cert-sync.nixosModules.default
+  ];
 
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   sops.secrets.authentik_env.mode = "0400";
   sops.secrets.authentik_ldap_token.mode = "0400";
+  sops.secrets.authentik_api_token.mode = "0400";
 
   sops.templates.authentik-ldap-env = {
     content = ''
@@ -58,9 +63,30 @@ in
     }
   ];
 
+  security.acme = {
+    acceptTerms = true;
+    defaults = {
+      server = "https://minz-pki-0.internal:9443/acme/acme/directory";
+      email = "emerytang@gmail.com";
+    };
+    certs."minz-authentik-0.internal" = {
+      listenHTTP = ":80";
+      reloadServices = [ "authentik-cert-sync.service" ];
+    };
+  };
+
+  services.authentik-cert-sync = {
+    enable = true;
+    authentikUrl = "http://localhost:${toString authentikPort}";
+    certName = "ldap-outpost";
+    acmeDomain = "minz-authentik-0.internal";
+    tokenFile = config.sops.secrets.authentik_api_token.path;
+  };
+
   networking.firewall.allowedTCPPorts = [
     authentikPort
     ldapPort
+    80  # ACME HTTP-01 challenge (step-ca validates from minz-pki-0)
   ];
 
   environment.persistence."/persist".directories = [

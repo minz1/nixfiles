@@ -159,11 +159,29 @@
       services = {
         ssh.port = 22;
         authentik.port = 9000;
-        ldap.port = 3389;
+        ldap.port = 6636;
       };
       networks.incus_bridge = {
         ip = "10.10.0.3";
       };
+    };
+
+    minz-pki-0 = {
+      os = "nixos";
+      sshUser = "minz1";
+      provisioner = "incus";
+      deployed = true;
+      incus = {
+        nix_size = "10G";
+        persist_size = "15GiB";
+        cpus = 1;
+        memory = "2GiB";
+      };
+      services = {
+        ssh.port = 22;
+        step_ca.port = 9443;
+      };
+      networks.incus_bridge.ip = "10.10.0.8";
     };
 
     minz-services-0 = {
