@@ -10,16 +10,6 @@ resource "incus_storage_volume" "persist" {
   }
 }
 
-resource "incus_storage_volume" "arr_cache" {
-  name         = "minz-arr-0-cache"
-  pool         = "default"
-  content_type = "block"
-
-  config = {
-    size = "100GiB"
-  }
-}
-
 resource "incus_storage_volume" "media_cache" {
   name = "minz-media-0-cache"
   pool = "default"

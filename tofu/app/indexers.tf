@@ -1,5 +1,6 @@
-# Local Torznab on arr-0 at 127.0.0.1:8181; priority 1 for debrid cache hits.
+# Disabled until Zilean finishes initial import. Add manually in Prowlarr UI then import into state.
 resource "prowlarr_indexer" "zilean" {
+  count = 0
   enable          = true
   name            = "Zilean"
   implementation  = "Torznab"

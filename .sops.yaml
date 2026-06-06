@@ -9,10 +9,6 @@ keys:
 
   - &minz-authentik-0 age1tk2thlt86mrl47d44u3f47v90mpp2w6f7ccmhzyjy9ycxtr7ne4qu3a73u
 
-  - &minz-arr-0 age12jxmqm7a5yrtjkn44uusp6k4r8tjcjj3lgxrrpn4gsly723zyfuskfcfdm
-
-  - &minz-jellyfin-0 age1vm2m3eamc5vnqagl635yv8fzxqhpk75906txnem6w9tj7r0vy5js0rj7ja
-
   - &minz-media-0 age1ehkwt0l6c22glvv9tc35ktece9rzxqelgxvklwk9klkkhd38gy4smqwtpu
 
   - &minz-services-0 age1j0z95pw98qdhwnah9kcn3f8tkae299u7jsxd72gp329jfql425xswyvq8m
@@ -48,18 +44,6 @@ creation_rules:
     key_groups:
       - age:
           - *minz-authentik-0
-          - *minz-desktop
-
-  - path_regex: secrets/minz-arr-0\.yaml$
-    key_groups:
-      - age:
-          - *minz-arr-0
-          - *minz-desktop
-
-  - path_regex: secrets/minz-jellyfin-0\.yaml$
-    key_groups:
-      - age:
-          - *minz-jellyfin-0
           - *minz-desktop
 
   - path_regex: secrets/minz-media-0\.yaml$

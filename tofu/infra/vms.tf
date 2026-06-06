@@ -88,17 +88,6 @@ resource "incus_instance" "vm" {
     }
   }
 
-  dynamic "device" {
-    for_each = each.key == "minz-arr-0" ? [1] : []
-    content {
-      name = "cache"
-      type = "disk"
-      properties = {
-        source = incus_storage_volume.arr_cache.name
-        pool   = "default"
-      }
-    }
-  }
 }
 
 # --- NixOS containers ---
@@ -139,34 +128,6 @@ resource "incus_instance" "container" {
       size = try(each.value.incus.root_size, "60GiB")
     }
   }
-
-  # --- Storage (NFS-backed disk devices) ---
-  # These are mounted on the host (/mnt/nfs/...) and bind-mounted into the container.
-  # This avoids syscall interception issues in unprivileged containers.
-  dynamic "device" {
-    for_each = try(each.value.incus.nfs_mounts, false) ? [1] : []
-    content {
-      name = "data"
-      type = "disk"
-      properties = {
-        source = "/mnt/nfs/data"
-        path   = "/data"
-      }
-    }
-  }
-
-  dynamic "device" {
-    for_each = try(each.value.incus.nfs_mounts, false) ? [1] : []
-    content {
-      name = "decypharr"
-      type = "disk"
-      properties = {
-        source = "/mnt/nfs/decypharr"
-        path   = "/mnt/decypharr"
-      }
-    }
-  }
-
 
   dynamic "device" {
     for_each = each.key == "minz-media-0" ? [1] : []

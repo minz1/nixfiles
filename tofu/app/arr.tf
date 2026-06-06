@@ -31,7 +31,7 @@ resource "sonarr_download_client_qbittorrent" "decypharr" {
   priority = 1
   host     = "127.0.0.1"
   port     = 8282
-  tv_category = "tv-sonarr"
+  tv_category = "sonarr"
 }
 
 resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
