@@ -17,8 +17,12 @@
   "authority": {
     "provisioners": [
       {
+        "type": "ACME",
+        "name": "acme"
+      },
+      {
         "type": "JWK",
-        "name": "acme",
+        "name": "admin",
         "key": {
           "use": "sig",
           "kty": "EC",

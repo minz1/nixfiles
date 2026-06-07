@@ -6,11 +6,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1780766179,
-        "narHash": "sha256-2+KUnrl5dUhuhkcvKQLqx5r5J6PdxdXCXLnmvTBecz4=",
+        "lastModified": 1780792059,
+        "narHash": "sha256-0m1ea/DnKlgg1MGwFYC0RqoNPIujYbvEr5M3w2oFaKs=",
         "owner": "minz1",
         "repo": "authentik-cert-sync",
-        "rev": "9926bdd07e8b73d5b8603f4908e284a439d0d24f",
+        "rev": "09f0236e24a40a1e718a751064d2f07978c6bd66",
         "type": "github"
       },
       "original": {

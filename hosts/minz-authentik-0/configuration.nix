@@ -23,7 +23,10 @@ in
 
   sops.secrets.authentik_env.mode = "0400";
   sops.secrets.authentik_ldap_token.mode = "0400";
-  sops.secrets.authentik_api_token.mode = "0400";
+  sops.secrets.authentik_api_token = {
+    mode = "0400";
+    owner = "acme";
+  };
 
   sops.templates.authentik-ldap-env = {
     content = ''
@@ -82,6 +85,11 @@ in
     acmeDomain = "minz-authentik-0.internal";
     tokenFile = config.sops.secrets.authentik_api_token.path;
   };
+
+  # reloadServices uses try-reload-or-restart which is a no-op for inactive oneshot
+  # services. RemainAfterExit=true keeps the service in active(exited) state so
+  # renewals trigger a restart correctly.
+  systemd.services.authentik-cert-sync.serviceConfig.RemainAfterExit = true;
 
   networking.firewall.allowedTCPPorts = [
     authentikPort
