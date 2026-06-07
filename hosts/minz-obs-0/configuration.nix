@@ -12,6 +12,9 @@ let
   lokiPort = node.services.loki.port;
   grafanaPort = node.services.grafana.port;
 
+  authentikNode = topology.nodes.minz-authentik-0;
+  authentikHttpsPort = authentikNode.services.authentik.httpsPort;
+
   nixosNodes = lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
   nodeExporterTargets = lib.mapAttrsToList (
     _: n:
@@ -111,9 +114,9 @@ in
         client_id = "grafana";
         client_secret = "$__file{${config.sops.secrets.grafana_oauth_client_secret.path}}";
         scopes = "openid email profile";
-        auth_url = "http://10.10.0.3:9000/application/o/authorize/";
-        token_url = "http://10.10.0.3:9000/application/o/token/";
-        api_url = "http://10.10.0.3:9000/application/o/userinfo/";
+        auth_url = "https://auth.minz1.com/application/o/authorize/";
+        token_url = "https://minz-authentik-0.internal:${toString authentikHttpsPort}/application/o/token/";
+        api_url = "https://minz-authentik-0.internal:${toString authentikHttpsPort}/application/o/userinfo/";
         role_attribute_path = "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'";
         allow_sign_up = true;
       };

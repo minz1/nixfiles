@@ -13,7 +13,7 @@ let
 
   authentikNode = topology.nodes.minz-authentik-0;
   authentikIp = authentikNode.networks.incus_bridge.ip;
-  authentikPort = authentikNode.services.authentik.port;
+  authentikPort = authentikNode.services.authentik.httpsPort;
 
   obsNode = topology.nodes.minz-obs-0;
   obsIp = obsNode.networks.incus_bridge.ip;
@@ -169,7 +169,7 @@ in
       }
 
       (forward_auth_authentik) {
-        forward_auth http://${authentikIp}:${toString authentikPort} {
+        forward_auth https://${authentikIp}:${toString authentikPort} {
           uri /outpost.goauthentik.io/auth/caddy
           copy_headers X-authentik-username X-authentik-groups X-authentik-email X-authentik-name X-authentik-uid
         }
@@ -181,7 +181,7 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy http://${authentikIp}:${toString authentikPort}
+          reverse_proxy https://${authentikIp}:${toString authentikPort}
         '';
       };
 
@@ -231,7 +231,7 @@ in
           crowdsec
 
           handle /outpost.goauthentik.io/* {
-            reverse_proxy http://${authentikIp}:${toString authentikPort}
+            reverse_proxy https://${authentikIp}:${toString authentikPort}
           }
 
           handle /sonarr* {

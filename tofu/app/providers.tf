@@ -40,9 +40,8 @@ terraform {
 }
 
 # Token sourced from AUTHENTIK_TOKEN in secrets/tofu.env.
-# URL: topology.nix nodes.minz-authentik-0.networks.incus_bridge.ip + services.authentik.port
 provider "authentik" {
-  url = "http://10.10.0.3:9000"
+  url = "https://10.10.0.3:9443"
 }
 
 # API keys sourced from TF_VAR_* in secrets/tofu.env.

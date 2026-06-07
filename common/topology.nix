@@ -158,8 +158,14 @@
       };
       services = {
         ssh.port = 22;
-        authentik.port = 9000;
-        ldap.port = 6636;
+        authentik = {
+          port = 9000;
+          httpsPort = 9443;
+        };
+        ldap = {
+          port = 3389;
+          tlsPort = 6636;
+        };
       };
       networks.incus_bridge = {
         ip = "10.10.0.3";
