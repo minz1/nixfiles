@@ -181,7 +181,9 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy https://${authentikIp}:${toString authentikPort}
+          reverse_proxy https://${authentikIp}:${toString authentikPort} {
+            header_up Host {http.request.host}
+          }
         '';
       };
 
@@ -189,7 +191,9 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy http://${obsIp}:${toString grafanaPort}
+          reverse_proxy https://${obsIp}:${toString grafanaPort} {
+            header_up Host {http.request.host}
+          }
         '';
       };
 

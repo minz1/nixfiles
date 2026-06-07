@@ -11,6 +11,7 @@ let
   promPort = node.services.prometheus.port;
   lokiPort = node.services.loki.port;
   grafanaPort = node.services.grafana.port;
+  acmeHttpPort = 80;
 
   authentikNode = topology.nodes.minz-authentik-0;
   authentikHttpsPort = authentikNode.services.authentik.httpsPort;
@@ -94,6 +95,9 @@ in
       server = {
         http_addr = "0.0.0.0";
         http_port = grafanaPort;
+        protocol = "https";
+        cert_file = "/var/lib/acme/minz-obs-0.internal/cert.pem";
+        cert_key = "/var/lib/acme/minz-obs-0.internal/key.pem";
         domain = "grafana.minz1.com";
         root_url = "https://grafana.minz1.com/";
       };
@@ -102,10 +106,14 @@ in
         # $__file{} is expanded by Grafana's file provider at runtime.
         admin_password = "$__file{${config.sops.secrets.grafana_admin_password.path}}";
         secret_key = "$__file{${config.sops.secrets.grafana_secret_key.path}}";
+        cookie_secure = true;
       };
       analytics = {
         reporting_enabled = false;
         check_for_updates = false;
+      };
+      live = {
+        allowed_origins = "https://grafana.minz1.com";
       };
       "auth.generic_oauth" = {
         enabled = true;
@@ -164,10 +172,21 @@ in
     }
   ];
 
+  security.acme = {
+    acceptTerms = true;
+    certs."minz-obs-0.internal" = {
+      listenHTTP = ":${toString acmeHttpPort}";
+      reloadServices = [ "grafana.service" ];
+      group = "grafana";
+      extraDomainNames = [ (node.networks.incus_bridge.ip) ];
+    };
+  };
+
   networking.firewall.allowedTCPPorts = [
     promPort
     lokiPort
     grafanaPort
+    acmeHttpPort
   ];
 
   environment.persistence."/persist".directories = [

@@ -144,10 +144,6 @@ in
 
   security.acme = {
     acceptTerms = true;
-    defaults = {
-      server = "https://minz-pki-0.internal:9443/acme/acme/directory";
-      email = "emerytang@gmail.com";
-    };
     certs."minz-authentik-0.internal" = {
       listenHTTP = ":${toString acmeHttpPort}";
       reloadServices = [ "caddy.service" ];

@@ -15,10 +15,16 @@ let
   entries = lib.filterAttrs (_: v: v != null)
     (lib.mapAttrs resolve
       (lib.filterAttrs (n: _: n != config.networking.hostName) topology.nodes));
+  pkiNode = topology.nodes.minz-pki-0;
+  pkiPort = pkiNode.services.step_ca.port;
 in
 {
   networking.extraHosts = lib.concatStringsSep "\n"
     (lib.mapAttrsToList (name: ip: "${ip}  ${name}.internal") entries);
+
+  security.acme.defaults.server = lib.mkDefault
+    "https://minz-pki-0.internal:${toString pkiPort}/acme/acme/directory";
+  security.acme.defaults.email = lib.mkDefault "emerytang@gmail.com";
 
   services.openssh = {
     enable = true;
