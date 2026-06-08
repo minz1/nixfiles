@@ -144,6 +144,9 @@ in
 
     globalConfig = ''
       order crowdsec first
+      # Disable automatic HTTP→HTTPS redirect server so lego can own port 80
+      # for internal ACME certificate issuance from step-ca.
+      auto_https disable_redirects
 
       crowdsec {
         api_url http://127.0.0.1:8080
@@ -274,6 +277,14 @@ in
     };
 
     environmentFile = config.sops.templates.crowdsec-caddy-env.path;
+  };
+
+  security.acme = {
+    acceptTerms = true;
+    certs."minz-vultr-nix-1.internal" = {
+      listenHTTP = ":80";
+      group = "caddy";
+    };
   };
 
   systemd.services.caddy.after = lib.mkAfter [ "crowdsec.service" ];

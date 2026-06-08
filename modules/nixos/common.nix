@@ -11,7 +11,10 @@ let
         (net: (node.networks or { }) ? ${net} && (node.networks.${net} ? ip))
         myNetworks;
     in
-    if shared == [ ] then null else node.networks.${builtins.head shared}.ip;
+    if shared != [ ] then node.networks.${builtins.head shared}.ip
+    else if (node.networks or { }) ? mgmt then node.networks.mgmt.ip
+    else if (node.networks or { }) ? incus_bridge then node.networks.incus_bridge.ip
+    else null;
   entries = lib.filterAttrs (_: v: v != null)
     (lib.mapAttrs resolve
       (lib.filterAttrs (n: _: n != config.networking.hostName) topology.nodes));

@@ -111,10 +111,13 @@ in
           # mTLS client cert verification already provides the auth guarantee.
           strict_sni_host = false;
           tls_connection_policies = [
-            # Incus-bridge callers (10.10.0.0/24) must present a client cert signed
-            # by the internal CA. WG hosts fall through to the no-client-cert policy.
+            # Incus-bridge and WG callers must present a client cert signed by
+            # the internal CA. Any other source falls through unauthenticated.
             {
-              match.remote_ip.ranges = [ topology.networks.incus_bridge.subnet ];
+              match.remote_ip.ranges = [
+                topology.networks.incus_bridge.subnet
+                topology.networks.mgmt.subnet
+              ];
               certificate_selection.any_tag = [ "loki" ];
               client_authentication = {
                 trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];

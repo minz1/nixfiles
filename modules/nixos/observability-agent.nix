@@ -8,13 +8,14 @@ let
   lokiUrl = if lokiIp != null then "https://${lokiIp}:${lokiHttpsPort}/loki/api/v1/push" else null;
   enableAlloy = lokiUrl != null;
 
-  # Incus-bridge hosts can reach step-ca for HTTP-01 and get internal certs;
-  # WG-only hosts (vultr-nix-*) cannot. Drive the decision from topology, not
-  # from NixOS config self-inspection, to avoid evaluation cycles.
+  # Any host on the incus bridge or mgmt WG network can reach step-ca for
+  # HTTP-01 validation (WG hosts via home-nix-0 NAT). Drive from topology
+  # to avoid NixOS config self-inspection cycles.
   thisNode = topology.nodes.${config.networking.hostName} or null;
-  hasIncusBridge = thisNode != null && thisNode.networks ? incus_bridge;
+  hasInternalNetwork = thisNode != null &&
+    ((thisNode.networks ? incus_bridge) || (thisNode.networks ? mgmt));
   certName = "${config.networking.hostName}.internal";
-  enableClientCert = enableAlloy && hasIncusBridge;
+  enableClientCert = enableAlloy && hasInternalNetwork;
   certDir = "/var/lib/acme/${certName}";
 in
 {

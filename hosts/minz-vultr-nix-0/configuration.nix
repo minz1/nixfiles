@@ -198,7 +198,18 @@ in
     '';
   };
 
-  networking.firewall.allowedTCPPorts = fwPorts;
+  networking.firewall.allowedTCPPorts = fwPorts ++ [ 80 ];
+
+  # No Caddy on this host, but group is needed for ACME cert readability by Alloy.
+  users.groups.caddy = { };
+
+  security.acme = {
+    acceptTerms = true;
+    certs."minz-vultr-nix-0.internal" = {
+      listenHTTP = ":80";
+      group = "caddy";
+    };
+  };
 
   users.manageLingering = true;
 
