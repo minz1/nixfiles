@@ -25,7 +25,7 @@ let
 
   servicesNode = topology.nodes.minz-services-0;
   memosIp = servicesNode.networks.incus_bridge.ip;
-  memosPort = servicesNode.services.memos.port;
+  memosCaddyHttpsPort = servicesNode.services.caddy.httpsPort;
 
   fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
 in
@@ -136,7 +136,7 @@ in
         plugins = [
           "github.com/hslatman/caddy-crowdsec-bouncer/http@v0.13.1"
         ];
-        hash = "sha256-hYfokre7FwhKp6OB3/I6zH+EzXb4yoIc9JiV9b5j87Y=";
+        hash = "sha256-9wxFVwd+s3woOvX5n7U+FEpw9Sri4b9SEftpSSOAArk=";
       }).overrideAttrs
         (_: {
           doInstallCheck = false;
@@ -223,7 +223,9 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy http://${memosIp}:${toString memosPort}
+          reverse_proxy https://${memosIp}:${toString memosCaddyHttpsPort} {
+            header_up Host {http.request.host}
+          }
         '';
       };
 

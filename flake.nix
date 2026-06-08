@@ -197,6 +197,9 @@
       deploy.nodes = builtins.mapAttrs (name: node: {
         hostname = deployHostname name node;
         sshUser = node.sshUser;
+        # 600s: gives headroom for first-time container image pulls during activation
+        # (rootless podman user session init can be slow on fresh deployments).
+        timeout = 600;
         profiles.system = {
           user = "root";
           path = deployPkgs.deploy-rs.lib.activate.nixos self.nixosConfigurations.${name};

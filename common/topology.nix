@@ -205,6 +205,7 @@
       services = {
         ssh.port = 22;
         memos.port = 5230;
+        caddy.httpsPort = 443;
       };
       networks.incus_bridge = {
         ip = "10.10.0.6";
