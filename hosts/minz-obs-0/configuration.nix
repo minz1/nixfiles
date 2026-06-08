@@ -10,7 +10,9 @@ let
   node = topology.nodes."${hostName}";
   promPort = node.services.prometheus.port;
   lokiPort = node.services.loki.port;
+  lokiHttpsPort = node.services.loki.httpsPort;
   grafanaPort = node.services.grafana.port;
+  obsIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 
   authentikNode = topology.nodes.minz-authentik-0;
@@ -54,6 +56,7 @@ in
     configuration = {
       auth_enabled = false;
       server = {
+        http_listen_address = "127.0.0.1";
         http_listen_port = lokiPort;
         grpc_listen_port = 9096;
       };
@@ -86,6 +89,39 @@ in
         delete_request_store = "filesystem";
       };
       analytics.reporting_enabled = false;
+    };
+  };
+
+  services.caddy = {
+    enable = true;
+    settings = {
+      apps = {
+        tls.certificates.load_files = [
+          {
+            certificate = "/var/lib/acme/minz-obs-0.internal/cert.pem";
+            key = "/var/lib/acme/minz-obs-0.internal/key.pem";
+            tags = [ "loki" ];
+          }
+        ];
+        http.servers.loki = {
+          listen = [ ":${toString lokiHttpsPort}" ];
+          automatic_https.disable = true;
+          tls_connection_policies = [
+            { certificate_selection.any_tag = [ "loki" ]; }
+          ];
+          routes = [
+            {
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "localhost:${toString lokiPort}"; } ];
+                  headers.request.set."Host" = [ "{http.request.host}" ];
+                }
+              ];
+            }
+          ];
+        };
+      };
     };
   };
 
@@ -176,15 +212,19 @@ in
     acceptTerms = true;
     certs."minz-obs-0.internal" = {
       listenHTTP = ":${toString acmeHttpPort}";
-      reloadServices = [ "grafana.service" ];
-      group = "grafana";
-      extraDomainNames = [ (node.networks.incus_bridge.ip) ];
+      reloadServices = [
+        "grafana.service"
+        "caddy.service"
+      ];
+      group = "caddy";
+      extraDomainNames = [ obsIp ];
     };
   };
 
+  users.users.grafana.extraGroups = [ "caddy" ];
+
   networking.firewall.allowedTCPPorts = [
-    promPort
-    lokiPort
+    lokiHttpsPort
     grafanaPort
     acmeHttpPort
   ];
@@ -206,6 +246,12 @@ in
       directory = "/var/lib/grafana";
       user = "grafana";
       group = "grafana";
+      mode = "0700";
+    }
+    {
+      directory = "/var/lib/caddy";
+      user = "caddy";
+      group = "caddy";
       mode = "0700";
     }
   ];

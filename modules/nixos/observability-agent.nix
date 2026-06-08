@@ -4,8 +4,8 @@ let
   topology = import ../../common/topology.nix;
   obsNode = topology.nodes."minz-obs-0" or null;
   lokiIp = if obsNode != null then obsNode.networks.incus_bridge.ip else null;
-  lokiPort = if obsNode != null then toString obsNode.services.loki.port else "3100";
-  lokiUrl = if lokiIp != null then "http://${lokiIp}:${lokiPort}/loki/api/v1/push" else null;
+  lokiHttpsPort = if obsNode != null then toString obsNode.services.loki.httpsPort else "3101";
+  lokiUrl = if lokiIp != null then "https://${lokiIp}:${lokiHttpsPort}/loki/api/v1/push" else null;
   enableAlloy = lokiUrl != null;
 in
 {

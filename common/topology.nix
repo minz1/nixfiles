@@ -111,6 +111,7 @@
         ssh.port = 22;
         prometheus.port = 9090;
         loki.port = 3100;
+        loki.httpsPort = 3101;
         grafana.port = 3000;
       };
       networks.incus_bridge = {
