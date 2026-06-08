@@ -33,6 +33,7 @@ resource "seerr_sonarr_server" "default" {
   extra_payload_json    = jsonencode({
     activeAnimeProfileId = 8 # Remux-1080p Anime
   })
+  lifecycle { ignore_changes = [quality_profile_name, active_anime_directory, anime_tags, tags] }
 }
 
 resource "seerr_radarr_server" "default" {
@@ -45,6 +46,7 @@ resource "seerr_radarr_server" "default" {
   active_directory   = "/data/library/movies"
   is_default         = true
   quality_profile_id = 7 # Remux 2160p (Combined)
+  lifecycle { ignore_changes = [quality_profile_name, tags] }
 }
 
 resource "authentik_provider_oauth2" "seerr" {

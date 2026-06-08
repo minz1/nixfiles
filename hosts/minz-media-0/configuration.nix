@@ -123,6 +123,7 @@ in
   services.jellyfin.enable = true;
 
   services.seerr.enable = true;
+  systemd.services.seerr.environment.NODE_EXTRA_CA_CERTS = "/etc/ssl/certs/ca-bundle.crt";
 
   services.rootless-podman = {
     enable = true;
@@ -503,7 +504,15 @@ in
             # Path-specific routes before the seerr catch-all; mediaIp allows direct
             # WireGuard access (e.g. from the Tofu runner at https://10.10.0.7/sonarr).
             {
-              match = [ { host = [ "arr.minz1.com" mediaIp ]; path = [ "/sonarr*" ]; } ];
+              match = [
+                {
+                  host = [
+                    "arr.minz1.com"
+                    mediaIp
+                  ];
+                  path = [ "/sonarr*" ];
+                }
+              ];
               handle = [
                 {
                   handler = "reverse_proxy";
@@ -512,7 +521,15 @@ in
               ];
             }
             {
-              match = [ { host = [ "arr.minz1.com" mediaIp ]; path = [ "/radarr*" ]; } ];
+              match = [
+                {
+                  host = [
+                    "arr.minz1.com"
+                    mediaIp
+                  ];
+                  path = [ "/radarr*" ];
+                }
+              ];
               handle = [
                 {
                   handler = "reverse_proxy";
@@ -521,7 +538,15 @@ in
               ];
             }
             {
-              match = [ { host = [ "arr.minz1.com" mediaIp ]; path = [ "/prowlarr*" ]; } ];
+              match = [
+                {
+                  host = [
+                    "arr.minz1.com"
+                    mediaIp
+                  ];
+                  path = [ "/prowlarr*" ];
+                }
+              ];
               handle = [
                 {
                   handler = "reverse_proxy";
@@ -530,7 +555,15 @@ in
               ];
             }
             {
-              match = [ { host = [ "arr.minz1.com" mediaIp ]; path = [ "/bazarr*" ]; } ];
+              match = [
+                {
+                  host = [
+                    "arr.minz1.com"
+                    mediaIp
+                  ];
+                  path = [ "/bazarr*" ];
+                }
+              ];
               handle = [
                 {
                   handler = "reverse_proxy";
@@ -542,7 +575,12 @@ in
             # "https://10.10.0.7/radarr" produces bare /api/v3/... requests that would
             # otherwise fall through to the seerr catch-all below.
             {
-              match = [ { host = [ mediaIp ]; path = [ "/api/v3*" ]; } ];
+              match = [
+                {
+                  host = [ mediaIp ];
+                  path = [ "/api/v3*" ];
+                }
+              ];
               handle = [
                 {
                   handler = "reverse_proxy";
@@ -553,7 +591,14 @@ in
             # Seerr catch-all: matches seerr.minz1.com and direct IP (e.g. Tofu runner).
             # Must come after path-specific routes so /sonarr*, /radarr* etc. don't land here.
             {
-              match = [ { host = [ "seerr.minz1.com" mediaIp ]; } ];
+              match = [
+                {
+                  host = [
+                    "seerr.minz1.com"
+                    mediaIp
+                  ];
+                }
+              ];
               handle = [
                 {
                   handler = "reverse_proxy";
@@ -571,5 +616,12 @@ in
     acmeHttpPort
     caddyHttpsPort
   ];
+
+  # Allow arr service ports from WireGuard management subnet only.
+  networking.firewall.extraCommands = ''
+    iptables -A nixos-fw -s 10.8.0.0/24 -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s 10.8.0.0/24 -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s 10.8.0.0/24 -p tcp --dport ${toString prowlarrPort} -j nixos-fw-accept
+  '';
 
 }
