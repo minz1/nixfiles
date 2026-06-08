@@ -21,12 +21,7 @@ let
 
   mediaNode = topology.nodes.minz-media-0;
   mediaIp = mediaNode.networks.incus_bridge.ip;
-  jellyfinPort = mediaNode.services.jellyfin.port;
-  seerrPort = mediaNode.services.seerr.port;
-  sonarrPort = mediaNode.services.sonarr.port;
-  radarrPort = mediaNode.services.radarr.port;
-  prowlarrPort = mediaNode.services.prowlarr.port;
-  bazarrPort = mediaNode.services.bazarr.port;
+  mediaCaddyHttpsPort = mediaNode.services.caddy.httpsPort;
 
   servicesNode = topology.nodes.minz-services-0;
   memosIp = servicesNode.networks.incus_bridge.ip;
@@ -207,7 +202,8 @@ in
             -Server
           }
           crowdsec
-          reverse_proxy http://${mediaIp}:${toString jellyfinPort} {
+          reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+            header_up Host {http.request.host}
             flush_interval -1
           }
         '';
@@ -217,7 +213,9 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy http://${mediaIp}:${toString seerrPort}
+          reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+            header_up Host {http.request.host}
+          }
         '';
       };
 
@@ -240,22 +238,30 @@ in
 
           handle /sonarr* {
             import forward_auth_authentik
-            reverse_proxy http://${mediaIp}:${toString sonarrPort}
+            reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+              header_up Host {http.request.host}
+            }
           }
 
           handle /radarr* {
             import forward_auth_authentik
-            reverse_proxy http://${mediaIp}:${toString radarrPort}
+            reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+              header_up Host {http.request.host}
+            }
           }
 
           handle /prowlarr* {
             import forward_auth_authentik
-            reverse_proxy http://${mediaIp}:${toString prowlarrPort}
+            reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+              header_up Host {http.request.host}
+            }
           }
 
           handle /bazarr* {
             import forward_auth_authentik
-            reverse_proxy http://${mediaIp}:${toString bazarrPort}
+            reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+              header_up Host {http.request.host}
+            }
           }
 
           handle {

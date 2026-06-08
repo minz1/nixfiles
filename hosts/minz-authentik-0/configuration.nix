@@ -96,7 +96,7 @@ in
           servers = {
             authentik = {
               listen = [ ":${toString authentikHttpsPort}" ];
-              automatic_https.disable_redirects = true;
+              automatic_https.disable = true;
               tls_connection_policies = [
                 { certificate_selection.any_tag = [ "authentik" ]; }
               ];
@@ -106,6 +106,10 @@ in
                     {
                       handler = "reverse_proxy";
                       upstreams = [ { dial = "localhost:${toString authentikPort}"; } ];
+                      # Preserve the X-Forwarded-Host set by forward_auth on the edge Caddy;
+                      # without this, Caddy overwrites it with the incoming Host (10.10.0.x:9443)
+                      # and the embedded outpost can't match the arrs proxy provider.
+                      headers.request.set."X-Forwarded-Host" = [ "{http.request.header.X-Forwarded-Host}" ];
                     }
                   ];
                 }

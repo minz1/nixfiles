@@ -133,6 +133,7 @@
       };
       services = {
         ssh.port = 22;
+        caddy.httpsPort = 443;
         jellyfin.port = 8096;
         seerr.port = 5055;
         decypharr.port = 8282;

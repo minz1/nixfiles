@@ -9,7 +9,15 @@
 let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
+  mediaIp = node.networks.incus_bridge.ip;
   jellyfinPort = node.services.jellyfin.port;
+  seerrPort = node.services.seerr.port;
+  sonarrPort = node.services.sonarr.port;
+  radarrPort = node.services.radarr.port;
+  prowlarrPort = node.services.prowlarr.port;
+  bazarrPort = node.services.bazarr.port;
+  acmeHttpPort = 80;
+  caddyHttpsPort = node.services.caddy.httpsPort;
 in
 {
   imports = [
@@ -112,15 +120,9 @@ in
     "video"
   ];
 
-  services.jellyfin = {
-    enable = true;
-    openFirewall = true;
-  };
+  services.jellyfin.enable = true;
 
-  services.seerr = {
-    enable = true;
-    openFirewall = true;
-  };
+  services.seerr.enable = true;
 
   services.rootless-podman = {
     enable = true;
@@ -135,21 +137,18 @@ in
 
   services.sonarr = {
     enable = true;
-    openFirewall = true;
     settings.server.urlBase = "/sonarr";
     environmentFiles = [ config.sops.templates.sonarr-env.path ];
   };
 
   services.radarr = {
     enable = true;
-    openFirewall = true;
     settings.server.urlBase = "/radarr";
     environmentFiles = [ config.sops.templates.radarr-env.path ];
   };
 
   services.prowlarr = {
     enable = true;
-    openFirewall = true;
     settings.server.urlBase = "/prowlarr";
     environmentFiles = [ config.sops.templates.prowlarr-env.path ];
   };
@@ -191,10 +190,7 @@ in
     ];
   };
 
-  services.bazarr = {
-    enable = true;
-    openFirewall = true;
-  };
+  services.bazarr.enable = true;
 
   services.recyclarr.enable = true;
 
@@ -463,6 +459,117 @@ in
     "L+ /var/lib/private/prowlarr/Definitions/Custom - - - - ${../../config/prowlarr/indexers}"
   ];
 
-  networking.firewall.allowedTCPPorts = [ jellyfinPort ];
+  security.acme = {
+    acceptTerms = true;
+    certs."minz-media-0.internal" = {
+      listenHTTP = ":${toString acmeHttpPort}";
+      reloadServices = [ "caddy.service" ];
+      group = "caddy";
+      extraDomainNames = [ mediaIp ];
+    };
+  };
+
+  systemd.services.caddy.after = lib.mkAfter [ "acme-minz-media-0.internal.service" ];
+  systemd.services.caddy.wants = [ "acme-minz-media-0.internal.service" ];
+
+  services.caddy = {
+    enable = true;
+    settings = {
+      apps = {
+        tls.certificates.load_files = [
+          {
+            certificate = "/var/lib/acme/minz-media-0.internal/cert.pem";
+            key = "/var/lib/acme/minz-media-0.internal/key.pem";
+            tags = [ "media" ];
+          }
+        ];
+        http.servers.main = {
+          listen = [ ":${toString caddyHttpsPort}" ];
+          automatic_https.disable = true;
+          tls_connection_policies = [
+            { certificate_selection.any_tag = [ "media" ]; }
+          ];
+          routes = [
+            {
+              match = [ { host = [ "jellyfin.minz1.com" ]; } ];
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString jellyfinPort}"; } ];
+                  flush_interval = -1;
+                }
+              ];
+            }
+            # Path-specific routes before the seerr catch-all; mediaIp allows direct
+            # WireGuard access (e.g. from the Tofu runner at https://10.10.0.7/sonarr).
+            {
+              match = [ { host = [ "arr.minz1.com" mediaIp ]; path = [ "/sonarr*" ]; } ];
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString sonarrPort}"; } ];
+                }
+              ];
+            }
+            {
+              match = [ { host = [ "arr.minz1.com" mediaIp ]; path = [ "/radarr*" ]; } ];
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString radarrPort}"; } ];
+                }
+              ];
+            }
+            {
+              match = [ { host = [ "arr.minz1.com" mediaIp ]; path = [ "/prowlarr*" ]; } ];
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString prowlarrPort}"; } ];
+                }
+              ];
+            }
+            {
+              match = [ { host = [ "arr.minz1.com" mediaIp ]; path = [ "/bazarr*" ]; } ];
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString bazarrPort}"; } ];
+                }
+              ];
+            }
+            # devopsarr/radarr v2.3.5 strips the base path from the provider URL, so
+            # "https://10.10.0.7/radarr" produces bare /api/v3/... requests that would
+            # otherwise fall through to the seerr catch-all below.
+            {
+              match = [ { host = [ mediaIp ]; path = [ "/api/v3*" ]; } ];
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString radarrPort}"; } ];
+                }
+              ];
+            }
+            # Seerr catch-all: matches seerr.minz1.com and direct IP (e.g. Tofu runner).
+            # Must come after path-specific routes so /sonarr*, /radarr* etc. don't land here.
+            {
+              match = [ { host = [ "seerr.minz1.com" mediaIp ]; } ];
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString seerrPort}"; } ];
+                }
+              ];
+            }
+          ];
+        };
+      };
+    };
+  };
+
+  networking.firewall.allowedTCPPorts = [
+    acmeHttpPort
+    caddyHttpsPort
+  ];
 
 }

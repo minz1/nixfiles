@@ -55,22 +55,21 @@ variable "torbox_api_key"        { sensitive = true }
 variable "torrentio_debrid_key"  { sensitive = true }
 
 provider "sonarr" {
-  url     = "http://10.10.0.7:8989/sonarr"
+  url     = "https://10.10.0.7/sonarr"
   api_key = var.sonarr_api_key
 }
 
 provider "radarr" {
-  url     = "http://10.10.0.7:7878/radarr"
+  url     = "https://10.10.0.7/radarr"
   api_key = var.radarr_api_key
 }
 
 provider "prowlarr" {
-  url     = "http://10.10.0.7:9696/prowlarr"
+  url     = "https://10.10.0.7/prowlarr"
   api_key = var.prowlarr_api_key
 }
 
-# URL: topology.nix nodes.minz-media-0.networks.incus_bridge.ip + services.seerr.port
 provider "seerr" {
-  url     = "http://10.10.0.7:5055"
+  url     = "https://10.10.0.7"
   api_key = var.seerr_api_key
 }
