@@ -18,7 +18,10 @@
     "provisioners": [
       {
         "type": "ACME",
-        "name": "acme"
+        "name": "acme",
+        "x509Template": {
+          "template": "{\"subject\": {{ toJson .Subject }}, \"sans\": {{ toJson .SANs }}, \"keyUsage\": [\"keyEncipherment\", \"digitalSignature\"], \"extKeyUsage\": [\"serverAuth\", \"clientAuth\"]}"
+        }
       },
       {
         "type": "JWK",

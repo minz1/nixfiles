@@ -8,6 +8,7 @@ let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   stepCaPort = node.services.step_ca.port;
+  pkiIp = node.networks.incus_bridge.ip;
 in
 {
   networking.hostName = hostName;
@@ -43,6 +44,18 @@ in
       };
     };
     intermediatePasswordFile = config.sops.secrets.step_ca_password.path;
+  };
+
+  # No Caddy on this host, but group is needed for ACME cert readability by Alloy.
+  users.groups.caddy = { };
+
+  security.acme = {
+    acceptTerms = true;
+    certs."minz-pki-0.internal" = {
+      listenHTTP = ":80";
+      group = "caddy";
+      extraDomainNames = [ pkiIp ];
+    };
   };
 
   networking.firewall.allowedTCPPorts = [ stepCaPort ];

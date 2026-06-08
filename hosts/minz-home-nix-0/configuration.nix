@@ -12,6 +12,7 @@ let
   incusNodeNetwork = node.networks.incus_bridge;
   wgAddr = node.networks.mgmt.ip;
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
+  incusBridgeIp = incusNodeNetwork.ip;
   incusClientCert = pkgs.writeText "incus-client.crt" (
     builtins.readFile ../../secrets/incus-client.crt
   );
@@ -148,6 +149,18 @@ in
           };
         }
       ];
+    };
+  };
+
+  # No Caddy on this host, but group is needed for ACME cert readability by Alloy.
+  users.groups.caddy = { };
+
+  security.acme = {
+    acceptTerms = true;
+    certs."minz-home-nix-0.internal" = {
+      listenHTTP = ":80";
+      group = "caddy";
+      extraDomainNames = [ incusBridgeIp ];
     };
   };
 

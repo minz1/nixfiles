@@ -19,6 +19,13 @@
     (builtins.readFile ../../hosts/minz-pki-0/root_ca.crt)
   ];
 
+  # Standalone root CA cert file for services (e.g. Caddy client_authentication)
+  # that need to reference a specific trust anchor rather than the full system bundle.
+  environment.etc."ssl/internal-ca.crt" = {
+    source = ../../hosts/minz-pki-0/root_ca.crt;
+    mode = "0444";
+  };
+
   networking.useNetworkd = true;
   networking.useDHCP = false;
 

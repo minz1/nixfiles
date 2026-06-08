@@ -106,7 +106,21 @@ in
         http.servers.loki = {
           listen = [ ":${toString lokiHttpsPort}" ];
           automatic_https.disable = true;
+          # Caddy auto-enables strict SNI-Host when client_authentication is set;
+          # override to false because Loki is accessed via IP (no SNI from clients).
+          # mTLS client cert verification already provides the auth guarantee.
+          strict_sni_host = false;
           tls_connection_policies = [
+            # Incus-bridge callers (10.10.0.0/24) must present a client cert signed
+            # by the internal CA. WG hosts fall through to the no-client-cert policy.
+            {
+              match.remote_ip.ranges = [ topology.networks.incus_bridge.subnet ];
+              certificate_selection.any_tag = [ "loki" ];
+              client_authentication = {
+                trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];
+                mode = "require_and_verify";
+              };
+            }
             { certificate_selection.any_tag = [ "loki" ]; }
           ];
           routes = [
