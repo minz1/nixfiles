@@ -280,7 +280,6 @@ in
   };
 
   security.acme = {
-    acceptTerms = true;
     certs."minz-vultr-nix-1.internal" = {
       listenHTTP = ":80";
       group = "caddy";

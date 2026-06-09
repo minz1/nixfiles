@@ -156,7 +156,6 @@ in
   users.groups.caddy = { };
 
   security.acme = {
-    acceptTerms = true;
     certs."minz-home-nix-0.internal" = {
       listenHTTP = ":80";
       group = "caddy";

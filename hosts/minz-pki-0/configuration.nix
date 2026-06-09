@@ -48,7 +48,6 @@ in
   users.groups.caddy = { };
 
   security.acme = {
-    acceptTerms = true;
     certs."minz-pki-0.internal" = {
       listenHTTP = ":80";
       group = "caddy";

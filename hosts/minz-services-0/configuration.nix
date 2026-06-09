@@ -62,7 +62,6 @@ in
   };
 
   security.acme = {
-    acceptTerms = true;
     certs."minz-services-0.internal" = {
       listenHTTP = ":${toString acmeHttpPort}";
       reloadServices = [ "caddy.service" ];

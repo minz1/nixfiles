@@ -6,6 +6,7 @@
 }:
 
 let
+  mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   promPort = node.services.prometheus.port;
@@ -226,7 +227,6 @@ in
   ];
 
   security.acme = {
-    acceptTerms = true;
     certs."minz-obs-0.internal" = {
       listenHTTP = ":${toString acmeHttpPort}";
       reloadServices = [
@@ -246,106 +246,17 @@ in
     acmeHttpPort
   ];
 
-  systemd.services.loki.serviceConfig = {
-    UMask = "0077";
-    CapabilityBoundingSet = "";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    PrivateUsers = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
+  systemd.services.loki.serviceConfig = mkHardened {
+    umask = "0077";
+    addressFamilies = [
       "AF_INET"
       "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
     ];
   };
 
-  systemd.services.prometheus.serviceConfig = {
-    UMask = "0077";
-    CapabilityBoundingSet = "";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    PrivateUsers = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
-      "AF_INET"
-      "AF_INET6"
-      "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
-    ];
-  };
+  systemd.services.prometheus.serviceConfig = mkHardened { umask = "0077"; };
 
-  systemd.services.grafana.serviceConfig = {
-    UMask = "0027";
-    CapabilityBoundingSet = "";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    PrivateUsers = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
-      "AF_INET"
-      "AF_INET6"
-      "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
-    ];
-  };
+  systemd.services.grafana.serviceConfig = mkHardened { };
 
   environment.persistence."/persist".directories = [
     {

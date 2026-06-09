@@ -1,6 +1,7 @@
 { config, lib, ... }:
 
 let
+  mkHardened = import ../lib/hardening.nix { inherit lib; };
   topology = import ../../common/topology.nix;
   obsNode = topology.nodes."minz-obs-0" or null;
   lokiIp = if obsNode != null then obsNode.networks.incus_bridge.ip else null;
@@ -12,8 +13,8 @@ let
   # HTTP-01 validation (WG hosts via home-nix-0 NAT). Drive from topology
   # to avoid NixOS config self-inspection cycles.
   thisNode = topology.nodes.${config.networking.hostName} or null;
-  hasInternalNetwork = thisNode != null &&
-    ((thisNode.networks ? incus_bridge) || (thisNode.networks ? mgmt));
+  hasInternalNetwork =
+    thisNode != null && ((thisNode.networks ? incus_bridge) || (thisNode.networks ? mgmt));
   certName = "${config.networking.hostName}.internal";
   enableClientCert = enableAlloy && hasInternalNetwork;
   certDir = "/var/lib/acme/${certName}";
@@ -59,11 +60,11 @@ in
         endpoint {
           url = "${lokiUrl}"
           ${lib.optionalString enableClientCert ''
-          tls_config {
-            ca_file   = "/etc/ssl/internal-ca.crt"
-            cert_file = "${certDir}/fullchain.pem"
-            key_file  = "${certDir}/key.pem"
-          }
+            tls_config {
+              ca_file   = "/etc/ssl/internal-ca.crt"
+              cert_file = "${certDir}/fullchain.pem"
+              key_file  = "${certDir}/key.pem"
+            }
           ''}
         }
       }
@@ -73,44 +74,21 @@ in
   # loki.source.journal reads via the systemd journal API — requires group access.
   # "caddy" group gives read access to the ACME cert files when client cert is enabled.
   # PrivateUsers omitted: conflicts with SupplementaryGroups on DynamicUser services.
-  systemd.services.alloy.serviceConfig = lib.mkIf enableAlloy {
-    SupplementaryGroups = [ "systemd-journal" ] ++ lib.optional enableClientCert "caddy";
-    UMask = "0027";
-    CapabilityBoundingSet = "";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
-      "AF_INET"
-      "AF_INET6"
-      "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
-      "@chown"
-      # Alloy calls bpf() at startup for eBPF component detection; without it the
-      # process gets SIGSYS instead of EPERM. CapabilityBoundingSet="" still prevents
-      # any privileged BPF operation from succeeding.
-      "bpf"
-    ];
-  };
+  systemd.services.alloy.serviceConfig = lib.mkIf enableAlloy (
+    # Alloy calls bpf() at startup for eBPF component detection; without it the
+    # process gets SIGSYS instead of EPERM. CapabilityBoundingSet="" still prevents
+    # any privileged BPF operation from succeeding.
+    (mkHardened {
+      privateUsers = false;
+      extraSystemCallFilter = [
+        "@chown"
+        "bpf"
+      ];
+    })
+    // {
+      SupplementaryGroups = [ "systemd-journal" ] ++ lib.optional enableClientCert "caddy";
+    }
+  );
 
   # Restart Alloy when the cert is renewed so it picks up the new key material.
   # The outer mkIf guards the entire cert key so no spurious ACME cert entry is

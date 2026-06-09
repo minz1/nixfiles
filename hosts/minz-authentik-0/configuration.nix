@@ -8,6 +8,7 @@
 }:
 
 let
+  mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   authentikPort = node.services.authentik.port;
@@ -147,7 +148,6 @@ in
   ];
 
   security.acme = {
-    acceptTerms = true;
     certs."minz-authentik-0.internal" = {
       listenHTTP = ":${toString acmeHttpPort}";
       reloadServices = [ "caddy.service" ];
@@ -162,105 +162,19 @@ in
     acmeHttpPort
   ];
 
-  systemd.services.authentik.serviceConfig = {
-    UMask = "0027";
-    CapabilityBoundingSet = "";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
-      "AF_INET"
-      "AF_INET6"
-      "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
-      "@chown"
-    ];
+  systemd.services.authentik.serviceConfig = mkHardened {
+    privateUsers = false;
+    extraSystemCallFilter = [ "@chown" ];
   };
 
-  systemd.services.authentik-worker.serviceConfig = {
-    UMask = "0027";
-    CapabilityBoundingSet = "";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
-      "AF_INET"
-      "AF_INET6"
-      "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
-      "@chown"
-    ];
+  systemd.services.authentik-worker.serviceConfig = mkHardened {
+    privateUsers = false;
+    extraSystemCallFilter = [ "@chown" ];
   };
 
-  systemd.services.authentik-ldap.serviceConfig = {
-    UMask = "0027";
-    CapabilityBoundingSet = "";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    PrivateUsers = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
-      "AF_INET"
-      "AF_INET6"
-      "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
+  # Alloy/bpf: authentik-ldap calls bpf() at startup for eBPF detection.
+  systemd.services.authentik-ldap.serviceConfig = mkHardened {
+    extraSystemCallFilter = [
       "@chown"
       "bpf"
     ];

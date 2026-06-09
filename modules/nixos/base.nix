@@ -1,5 +1,8 @@
 { config, lib, ... }:
 
+let
+  mkHardened = import ../lib/hardening.nix { inherit lib; };
+in
 {
   imports = [
     ./common.nix
@@ -40,36 +43,8 @@
 
   # PrivateUsers omitted: drops AmbientCapabilities, breaking port 80/443 binding on
   # hosts where Caddy uses them. CapabilityBoundingSet keeps only the net-bind capability.
-  systemd.services.caddy.serviceConfig = lib.mkIf config.services.caddy.enable {
-    UMask = "0027";
-    CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
-      "AF_INET"
-      "AF_INET6"
-      "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
-    ];
-  };
+  systemd.services.caddy.serviceConfig = lib.mkIf config.services.caddy.enable (mkHardened {
+    capabilityBoundingSet = "CAP_NET_BIND_SERVICE";
+    privateUsers = false;
+  });
 }

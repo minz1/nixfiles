@@ -7,6 +7,7 @@
 }:
 
 let
+  mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   mediaIp = node.networks.incus_bridge.ip;
@@ -153,79 +154,20 @@ in
     settings.server.urlBase = "/prowlarr";
     environmentFiles = [ config.sops.templates.prowlarr-env.path ];
   };
-  systemd.services.prowlarr.serviceConfig = {
-    # Recreate symlink on each start so stale Nix store paths don't persist after deploy.
-    ExecStartPre = "+/bin/sh -c 'mkdir -p /var/lib/private/prowlarr/Definitions && ln -sfT ${../../config/prowlarr/indexers} /var/lib/private/prowlarr/Definitions/Custom'";
-
+  systemd.services.prowlarr.serviceConfig =
     # nixpkgs prowlarr module only adds DynamicUser; add full hardening parity with sonarr.
-    CapabilityBoundingSet = "";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    PrivateUsers = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
-      "AF_INET"
-      "AF_INET6"
-      "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
-      "@chown"
-    ];
-  };
+    (mkHardened {
+      umask = null;
+      extraSystemCallFilter = [ "@chown" ];
+    })
+    // {
+      # Recreate symlink on each start so stale Nix store paths don't persist after deploy.
+      ExecStartPre = "+/bin/sh -c 'mkdir -p /var/lib/private/prowlarr/Definitions && ln -sfT ${../../config/prowlarr/indexers} /var/lib/private/prowlarr/Definitions/Custom'";
+    };
 
   services.bazarr.enable = true;
 
-  systemd.services.bazarr.serviceConfig = {
-    UMask = "0027";
-    CapabilityBoundingSet = "";
-    NoNewPrivileges = true;
-    ProtectHome = true;
-    ProtectClock = true;
-    ProtectKernelLogs = true;
-    PrivateTmp = true;
-    PrivateDevices = true;
-    PrivateUsers = true;
-    ProtectKernelTunables = true;
-    ProtectKernelModules = true;
-    ProtectControlGroups = true;
-    RestrictSUIDSGID = true;
-    RemoveIPC = true;
-    ProtectHostname = true;
-    ProtectProc = "invisible";
-    RestrictAddressFamilies = [
-      "AF_INET"
-      "AF_INET6"
-      "AF_UNIX"
-    ];
-    RestrictNamespaces = true;
-    RestrictRealtime = true;
-    LockPersonality = true;
-    SystemCallArchitectures = "native";
-    SystemCallFilter = [
-      "@system-service"
-      "~@privileged"
-      "~@debug"
-      "~@mount"
-    ];
-  };
+  systemd.services.bazarr.serviceConfig = mkHardened { };
 
   services.recyclarr.enable = true;
 
@@ -495,7 +437,6 @@ in
   ];
 
   security.acme = {
-    acceptTerms = true;
     certs."minz-media-0.internal" = {
       listenHTTP = ":${toString acmeHttpPort}";
       reloadServices = [ "caddy.service" ];
@@ -653,9 +594,9 @@ in
 
   # Allow arr service ports from WireGuard management subnet only.
   networking.firewall.extraCommands = ''
-    iptables -A nixos-fw -s 10.8.0.0/24 -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s 10.8.0.0/24 -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s 10.8.0.0/24 -p tcp --dport ${toString prowlarrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString prowlarrPort} -j nixos-fw-accept
   '';
 
 }
