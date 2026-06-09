@@ -3,7 +3,6 @@
 let
   mkHardened = import ../lib/hardening.nix { inherit lib; };
   topology = import ../../common/topology.nix;
-  # Access loki endpoint from hostEndpoints; null if obs-0 is not yet deployed.
   lokiEndpoint = (hostEndpoints."minz-obs-0" or { })."loki" or null;
   lokiUrl =
     if lokiEndpoint != null then
@@ -12,8 +11,7 @@ let
       null;
   enableAlloy = lokiUrl != null;
 
-  # Network membership is infrastructure: drive from topology to avoid
-  # NixOS config self-inspection cycles.
+  # topology-driven: avoids self-inspection cycles in NixOS config
   thisNode = topology.nodes.${config.networking.hostName} or null;
   hasInternalNetwork =
     thisNode != null && ((thisNode.networks ? incus_bridge) || (thisNode.networks ? mgmt));
@@ -73,13 +71,9 @@ in
     '';
   };
 
-  # loki.source.journal reads via the systemd journal API — requires group access.
-  # "caddy" group gives read access to the ACME cert files when client cert is enabled.
-  # PrivateUsers omitted: conflicts with SupplementaryGroups on DynamicUser services.
+  # privateUsers=false: PrivateUsers conflicts with SupplementaryGroups on DynamicUser
   systemd.services.alloy.serviceConfig = lib.mkIf enableAlloy (
-    # Alloy calls bpf() at startup for eBPF component detection; without it the
-    # process gets SIGSYS instead of EPERM. CapabilityBoundingSet="" still prevents
-    # any privileged BPF operation from succeeding.
+    # bpf: Alloy probes for eBPF at startup; SIGSYS without it even with empty CapabilityBoundingSet
     (mkHardened {
       privateUsers = false;
       extraSystemCallFilter = [
@@ -92,14 +86,11 @@ in
     }
   );
 
-  # Restart Alloy when the cert is renewed so it picks up the new key material.
-  # The outer mkIf guards the entire cert key so no spurious ACME cert entry is
-  # created for hosts that don't have the cert (e.g. WG-only hosts).
+  # mkIf guards the whole cert key to avoid spurious ACME entries on WG-only hosts
   security.acme.certs = lib.mkIf enableClientCert {
     ${certName}.reloadServices = [ "alloy.service" ];
   };
 
-  # Wait for ACME cert before starting Alloy so the client cert file is present.
   systemd.services.alloy.after = lib.mkIf enableClientCert [
     "acme-${certName}.service"
   ];
@@ -107,7 +98,7 @@ in
     "acme-${certName}.service"
   ];
 
-  # alloy is DynamicUser — persist /var/lib/private/alloy (the real path), not the /var/lib/alloy symlink.
+  # DynamicUser: persist /var/lib/private/alloy, not the /var/lib/alloy symlink
   environment.persistence."/persist".directories =
     lib.mkIf (enableAlloy && config.fileSystems ? "/persist")
       [

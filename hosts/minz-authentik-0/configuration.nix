@@ -14,13 +14,11 @@ let
   authentikIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 
-  # Own service ports — single source of truth here; also exported via homelab.endpoints below.
   authentikPort = 9000;
   authentikHttpsPort = 9443;
   ldapPort = 3389;
   ldapTlsPort = 6636;
-  # Caddy owns authentikHttpsPort and ldapTlsPort externally; push the outpost listeners
-  # one port higher on loopback so there is no conflict.
+  # +1: Caddy owns the external ports; outpost listeners must not conflict
   authentikBuiltinHttpsPort = authentikHttpsPort + 1;
   ldapOutpostTlsPort = ldapTlsPort + 1;
 in
@@ -109,9 +107,7 @@ in
                     {
                       handler = "reverse_proxy";
                       upstreams = [ { dial = "localhost:${toString authentikPort}"; } ];
-                      # Preserve the X-Forwarded-Host set by forward_auth on the edge Caddy;
-                      # without this, Caddy overwrites it with the incoming Host (10.10.0.x:9443)
-                      # and the embedded outpost can't match the arrs proxy provider.
+                      # preserve X-Forwarded-Host from edge Caddy; overwriting breaks outpost proxy provider matching
                       headers.request.set."X-Forwarded-Host" = [ "{http.request.header.X-Forwarded-Host}" ];
                     }
                   ];
@@ -174,7 +170,7 @@ in
     extraSystemCallFilter = [ "@chown" ];
   };
 
-  # Alloy/bpf: authentik-ldap calls bpf() at startup for eBPF detection.
+  # bpf: authentik-ldap (Go binary) probes for eBPF at startup
   systemd.services.authentik-ldap.serviceConfig = mkHardened {
     extraSystemCallFilter = [
       "@chown"

@@ -21,8 +21,7 @@ in
     (builtins.readFile ../../hosts/minz-pki-0/root_ca.crt)
   ];
 
-  # Standalone root CA cert file for services (e.g. Caddy client_authentication)
-  # that need to reference a specific trust anchor rather than the full system bundle.
+  # explicit file for services (e.g. Caddy client_authentication) that can't use the system PKI bundle
   environment.etc."ssl/internal-ca.crt" = {
     source = ../../hosts/minz-pki-0/root_ca.crt;
     mode = "0444";
@@ -40,8 +39,7 @@ in
     "net.core.bpf_jit_harden" = 2;
   };
 
-  # PrivateUsers omitted: drops AmbientCapabilities, breaking port 80/443 binding on
-  # hosts where Caddy uses them. CapabilityBoundingSet keeps only the net-bind capability.
+  # privateUsers=false: ambient CAP_NET_BIND_SERVICE requires no user namespace
   systemd.services.caddy.serviceConfig = lib.mkIf config.services.caddy.enable (mkHardened {
     capabilityBoundingSet = "CAP_NET_BIND_SERVICE";
     privateUsers = false;

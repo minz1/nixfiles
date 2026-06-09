@@ -82,7 +82,7 @@ in
     ];
   };
 
-  # cscli writes to the SQLite DB directly (no HTTP LAPI needed); registerBouncer.enable would conflict with the DynamicUser symlink (status=238).
+  # cscli writes directly to SQLite; registerBouncer.enable conflicts with DynamicUser symlink (status=238)
   systemd.services.crowdsec.serviceConfig.ExecStartPre = [
     "+${pkgs.writeShellScript "crowdsec-register-bouncers" ''
       cscli=/run/current-system/sw/bin/cscli
@@ -105,14 +105,10 @@ in
 
   services.crowdsec-firewall-bouncer = {
     enable = true;
-    # Key is managed by the crowdsec ExecStartPre script above.
     registerBouncer.enable = false;
     secrets.apiKeyPath = fwBouncerKeyFile;
-    # api_url and mode (nftables) are derived from services.crowdsec and
-    # networking.nftables.enable automatically by the module; no overrides needed.
   };
 
-  # nftables required for the firewall bouncer's nftables backend.
   networking.nftables.enable = true;
 
   services.caddy = {
@@ -134,8 +130,7 @@ in
 
     globalConfig = ''
       order crowdsec first
-      # Disable automatic HTTP→HTTPS redirect server so lego can own port 80
-      # for internal ACME certificate issuance from step-ca.
+      # disable_redirects: lets lego own port 80 for step-ca ACME issuance
       auto_https disable_redirects
 
       crowdsec {

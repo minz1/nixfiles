@@ -13,7 +13,6 @@ let
   obsIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 
-  # Own service ports — single source of truth here; also exported via homelab.endpoints below.
   promPort = 9090;
   lokiPort = 3100;
   lokiHttpsPort = 3101;
@@ -109,13 +108,9 @@ in
         http.servers.loki = {
           listen = [ ":${toString lokiHttpsPort}" ];
           automatic_https.disable = true;
-          # Caddy auto-enables strict SNI-Host when client_authentication is set;
-          # override to false because Loki is accessed via IP (no SNI from clients).
-          # mTLS client cert verification already provides the auth guarantee.
+          # strict_sni_host=false: Loki accessed via IP with no SNI; mTLS provides auth
           strict_sni_host = false;
           tls_connection_policies = [
-            # Incus-bridge and WG callers must present a client cert signed by
-            # the internal CA. Any other source falls through unauthenticated.
             {
               match.remote_ip.ranges = [
                 topology.networks.incus_bridge.subnet

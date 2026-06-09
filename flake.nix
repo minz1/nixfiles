@@ -54,7 +54,6 @@
       overlay = import ./pkgs;
       topology = import ./common/topology.nix;
 
-      # Shared overlay list — used for both the top-level pkgs and per-host nixpkgs.overlays.
       overlays = [
         rustfs.overlays.default
         overlay
@@ -62,22 +61,15 @@
 
       nixosNodes = nixpkgs.lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
 
-      # All nodes declared in topology with os = "nixos" get a NixOS configuration
-      # and a deploy-rs node automatically. Adding a new host only requires a
-      # topology entry and a hosts/<name>/configuration.nix file.
       configurableNodes = nixpkgs.lib.filterAttrs (
         _: node: if (node.provisioner or "") == "incus" then node.deployed or false else true
       ) nixosNodes;
 
-      # Nodes that are also provisioned by Incus use their incus_bridge IP for deploy-rs.
-      # This is because the mgmt (WireGuard) tunnel doesn't route to VMs directly
-      # from the runner — the Incus bridge on the host VM provides L2 adjacency.
+      # incus nodes: bridge IP because the WG tunnel doesn't route to VMs from the runner
       deployHostname =
         name: node:
         if node.provisioner or "" == "incus" then node.networks.incus_bridge.ip else node.networks.mgmt.ip;
 
-      # Deployable NixOS nodes: only those that have been provisioned (or don't need provisioning).
-      # VMs with `deployed = false` are skipped until OpenTofu creates them.
       deployableNodes =
         let
           filterDeployed =
@@ -99,10 +91,7 @@
         inherit overlays;
       };
 
-      # deploy-rs shim: re-use the deploy-rs binary from our main pkgs evaluation
-      # rather than letting deployPkgs build a second copy. Without this, Nix would
-      # build deploy-rs twice (once for pkgs, once for deployPkgs) even though
-      # the inputs are identical, wasting significant build time.
+      # re-use deploy-rs binary from pkgs to avoid building it twice across two nixpkgs evals
       deployPkgs = import nixpkgs {
         inherit system;
         overlays = [
@@ -115,9 +104,6 @@
         ];
       };
 
-      # Bootstrap image target — a NixOS eval just for building the golden image.
-      # nixos-rebuild build-image --image-variant incus --flake .#bootstrapImage
-      # or: nix build .#bootstrap-image
       bootstrapImage = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
@@ -132,11 +118,7 @@
         ];
       };
 
-      # nixosConfigurations and hostEndpoints are mutually referential: each host's
-      # specialArgs includes hostEndpoints, which is derived from nixosConfigurations.
-      # Nix lazy evaluation makes this safe: building hostEndpoints only forces
-      # config.homelab.endpoints (not the full toplevel), and endpoint declarations
-      # use only local constants — they never access hostEndpoints themselves.
+      # mutual let binding: Nix lazy eval makes this safe; hostEndpoints only forces config.homelab.endpoints
       nixosConfigurations = builtins.mapAttrs (
         name: _:
         let
@@ -208,9 +190,7 @@
       deploy.nodes = builtins.mapAttrs (name: node: {
         hostname = deployHostname name node;
         sshUser = node.sshUser;
-        # 600s: gives headroom for first-time container image pulls during activation
-        # (rootless podman user session init can be slow on fresh deployments).
-        timeout = 600;
+        timeout = 600; # rootless podman session init can be slow on first container pull
         profiles.system = {
           user = "root";
           path = deployPkgs.deploy-rs.lib.activate.nixos self.nixosConfigurations.${name};

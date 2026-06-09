@@ -10,7 +10,6 @@ let
   servicesIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 
-  # Own service ports — single source of truth here; also exported via homelab.endpoints below.
   memosPort = 5230;
   caddyHttpsPort = 443;
 in

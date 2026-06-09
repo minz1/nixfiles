@@ -13,7 +13,6 @@ let
   mediaIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 
-  # Own service ports — single source of truth here; Caddy also exported via homelab.endpoints.
   caddyHttpsPort = 443;
   jellyfinPort = 8096;
   seerrPort = 5055;
@@ -53,13 +52,12 @@ in
     owner = "radarr";
     mode = "0400";
   };
-  # DynamicUser service: EnvironmentFile is read by systemd as root before the
-  # dynamic UID is allocated, so root:root 0400 is the correct owner/mode.
+  # root:root 0400: EnvironmentFile is read as root before DynamicUser UID is allocated
   sops.templates.prowlarr-env = {
     content = "PROWLARR__AUTH__APIKEY=${config.sops.placeholder.prowlarr_api_key}";
     mode = "0400";
   };
-  # Quadlet EnvironmentFile is read by Podman before exec — owner must match the rootless uid (oci/902).
+  # Quadlet EnvironmentFile read by Podman before exec; owner must match the rootless UID
   sops.templates.zilean-postgres-env = {
     content = "POSTGRES_PASSWORD=${config.sops.placeholder.zilean_db_password}";
     owner = "oci";
@@ -157,14 +155,16 @@ in
     environmentFiles = [ config.sops.templates.prowlarr-env.path ];
   };
   systemd.services.prowlarr.serviceConfig =
-    # nixpkgs prowlarr module only adds DynamicUser; add full hardening parity with sonarr.
     (mkHardened {
       umask = null;
       extraSystemCallFilter = [ "@chown" ];
     })
     // {
-      # Recreate symlink on each start so stale Nix store paths don't persist after deploy.
-      ExecStartPre = "+/bin/sh -c 'mkdir -p /var/lib/private/prowlarr/Definitions && ln -sfT ${../../config/prowlarr/indexers} /var/lib/private/prowlarr/Definitions/Custom'";
+      # no + prefix: runs as DynamicUser so Definitions/ is created with correct ownership
+      ExecStartPre = pkgs.writeShellScript "prowlarr-setup-definitions" ''
+        mkdir -p /var/lib/prowlarr/Definitions
+        ln -sfT ${../../config/prowlarr/indexers} /var/lib/prowlarr/Definitions/Custom
+      '';
     };
 
   services.bazarr.enable = true;
@@ -434,8 +434,6 @@ in
     "d /data/library                 0775 root   media  -"
     "d /data/library/tv              0775 sonarr media  -"
     "d /data/library/movies          0775 radarr media  -"
-    "d /var/lib/private/prowlarr/Definitions 0755 root root -"
-    "L+ /var/lib/private/prowlarr/Definitions/Custom - - - - ${../../config/prowlarr/indexers}"
   ];
 
   security.acme = {
@@ -548,9 +546,7 @@ in
                 }
               ];
             }
-            # devopsarr/radarr v2.3.5 strips the base path from the provider URL, so
-            # "https://10.10.0.7/radarr" produces bare /api/v3/... requests that would
-            # otherwise fall through to the seerr catch-all below.
+            # radarr v2.3.5 strips base path from provider URL, producing bare /api/v3/* requests
             {
               match = [
                 {
@@ -565,8 +561,7 @@ in
                 }
               ];
             }
-            # Seerr catch-all: matches seerr.minz1.com and direct IP (e.g. Tofu runner).
-            # Must come after path-specific routes so /sonarr*, /radarr* etc. don't land here.
+            # catch-all; must follow path routes so /sonarr*, /radarr* etc. don't land here
             {
               match = [
                 {
@@ -594,7 +589,6 @@ in
     caddyHttpsPort
   ];
 
-  # Allow arr service ports from WireGuard management subnet only.
   networking.firewall.extraCommands = ''
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
