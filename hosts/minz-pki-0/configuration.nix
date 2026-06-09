@@ -27,8 +27,6 @@ in
     owner = "step-ca";
   };
 
-  sops.secrets.step_ca_root_key = { };
-
   services.step-ca = {
     enable = true;
     address = "0.0.0.0";

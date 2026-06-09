@@ -77,3 +77,8 @@ creation_rules:
       - age:
           - *minz-vultr-nix-0
           - *minz-desktop
+
+  - path_regex: secrets/ca\.yaml$
+    key_groups:
+      - age:
+          - *minz-desktop
