@@ -18,6 +18,12 @@ let
   memos = hostEndpoints.minz-services-0.caddy;
 
   fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
+  arrApps = [
+    "sonarr"
+    "radarr"
+    "prowlarr"
+    "bazarr"
+  ];
 in
 {
   imports = [ ./hardware-configuration.nix ];
@@ -226,33 +232,14 @@ in
             reverse_proxy https://${authentik.ip}:${toString authentik.port}
           }
 
-          handle /sonarr* {
-            import forward_auth_authentik
-            reverse_proxy https://${media.ip}:${toString media.port} {
-              header_up Host {http.request.host}
+          ${lib.concatMapStrings (app: ''
+            handle /${app}* {
+              import forward_auth_authentik
+              reverse_proxy https://${media.ip}:${toString media.port} {
+                header_up Host {http.request.host}
+              }
             }
-          }
-
-          handle /radarr* {
-            import forward_auth_authentik
-            reverse_proxy https://${media.ip}:${toString media.port} {
-              header_up Host {http.request.host}
-            }
-          }
-
-          handle /prowlarr* {
-            import forward_auth_authentik
-            reverse_proxy https://${media.ip}:${toString media.port} {
-              header_up Host {http.request.host}
-            }
-          }
-
-          handle /bazarr* {
-            import forward_auth_authentik
-            reverse_proxy https://${media.ip}:${toString media.port} {
-              header_up Host {http.request.host}
-            }
-          }
+          '') arrApps}
 
           handle {
             respond "Not found" 404

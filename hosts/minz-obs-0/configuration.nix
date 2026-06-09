@@ -13,10 +13,11 @@ let
   obsIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 
-  promPort = 9090;
+  victoriaPort = 9090;
   lokiPort = 3100;
   lokiHttpsPort = 3101;
   grafanaPort = 3000;
+  certDir = "/var/lib/acme/minz-obs-0.internal";
 
   authentikHttpsPort = hostEndpoints.minz-authentik-0.authentik.port;
 
@@ -33,18 +34,24 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
-  services.prometheus = {
+  services.victoriametrics = {
     enable = true;
-    port = promPort;
-    retentionTime = "30d";
-    scrapeConfigs = [
+    listenAddress = ":${toString victoriaPort}";
+    retentionPeriod = "30d";
+    prometheusConfig.scrape_configs = [
       {
         job_name = "node";
+        scheme = "https";
+        tls_config = {
+          ca_file = "/etc/ssl/internal-ca.crt";
+          cert_file = "${certDir}/fullchain.pem";
+          key_file = "${certDir}/key.pem";
+        };
         static_configs = [ { targets = nodeExporterTargets; } ];
       }
       {
-        job_name = "prometheus";
-        static_configs = [ { targets = [ "127.0.0.1:${toString promPort}" ]; } ];
+        job_name = "victoriametrics";
+        static_configs = [ { targets = [ "127.0.0.1:${toString victoriaPort}" ]; } ];
       }
       {
         job_name = "loki";
@@ -187,9 +194,9 @@ in
       enable = true;
       datasources.settings.datasources = [
         {
-          name = "Prometheus";
+          name = "VictoriaMetrics";
           type = "prometheus";
-          url = "http://127.0.0.1:${toString promPort}";
+          url = "http://127.0.0.1:${toString victoriaPort}";
           isDefault = true;
         }
         {
@@ -241,7 +248,14 @@ in
     ];
   };
 
-  systemd.services.prometheus.serviceConfig = mkHardened { umask = "0077"; };
+  systemd.services.victoriametrics.serviceConfig = (mkHardened {
+    umask = "0077";
+    privateUsers = false;
+  }) // {
+    SupplementaryGroups = [ "caddy" ];
+  };
+  systemd.services.victoriametrics.after = [ "acme-minz-obs-0.internal.service" ];
+  systemd.services.victoriametrics.wants = [ "acme-minz-obs-0.internal.service" ];
 
   systemd.services.grafana.serviceConfig = mkHardened { };
 
@@ -260,10 +274,8 @@ in
 
   environment.persistence."/persist".directories = [
     {
-      directory = "/var/lib/prometheus2";
-      user = "prometheus";
-      group = "prometheus";
-      mode = "0750";
+      directory = "/var/lib/private/victoriametrics";
+      mode = "0700";
     }
     {
       directory = "/var/lib/loki";

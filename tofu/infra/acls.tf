@@ -145,7 +145,15 @@ resource "incus_network_acl" "obs" {
       destination      = local.mgmt_subnet
       destination_port = "9100"
       protocol         = "tcp"
-      description      = "Prometheus node_exporter scraping of WG hosts"
+      description      = "node_exporter scraping of WG hosts"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = "0.0.0.0/0"
+      destination_port = "443"
+      protocol         = "tcp"
+      description      = "HTTPS egress for Grafana dashboard imports"
       state            = "enabled"
     },
   ]

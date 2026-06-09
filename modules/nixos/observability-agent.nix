@@ -20,10 +20,31 @@ let
   certDir = "/var/lib/acme/${certName}";
 in
 {
+  environment.etc."node-exporter-web.yml" = lib.mkIf enableClientCert {
+    text = ''
+      tls_server_config:
+        cert_file: ${certDir}/fullchain.pem
+        key_file: ${certDir}/key.pem
+        client_auth_type: RequireAndVerifyClientCert
+        client_ca_file: /etc/ssl/internal-ca.crt
+    '';
+  };
+
   services.prometheus.exporters.node = {
     enable = true;
     openFirewall = true;
+    extraFlags = lib.optional enableClientCert "--web.config.file=/etc/node-exporter-web.yml";
   };
+
+  systemd.services.prometheus-node-exporter.serviceConfig = lib.mkIf enableClientCert {
+    SupplementaryGroups = [ "caddy" ];
+  };
+  systemd.services.prometheus-node-exporter.after = lib.mkIf enableClientCert [
+    "acme-${certName}.service"
+  ];
+  systemd.services.prometheus-node-exporter.wants = lib.mkIf enableClientCert [
+    "acme-${certName}.service"
+  ];
 
   services.alloy = {
     enable = enableAlloy;
