@@ -162,6 +162,110 @@ in
     acmeHttpPort
   ];
 
+  systemd.services.authentik.serviceConfig = {
+    UMask = "0027";
+    CapabilityBoundingSet = "";
+    NoNewPrivileges = true;
+    ProtectHome = true;
+    ProtectClock = true;
+    ProtectKernelLogs = true;
+    PrivateTmp = true;
+    PrivateDevices = true;
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    ProtectControlGroups = true;
+    RestrictSUIDSGID = true;
+    RemoveIPC = true;
+    ProtectHostname = true;
+    ProtectProc = "invisible";
+    RestrictAddressFamilies = [
+      "AF_INET"
+      "AF_INET6"
+      "AF_UNIX"
+    ];
+    RestrictNamespaces = true;
+    RestrictRealtime = true;
+    LockPersonality = true;
+    SystemCallArchitectures = "native";
+    SystemCallFilter = [
+      "@system-service"
+      "~@privileged"
+      "~@debug"
+      "~@mount"
+      "@chown"
+    ];
+  };
+
+  systemd.services.authentik-worker.serviceConfig = {
+    UMask = "0027";
+    CapabilityBoundingSet = "";
+    NoNewPrivileges = true;
+    ProtectHome = true;
+    ProtectClock = true;
+    ProtectKernelLogs = true;
+    PrivateTmp = true;
+    PrivateDevices = true;
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    ProtectControlGroups = true;
+    RestrictSUIDSGID = true;
+    RemoveIPC = true;
+    ProtectHostname = true;
+    ProtectProc = "invisible";
+    RestrictAddressFamilies = [
+      "AF_INET"
+      "AF_INET6"
+      "AF_UNIX"
+    ];
+    RestrictNamespaces = true;
+    RestrictRealtime = true;
+    LockPersonality = true;
+    SystemCallArchitectures = "native";
+    SystemCallFilter = [
+      "@system-service"
+      "~@privileged"
+      "~@debug"
+      "~@mount"
+      "@chown"
+    ];
+  };
+
+  systemd.services.authentik-ldap.serviceConfig = {
+    UMask = "0027";
+    CapabilityBoundingSet = "";
+    NoNewPrivileges = true;
+    ProtectHome = true;
+    ProtectClock = true;
+    ProtectKernelLogs = true;
+    PrivateTmp = true;
+    PrivateDevices = true;
+    PrivateUsers = true;
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    ProtectControlGroups = true;
+    RestrictSUIDSGID = true;
+    RemoveIPC = true;
+    ProtectHostname = true;
+    ProtectProc = "invisible";
+    RestrictAddressFamilies = [
+      "AF_INET"
+      "AF_INET6"
+      "AF_UNIX"
+    ];
+    RestrictNamespaces = true;
+    RestrictRealtime = true;
+    LockPersonality = true;
+    SystemCallArchitectures = "native";
+    SystemCallFilter = [
+      "@system-service"
+      "~@privileged"
+      "~@debug"
+      "~@mount"
+      "@chown"
+      "bpf"
+    ];
+  };
+
   environment.persistence."/persist".directories = [
     {
       directory = "/var/lib/private/authentik";

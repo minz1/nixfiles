@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, lib, ... }:
 
 {
   imports = [
@@ -36,5 +36,40 @@
     "kernel.dmesg_restrict" = 1;
     "kernel.kptr_restrict" = 2;
     "net.core.bpf_jit_harden" = 2;
+  };
+
+  # PrivateUsers omitted: drops AmbientCapabilities, breaking port 80/443 binding on
+  # hosts where Caddy uses them. CapabilityBoundingSet keeps only the net-bind capability.
+  systemd.services.caddy.serviceConfig = lib.mkIf config.services.caddy.enable {
+    UMask = "0027";
+    CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
+    NoNewPrivileges = true;
+    ProtectHome = true;
+    ProtectClock = true;
+    ProtectKernelLogs = true;
+    PrivateTmp = true;
+    PrivateDevices = true;
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    ProtectControlGroups = true;
+    RestrictSUIDSGID = true;
+    RemoveIPC = true;
+    ProtectHostname = true;
+    ProtectProc = "invisible";
+    RestrictAddressFamilies = [
+      "AF_INET"
+      "AF_INET6"
+      "AF_UNIX"
+    ];
+    RestrictNamespaces = true;
+    RestrictRealtime = true;
+    LockPersonality = true;
+    SystemCallArchitectures = "native";
+    SystemCallFilter = [
+      "@system-service"
+      "~@privileged"
+      "~@debug"
+      "~@mount"
+    ];
   };
 }
