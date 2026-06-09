@@ -164,6 +164,12 @@ in
     };
   };
 
+  # NTP server for incus-bridge VMs; incusbr0 is trusted so no firewall rule needed.
+  services.chrony = {
+    enable = true;
+    extraConfig = "allow ${incusNetwork.subnet}";
+  };
+
   # Intel I219 (e1000e) hardware unit hang fix — TSO/GSO cause tx ring stalls.
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="net", KERNEL=="eno1", RUN+="${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off"

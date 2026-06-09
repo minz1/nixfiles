@@ -4,8 +4,7 @@ variable "hostname" {
   description = "Specific VM hostname to target. Empty string targets all Incus VMs."
 }
 
-# Read all nodes from the Nix topology. The --apply transformation wraps the
-# attribute set in a JSON string so Tofu doesn't try to parse nested Nix types.
+# Nix eval wraps the result in a JSON string so Tofu doesn't try to parse nested Nix types.
 data "external" "topology" {
   program = [
     "nix", "eval", "--json", "--impure",
@@ -63,10 +62,15 @@ resource "incus_instance" "vm" {
   device {
     name = "eth0"
     type = "nic"
-    properties = {
-      network = local.incus_bridge_name
-      "ipv4.address" = each.value.networks.incus_bridge.ip
-    }
+    properties = merge(
+      {
+        network        = local.incus_bridge_name
+        "ipv4.address" = each.value.networks.incus_bridge.ip
+      },
+      lookup(local.vm_acl_map, each.key, "") != "" ? {
+        "security.acls" = lookup(local.vm_acl_map, each.key, "")
+      } : {}
+    )
   }
 
   device {
@@ -113,10 +117,15 @@ resource "incus_instance" "container" {
   device {
     name = "eth0"
     type = "nic"
-    properties = {
-      network        = local.incus_bridge_name
-      "ipv4.address" = each.value.networks.incus_bridge.ip
-    }
+    properties = merge(
+      {
+        network        = local.incus_bridge_name
+        "ipv4.address" = each.value.networks.incus_bridge.ip
+      },
+      lookup(local.container_acl_map, each.key, "") != "" ? {
+        "security.acls" = lookup(local.container_acl_map, each.key, "")
+      } : {}
+    )
   }
 
   device {
@@ -169,8 +178,7 @@ resource "incus_instance" "container" {
   }
 
   exec = {
-    # Derive the public key from the private key, then restart sshd to activate it.
-    # Exec blocks run in key order after all file uploads.
+    # Derive pubkey and restart sshd; exec blocks run in key order after file uploads.
     "00-derive-pubkey" = {
       command = ["/bin/sh", "-c", "ssh-keygen -y -f /etc/ssh/ssh_host_ed25519_key > /etc/ssh/ssh_host_ed25519_key.pub && chmod 644 /etc/ssh/ssh_host_ed25519_key.pub"]
       trigger = "once"

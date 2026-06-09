@@ -10,6 +10,11 @@ let
   node = topology.nodes.${hostName} or (throw "No topology entry for ${hostName}");
   vmIp = node.networks.incus_bridge.ip;
   nixSize = node.incus.nix_size or "60G";
+  incusHostNode = lib.findFirst
+    (n: (n.provisioner or "") == "incus-host")
+    (throw "No incus-host node in topology")
+    (lib.attrValues topology.nodes);
+  gatewayIp = incusHostNode.networks.incus_bridge.ip;
 in
 {
   imports = [
@@ -24,9 +29,14 @@ in
   systemd.network.networks."10-enp" = {
     matchConfig.Name = "en*";
     address = [ "${vmIp}/24" ];
-    gateway = [ "10.10.0.1" ];
+    gateway = [ gatewayIp ];
     linkConfig.RequiredForOnline = "routable";
   };
+
+  services.timesyncd.servers = [ gatewayIp ];
+
+  # Egress ACL blocks cache.nixos.org; deploy-rs nix copy provides the full closure.
+  nix.settings.substituters = lib.mkForce [];
 
   services.openssh.listenAddresses = [
     {
