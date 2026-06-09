@@ -43,5 +43,9 @@ in
   systemd.services.caddy.serviceConfig = lib.mkIf config.services.caddy.enable (mkHardened {
     capabilityBoundingSet = "CAP_NET_BIND_SERVICE";
     privateUsers = false;
+    extraSystemCallFilter = [
+      "fstatat64"
+      "newfstatat"
+    ];
   });
 }
