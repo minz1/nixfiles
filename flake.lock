@@ -66,11 +66,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1780633392,
-        "narHash": "sha256-wnubXQWv+GGn+kxd5cSb4X3qMqatceKscs2jD6fmEQs=",
+        "lastModified": 1781022886,
+        "narHash": "sha256-hFJcUpDpDvW2KkBlFPXSlL0Ij/jhOtLj7PylbDbuOlM=",
         "owner": "minz1",
         "repo": "decypharr",
-        "rev": "644955f50fd24900f8fc7bcb4c3265f3dbab8795",
+        "rev": "987539dba3dd65da5e8968aaf272b518d06cd297",
         "type": "github"
       },
       "original": {
@@ -87,11 +87,11 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1770019181,
-        "narHash": "sha256-hwsYgDnby50JNVpTRYlF3UR/Rrpt01OrxVuryF40CFY=",
+        "lastModified": 1781023725,
+        "narHash": "sha256-Gt+qFANcrDRjl3xzidLYrAUQCd3808iuAsLwZbYYAEU=",
         "owner": "serokell",
         "repo": "deploy-rs",
-        "rev": "77c906c0ba56aabdbc72041bf9111b565cdd6171",
+        "rev": "2ce9051767ee4d1a3c43b52ba327431783bfd463",
         "type": "github"
       },
       "original": {

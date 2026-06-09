@@ -191,7 +191,22 @@ in
     removeStalledAfter = "10m";
 
     rclone = {
-      vfsCacheMode = "off";
+      cacheDir = "/var/cache/decypharr";
+      vfsCacheMode = "full";
+      vfsCacheMaxSize = "85G";
+      vfsCacheMaxAge = "168h";
+      vfsReadChunkSize = "128M";
+      vfsReadChunkSizeLimit = "off";
+      vfsReadChunkStreams = 4;
+      vfsReadAhead = "256M";
+      vfsCachePollInterval = "5m";
+      vfsCacheMinFreeSpace = "5G";
+      vfsDiskSpaceTotal = "100G";
+      bufferSize = "32M";
+      transfers = 8;
+      asyncRead = true;
+      attrTimeout = "1h";
+      dirCacheTime = "24h";
     };
 
     usenet = {
