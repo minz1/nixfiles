@@ -155,14 +155,6 @@ in
   # No Caddy on this host, but group is needed for ACME cert readability by Alloy.
   users.groups.caddy = { };
 
-  security.acme = {
-    certs."minz-home-nix-0.internal" = {
-      listenHTTP = ":80";
-      group = "caddy";
-      extraDomainNames = [ incusBridgeIp ];
-    };
-  };
-
   # NTP server for incus-bridge VMs; incusbr0 is trusted so no firewall rule needed.
   services.chrony = {
     enable = true;

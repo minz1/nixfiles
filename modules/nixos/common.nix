@@ -24,6 +24,9 @@ let
     lib.mapAttrs resolve (lib.filterAttrs (n: _: n != config.networking.hostName) topology.nodes)
   );
   pkiPort = 9443;
+  allHostIps = lib.filter (ip: ip != null) (
+    lib.mapAttrsToList (_: net: net.ip or null) (me.networks or { })
+  );
 in
 {
   networking.extraHosts = lib.concatStringsSep "\n" (
@@ -33,6 +36,12 @@ in
   security.acme.acceptTerms = true;
   security.acme.defaults.server = lib.mkDefault "https://minz-pki-0.internal:${toString pkiPort}/acme/acme/directory";
   security.acme.defaults.email = lib.mkDefault "emerytang@gmail.com";
+  security.acme.certs."${config.networking.hostName}.internal" = {
+    listenHTTP = ":80";
+    group = "caddy";
+    reloadServices = lib.optional config.services.caddy.enable "caddy.service";
+    extraDomainNames = allHostIps;
+  };
 
   services.openssh = {
     enable = true;

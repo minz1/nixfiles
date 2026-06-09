@@ -436,15 +436,6 @@ in
     "d /data/library/movies          0775 radarr media  -"
   ];
 
-  security.acme = {
-    certs."minz-media-0.internal" = {
-      listenHTTP = ":${toString acmeHttpPort}";
-      reloadServices = [ "caddy.service" ];
-      group = "caddy";
-      extraDomainNames = [ mediaIp ];
-    };
-  };
-
   systemd.services.caddy.after = lib.mkAfter [ "acme-minz-media-0.internal.service" ];
   systemd.services.caddy.wants = [ "acme-minz-media-0.internal.service" ];
 

@@ -145,15 +145,6 @@ in
     }
   ];
 
-  security.acme = {
-    certs."minz-authentik-0.internal" = {
-      listenHTTP = ":${toString acmeHttpPort}";
-      reloadServices = [ "caddy.service" ];
-      group = "caddy";
-      extraDomainNames = [ authentikIp ];
-    };
-  };
-
   networking.firewall.allowedTCPPorts = [
     authentikHttpsPort
     ldapTlsPort

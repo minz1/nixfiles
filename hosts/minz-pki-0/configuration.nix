@@ -47,14 +47,6 @@ in
   # No Caddy on this host, but group is needed for ACME cert readability by Alloy.
   users.groups.caddy = { };
 
-  security.acme = {
-    certs."minz-pki-0.internal" = {
-      listenHTTP = ":80";
-      group = "caddy";
-      extraDomainNames = [ pkiIp ];
-    };
-  };
-
   networking.firewall.allowedTCPPorts = [ stepCaPort ];
 
   environment.persistence."/persist".directories = [

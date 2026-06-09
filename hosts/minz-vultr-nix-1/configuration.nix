@@ -264,13 +264,6 @@ in
     environmentFile = config.sops.templates.crowdsec-caddy-env.path;
   };
 
-  security.acme = {
-    certs."minz-vultr-nix-1.internal" = {
-      listenHTTP = ":80";
-      group = "caddy";
-    };
-  };
-
   systemd.services.caddy.after = lib.mkAfter [ "crowdsec.service" ];
   systemd.services.caddy.requires = [ "crowdsec.service" ];
 

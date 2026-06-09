@@ -223,17 +223,7 @@ in
     }
   ];
 
-  security.acme = {
-    certs."minz-obs-0.internal" = {
-      listenHTTP = ":${toString acmeHttpPort}";
-      reloadServices = [
-        "grafana.service"
-        "caddy.service"
-      ];
-      group = "caddy";
-      extraDomainNames = [ obsIp ];
-    };
-  };
+  security.acme.certs."minz-obs-0.internal".reloadServices = [ "grafana.service" ];
 
   users.users.grafana.extraGroups = [ "caddy" ];
 

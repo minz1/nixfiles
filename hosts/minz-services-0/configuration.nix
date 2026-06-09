@@ -62,15 +62,6 @@ in
     };
   };
 
-  security.acme = {
-    certs."minz-services-0.internal" = {
-      listenHTTP = ":${toString acmeHttpPort}";
-      reloadServices = [ "caddy.service" ];
-      group = "caddy";
-      extraDomainNames = [ servicesIp ];
-    };
-  };
-
   networking.firewall.allowedTCPPorts = [
     caddyHttpsPort
     acmeHttpPort
