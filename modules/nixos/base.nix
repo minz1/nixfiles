@@ -1,8 +1,5 @@
-{ config, lib, ... }:
+{ config, ... }:
 
-let
-  mkHardened = import ../lib/hardening.nix { inherit lib; };
-in
 {
   imports = [
     ./common.nix
@@ -39,13 +36,4 @@ in
     "net.core.bpf_jit_harden" = 2;
   };
 
-  # privateUsers=false: ambient CAP_NET_BIND_SERVICE requires no user namespace
-  systemd.services.caddy.serviceConfig = lib.mkIf config.services.caddy.enable (mkHardened {
-    capabilityBoundingSet = "CAP_NET_BIND_SERVICE";
-    privateUsers = false;
-    extraSystemCallFilter = [
-      "fstatat64"
-      "newfstatat"
-    ];
-  });
 }
