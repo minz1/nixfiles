@@ -1,17 +1,19 @@
-{ config, lib, ... }:
+{ config, lib, hostEndpoints, ... }:
 
 let
   mkHardened = import ../lib/hardening.nix { inherit lib; };
   topology = import ../../common/topology.nix;
-  obsNode = topology.nodes."minz-obs-0" or null;
-  lokiIp = if obsNode != null then obsNode.networks.incus_bridge.ip else null;
-  lokiHttpsPort = if obsNode != null then toString obsNode.services.loki.httpsPort else "3101";
-  lokiUrl = if lokiIp != null then "https://${lokiIp}:${lokiHttpsPort}/loki/api/v1/push" else null;
+  # Access loki endpoint from hostEndpoints; null if obs-0 is not yet deployed.
+  lokiEndpoint = (hostEndpoints."minz-obs-0" or { })."loki" or null;
+  lokiUrl =
+    if lokiEndpoint != null then
+      "https://${lokiEndpoint.ip}:${toString lokiEndpoint.port}/loki/api/v1/push"
+    else
+      null;
   enableAlloy = lokiUrl != null;
 
-  # Any host on the incus bridge or mgmt WG network can reach step-ca for
-  # HTTP-01 validation (WG hosts via home-nix-0 NAT). Drive from topology
-  # to avoid NixOS config self-inspection cycles.
+  # Network membership is infrastructure: drive from topology to avoid
+  # NixOS config self-inspection cycles.
   thisNode = topology.nodes.${config.networking.hostName} or null;
   hasInternalNetwork =
     thisNode != null && ((thisNode.networks ? incus_bridge) || (thisNode.networks ? mgmt));

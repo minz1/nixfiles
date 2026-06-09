@@ -11,16 +11,18 @@ let
   mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
-  authentikPort = node.services.authentik.port;
-  authentikHttpsPort = node.services.authentik.httpsPort;
-  ldapPort = node.services.ldap.port;
-  ldapTlsPort = node.services.ldap.tlsPort;
   authentikIp = node.networks.incus_bridge.ip;
+  acmeHttpPort = 80;
+
+  # Own service ports — single source of truth here; also exported via homelab.endpoints below.
+  authentikPort = 9000;
+  authentikHttpsPort = 9443;
+  ldapPort = 3389;
+  ldapTlsPort = 6636;
   # Caddy owns authentikHttpsPort and ldapTlsPort externally; push the outpost listeners
   # one port higher on loopback so there is no conflict.
   authentikBuiltinHttpsPort = authentikHttpsPort + 1;
   ldapOutpostTlsPort = ldapTlsPort + 1;
-  acmeHttpPort = 80;
 in
 {
   imports = [
@@ -178,6 +180,12 @@ in
       "@chown"
       "bpf"
     ];
+  };
+
+  homelab.endpoints.authentik = {
+    ip = authentikIp;
+    port = authentikHttpsPort;
+    tls = true;
   };
 
   environment.persistence."/persist".directories = [

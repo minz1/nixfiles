@@ -131,8 +131,12 @@
           ./modules/profiles/bootstrap-container.nix
         ];
       };
-    in
-    {
+
+      # nixosConfigurations and hostEndpoints are mutually referential: each host's
+      # specialArgs includes hostEndpoints, which is derived from nixosConfigurations.
+      # Nix lazy evaluation makes this safe: building hostEndpoints only forces
+      # config.homelab.endpoints (not the full toplevel), and endpoint declarations
+      # use only local constants — they never access hostEndpoints themselves.
       nixosConfigurations = builtins.mapAttrs (
         name: _:
         let
@@ -174,7 +178,7 @@
           inherit system;
           specialArgs = {
             hostName = name;
-            inherit lanzaboote authentik-nix;
+            inherit lanzaboote authentik-nix hostEndpoints;
           };
           modules = [
             sops-nix.nixosModules.sops
@@ -193,6 +197,13 @@
           ];
         }
       ) configurableNodes;
+
+      hostEndpoints = nixpkgs.lib.mapAttrs (
+        _: nixos: nixos.config.homelab.endpoints
+      ) nixosConfigurations;
+    in
+    {
+      inherit nixosConfigurations hostEndpoints;
 
       deploy.nodes = builtins.mapAttrs (name: node: {
         hostname = deployHostname name node;

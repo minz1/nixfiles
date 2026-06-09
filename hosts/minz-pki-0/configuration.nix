@@ -7,8 +7,8 @@
 let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
-  stepCaPort = node.services.step_ca.port;
   pkiIp = node.networks.incus_bridge.ip;
+  stepCaPort = 9443;
 in
 {
   networking.hostName = hostName;

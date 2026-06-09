@@ -3,6 +3,7 @@
   config,
   pkgs,
   lib,
+  hostEndpoints,
   ...
 }:
 
@@ -11,21 +12,10 @@ let
   node = topology.nodes."${hostName}";
   wgAddr = node.networks.mgmt.ip;
 
-  authentikNode = topology.nodes.minz-authentik-0;
-  authentikIp = authentikNode.networks.incus_bridge.ip;
-  authentikPort = authentikNode.services.authentik.httpsPort;
-
-  obsNode = topology.nodes.minz-obs-0;
-  obsIp = obsNode.networks.incus_bridge.ip;
-  grafanaPort = obsNode.services.grafana.port;
-
-  mediaNode = topology.nodes.minz-media-0;
-  mediaIp = mediaNode.networks.incus_bridge.ip;
-  mediaCaddyHttpsPort = mediaNode.services.caddy.httpsPort;
-
-  servicesNode = topology.nodes.minz-services-0;
-  memosIp = servicesNode.networks.incus_bridge.ip;
-  memosCaddyHttpsPort = servicesNode.services.caddy.httpsPort;
+  authentik = hostEndpoints.minz-authentik-0.authentik;
+  grafana = hostEndpoints.minz-obs-0.grafana;
+  media = hostEndpoints.minz-media-0.caddy;
+  memos = hostEndpoints.minz-services-0.caddy;
 
   fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
 in
@@ -47,7 +37,7 @@ in
   services.openssh.listenAddresses = [
     {
       addr = wgAddr;
-      port = node.services.ssh.port;
+      port = 22;
     }
   ];
 
@@ -167,7 +157,7 @@ in
       }
 
       (forward_auth_authentik) {
-        forward_auth https://${authentikIp}:${toString authentikPort} {
+        forward_auth https://${authentik.ip}:${toString authentik.port} {
           uri /outpost.goauthentik.io/auth/caddy
           copy_headers X-authentik-username X-authentik-groups X-authentik-email X-authentik-name X-authentik-uid
         }
@@ -179,7 +169,7 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy https://${authentikIp}:${toString authentikPort} {
+          reverse_proxy https://${authentik.ip}:${toString authentik.port} {
             header_up Host {http.request.host}
           }
         '';
@@ -189,7 +179,7 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy https://${obsIp}:${toString grafanaPort} {
+          reverse_proxy https://${grafana.ip}:${toString grafana.port} {
             header_up Host {http.request.host}
           }
         '';
@@ -205,7 +195,7 @@ in
             -Server
           }
           crowdsec
-          reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+          reverse_proxy https://${media.ip}:${toString media.port} {
             header_up Host {http.request.host}
             flush_interval -1
           }
@@ -216,7 +206,7 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+          reverse_proxy https://${media.ip}:${toString media.port} {
             header_up Host {http.request.host}
           }
         '';
@@ -226,7 +216,7 @@ in
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy https://${memosIp}:${toString memosCaddyHttpsPort} {
+          reverse_proxy https://${memos.ip}:${toString memos.port} {
             header_up Host {http.request.host}
           }
         '';
@@ -238,33 +228,33 @@ in
           crowdsec
 
           handle /outpost.goauthentik.io/* {
-            reverse_proxy https://${authentikIp}:${toString authentikPort}
+            reverse_proxy https://${authentik.ip}:${toString authentik.port}
           }
 
           handle /sonarr* {
             import forward_auth_authentik
-            reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+            reverse_proxy https://${media.ip}:${toString media.port} {
               header_up Host {http.request.host}
             }
           }
 
           handle /radarr* {
             import forward_auth_authentik
-            reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+            reverse_proxy https://${media.ip}:${toString media.port} {
               header_up Host {http.request.host}
             }
           }
 
           handle /prowlarr* {
             import forward_auth_authentik
-            reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+            reverse_proxy https://${media.ip}:${toString media.port} {
               header_up Host {http.request.host}
             }
           }
 
           handle /bazarr* {
             import forward_auth_authentik
-            reverse_proxy https://${mediaIp}:${toString mediaCaddyHttpsPort} {
+            reverse_proxy https://${media.ip}:${toString media.port} {
               header_up Host {http.request.host}
             }
           }

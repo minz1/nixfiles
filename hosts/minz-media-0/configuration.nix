@@ -11,14 +11,16 @@ let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   mediaIp = node.networks.incus_bridge.ip;
-  jellyfinPort = node.services.jellyfin.port;
-  seerrPort = node.services.seerr.port;
-  sonarrPort = node.services.sonarr.port;
-  radarrPort = node.services.radarr.port;
-  prowlarrPort = node.services.prowlarr.port;
-  bazarrPort = node.services.bazarr.port;
   acmeHttpPort = 80;
-  caddyHttpsPort = node.services.caddy.httpsPort;
+
+  # Own service ports — single source of truth here; Caddy also exported via homelab.endpoints.
+  caddyHttpsPort = 443;
+  jellyfinPort = 8096;
+  seerrPort = 5055;
+  sonarrPort = 8989;
+  radarrPort = 7878;
+  prowlarrPort = 9696;
+  bazarrPort = 6767;
 in
 {
   imports = [
@@ -183,7 +185,7 @@ in
     mediaGroup = "media";
     useAuth = false;
 
-    port = node.services.decypharr.port;
+    port = 8282;
     downloadFolder = "/data/downloads";
     maxDownloads = 10;
     removeStalledAfter = "10m";
@@ -414,8 +416,8 @@ in
             publishPorts = [ "127.0.0.1:6868:6767" ];
             # incus_bridge IP because 127.0.0.1 is the container's own loopback.
             environments = {
-              SONARR_BASE_URL = "http://${node.networks.incus_bridge.ip}:${toString node.services.sonarr.port}/sonarr/";
-              RADARR_BASE_URL = "http://${node.networks.incus_bridge.ip}:${toString node.services.radarr.port}/radarr/";
+              SONARR_BASE_URL = "http://${mediaIp}:${toString sonarrPort}/sonarr/";
+              RADARR_BASE_URL = "http://${mediaIp}:${toString radarrPort}/radarr/";
             };
             environmentFiles = [ config.sops.templates.seadexerr-env.path ];
           };
@@ -599,4 +601,9 @@ in
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString prowlarrPort} -j nixos-fw-accept
   '';
 
+  homelab.endpoints.caddy = {
+    ip = mediaIp;
+    port = caddyHttpsPort;
+    tls = true;
+  };
 }

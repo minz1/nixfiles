@@ -27,9 +27,6 @@
         disk = "/dev/vda";
         nix_size = "20G";
       };
-      services = {
-        ssh.port = 22;
-      };
       networks = {
         mgmt = {
           ip = "10.8.0.6";
@@ -53,14 +50,6 @@
       storage = {
         disk = "/dev/vda";
         nix_size = "20G";
-      };
-      services = {
-        ssh.port = 22;
-        forgejo.port = 3000;
-        rustfs.ports = [
-          9000
-          9001
-        ];
       };
       networks.mgmt = {
         ip = "10.8.0.1";
@@ -107,13 +96,6 @@
         cpus = 2;
         memory = "2GiB";
       };
-      services = {
-        ssh.port = 22;
-        prometheus.port = 9090;
-        loki.port = 3100;
-        loki.httpsPort = 3101;
-        grafana.port = 3000;
-      };
       networks.incus_bridge = {
         ip = "10.10.0.2";
       };
@@ -132,17 +114,6 @@
         gpu = true;
         nesting = true;
       };
-      services = {
-        ssh.port = 22;
-        caddy.httpsPort = 443;
-        jellyfin.port = 8096;
-        seerr.port = 5055;
-        decypharr.port = 8282;
-        sonarr.port = 8989;
-        radarr.port = 7878;
-        prowlarr.port = 9696;
-        bazarr.port = 6767;
-      };
       networks.incus_bridge = {
         ip = "10.10.0.7";
       };
@@ -157,17 +128,6 @@
         nix_size = "30G";
         cpus = 2;
         memory = "2GiB";
-      };
-      services = {
-        ssh.port = 22;
-        authentik = {
-          port = 9000;
-          httpsPort = 9443;
-        };
-        ldap = {
-          port = 3389;
-          tlsPort = 6636;
-        };
       };
       networks.incus_bridge = {
         ip = "10.10.0.3";
@@ -185,10 +145,6 @@
         cpus = 1;
         memory = "2GiB";
       };
-      services = {
-        ssh.port = 22;
-        step_ca.port = 9443;
-      };
       networks.incus_bridge.ip = "10.10.0.8";
     };
 
@@ -202,11 +158,6 @@
         root_size = "20GiB";
         cpus = 1;
         memory = "512MiB";
-      };
-      services = {
-        ssh.port = 22;
-        memos.port = 5230;
-        caddy.httpsPort = 443;
       };
       networks.incus_bridge = {
         ip = "10.10.0.6";
@@ -223,10 +174,6 @@
         nix_size = "60G";
         # 500GB SATA SSD — Incus storage pool, ext4, mounted at /var/lib/incus
         incus_disk = "/dev/disk/by-id/ata-WDC_WDBNCE5000PNC_21112L803982";
-      };
-      services = {
-        ssh.port = 22;
-        incus.port = 8443;
       };
       networks = {
         mgmt = {

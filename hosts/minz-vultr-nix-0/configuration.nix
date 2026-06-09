@@ -7,15 +7,14 @@
 }:
 
 let
-  topology = (import ../../common/topology.nix);
+  topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   wgAddr = node.networks.mgmt.ip;
-  forgejoPort = node.services.forgejo.port;
-  fwPorts =
-    node.services.rustfs.ports or [
-      9000
-      9001
-    ];
+  forgejoPort = 3000;
+  fwPorts = [
+    9000
+    9001
+  ];
 in
 {
   imports = [
@@ -34,7 +33,7 @@ in
   services.openssh.listenAddresses = [
     {
       addr = wgAddr;
-      port = node.services.ssh.port;
+      port = 22;
     }
   ];
 

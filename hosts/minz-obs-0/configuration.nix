@@ -2,6 +2,7 @@
   hostName,
   config,
   lib,
+  hostEndpoints,
   ...
 }:
 
@@ -9,15 +10,16 @@ let
   mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
-  promPort = node.services.prometheus.port;
-  lokiPort = node.services.loki.port;
-  lokiHttpsPort = node.services.loki.httpsPort;
-  grafanaPort = node.services.grafana.port;
   obsIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 
-  authentikNode = topology.nodes.minz-authentik-0;
-  authentikHttpsPort = authentikNode.services.authentik.httpsPort;
+  # Own service ports — single source of truth here; also exported via homelab.endpoints below.
+  promPort = 9090;
+  lokiPort = 3100;
+  lokiHttpsPort = 3101;
+  grafanaPort = 3000;
+
+  authentikHttpsPort = hostEndpoints.minz-authentik-0.authentik.port;
 
   nixosNodes = lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
   nodeExporterTargets = lib.mapAttrsToList (
@@ -257,6 +259,19 @@ in
   systemd.services.prometheus.serviceConfig = mkHardened { umask = "0077"; };
 
   systemd.services.grafana.serviceConfig = mkHardened { };
+
+  homelab.endpoints = {
+    loki = {
+      ip = obsIp;
+      port = lokiHttpsPort;
+      tls = true;
+    };
+    grafana = {
+      ip = obsIp;
+      port = grafanaPort;
+      tls = true;
+    };
+  };
 
   environment.persistence."/persist".directories = [
     {

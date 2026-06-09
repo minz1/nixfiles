@@ -23,8 +23,7 @@ let
   entries = lib.filterAttrs (_: v: v != null) (
     lib.mapAttrs resolve (lib.filterAttrs (n: _: n != config.networking.hostName) topology.nodes)
   );
-  pkiNode = topology.nodes.minz-pki-0;
-  pkiPort = pkiNode.services.step_ca.port;
+  pkiPort = 9443;
 in
 {
   networking.extraHosts = lib.concatStringsSep "\n" (

@@ -68,7 +68,7 @@ in
   services.openssh.listenAddresses = [
     {
       addr = wgAddr;
-      port = node.services.ssh.port;
+      port = 22;
     }
   ];
 
@@ -110,7 +110,7 @@ in
     enable = true;
     preseed = {
       config = {
-        "core.https_address" = "${wgAddr}:${toString node.services.incus.port}";
+        "core.https_address" = "${wgAddr}:8443";
       };
       networks = [
         {

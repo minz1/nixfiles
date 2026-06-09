@@ -7,10 +7,12 @@
 let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
-  memosPort = node.services.memos.port;
-  caddyHttpsPort = node.services.caddy.httpsPort;
   servicesIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
+
+  # Own service ports — single source of truth here; also exported via homelab.endpoints below.
+  memosPort = 5230;
+  caddyHttpsPort = 443;
 in
 {
   networking.hostName = hostName;
@@ -74,6 +76,12 @@ in
     caddyHttpsPort
     acmeHttpPort
   ];
+
+  homelab.endpoints.caddy = {
+    ip = servicesIp;
+    port = caddyHttpsPort;
+    tls = true;
+  };
 
   environment.persistence."/persist".directories = [
     {
