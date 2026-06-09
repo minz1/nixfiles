@@ -24,6 +24,7 @@ in
 {
   imports = [
     ../../modules/services/jellyfin-init.nix
+    ../../modules/services/ffprobe-monitor.nix
     ../../modules/nixos/rootless-podman.nix
   ];
 
@@ -362,6 +363,8 @@ in
       };
     };
   };
+
+  services.ffprobe-monitor.enable = true;
 
   # The cache volume root is root:root after creation; fix ownership before decypharr starts.
   systemd.services.decypharr.serviceConfig = {

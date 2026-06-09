@@ -25,9 +25,9 @@ let
   );
   pkiPort = 9443;
   allHostIps = lib.filter (ip: ip != null) (
-    lib.mapAttrsToList (
-      name: net: if name != "edge" then (net.ip or null) else null
-    ) (me.networks or { })
+    lib.mapAttrsToList (name: net: if name != "edge" then (net.ip or null) else null) (
+      me.networks or { }
+    )
   );
 in
 {
