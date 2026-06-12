@@ -43,6 +43,10 @@ in
   sops.secrets.decypharr_torbox_download_key = { };
   sops.secrets.decypharr_usenet_username = { };
   sops.secrets.decypharr_usenet_password = { };
+  sops.secrets.decypharr_username = { };
+  sops.secrets.decypharr_password_hash = { };
+  sops.secrets.decypharr_api_token = { };
+  sops.secrets.decypharr_secret_key = { };
   sops.secrets.zilean_db_password = { };
 
   sops.templates.sonarr-env = {
@@ -92,9 +96,16 @@ in
       DECYPHARR_ARRS__1__TOKEN=${config.sops.placeholder.radarr_api_key}
       DECYPHARR_USENET__PROVIDERS__0__USERNAME=${config.sops.placeholder.decypharr_usenet_username}
       DECYPHARR_USENET__PROVIDERS__0__PASSWORD=${config.sops.placeholder.decypharr_usenet_password}
+      DECYPHARR_SECRET_KEY=${config.sops.placeholder.decypharr_secret_key}
     '';
     owner = "decypharr";
     mode = "0400";
+  };
+
+  sops.templates.decypharr-auth-json = {
+    content = ''{"username":"${config.sops.placeholder.decypharr_username}","password":"${config.sops.placeholder.decypharr_password_hash}","api_token":"${config.sops.placeholder.decypharr_api_token}"}'';
+    owner = "decypharr";
+    mode = "0600";
   };
   sops.templates.recyclarr-env = {
     content = ''
@@ -186,7 +197,6 @@ in
     openFirewall = true;
     extraGroups = [ "media" ];
     mediaGroup = "media";
-    useAuth = false;
 
     port = 8282;
     downloadFolder = "/data/downloads";
@@ -379,10 +389,15 @@ in
   systemd.services.decypharr.serviceConfig = {
     ExecStartPre = lib.mkAfter [
       "+${pkgs.coreutils}/bin/chown decypharr:decypharr /var/cache/decypharr"
+      "+${pkgs.coreutils}/bin/install -m 600 -o decypharr -g decypharr ${config.sops.templates.decypharr-auth-json.path} /var/lib/decypharr/auth.json"
     ];
     IOWeight = 100;
     OOMScoreAdjust = 500;
   };
+
+  systemd.services.decypharr.restartTriggers = [
+    config.sops.templates.decypharr-auth-json.content
+  ];
 
   virtualisation.quadlet =
     let
@@ -611,6 +626,9 @@ in
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString prowlarrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString jellyfinPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString mediaAgentPort} -j nixos-fw-accept
   '';
 

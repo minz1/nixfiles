@@ -42,7 +42,11 @@ in
     jellyfin.url = "http://${mediaIp}:8096";
     sonarr.url = "http://${mediaIp}:8989/sonarr";
     radarr.url = "http://${mediaIp}:7878/radarr";
-    loki.url = "https://${loki.ip}:${toString loki.port}";
+    loki = {
+      url = "https://${loki.ip}:${toString loki.port}";
+      tlsCert = "/var/lib/acme/minz-services-0.internal/cert.pem";
+      tlsKey = "/var/lib/acme/minz-services-0.internal/key.pem";
+    };
     mediaAgent.url = "http://${mediaIp}:9191";
   };
 
@@ -105,6 +109,14 @@ in
     port = caddyHttpsPort;
     tls = true;
   };
+
+  homelab.endpoints.mediafixer = {
+    ip = servicesIp;
+    port = mediaFixerPort;
+    tls = false;
+  };
+
+  systemd.services.media-fixer.serviceConfig.SupplementaryGroups = [ "caddy" ];
 
   environment.persistence."/persist".directories = [
     {
