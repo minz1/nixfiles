@@ -154,10 +154,10 @@
       provisioner = "incus";
       deployed = true;
       incus = {
-        incus_type = "container";
-        root_size = "20GiB";
-        cpus = 1;
-        memory = "512MiB";
+        nix_size = "18G";
+        persist_size = "20GiB";
+        cpus = 2;
+        memory = "2GiB";
       };
       networks.incus_bridge = {
         ip = "10.10.0.6";

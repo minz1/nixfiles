@@ -45,10 +45,10 @@ locals {
     "minz-pki-0"       = incus_network_acl.pki.name
     "minz-obs-0"       = incus_network_acl.obs.name
     "minz-authentik-0" = incus_network_acl.authentik.name
+    "minz-services-0"  = incus_network_acl.services.name
   }
 
   container_acl_map = {
-    "minz-services-0" = incus_network_acl.services.name
     # minz-media-0: no ACL — broad internet egress required (debrid, indexers)
   }
 }
@@ -86,10 +86,10 @@ resource "incus_network_acl" "pki" {
   ]
 }
 
-# services-0: serves Memos HTTPS; no external egress needed.
+# services-0: serves Memos HTTPS; media-fixer needs HTTPS egress to Discord and LLM APIs.
 resource "incus_network_acl" "services" {
   name        = "services"
-  description = "minz-services-0: bridge-internal egress only"
+  description = "minz-services-0: bridge-internal egress + HTTPS for media-fixer"
 
   ingress = concat(local.common_ingress, [
     {
@@ -97,6 +97,14 @@ resource "incus_network_acl" "services" {
       destination_port = "443"
       protocol         = "tcp"
       description      = "Caddy HTTPS"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      source           = local.mgmt_subnet
+      destination_port = "8081"
+      protocol         = "tcp"
+      description      = "media-fixer dashboard from WireGuard"
       state            = "enabled"
     },
   ])
@@ -107,6 +115,14 @@ resource "incus_network_acl" "services" {
       destination = local.incus_bridge_subnet
       description = "Bridge-internal traffic"
       state       = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = "0.0.0.0/0"
+      destination_port = "443"
+      protocol         = "tcp"
+      description      = "HTTPS egress for Discord and LLM APIs (media-fixer)"
+      state            = "enabled"
     },
   ]
 }

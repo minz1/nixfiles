@@ -1,5 +1,6 @@
 {
   hostName,
+  hostEndpoints,
   config,
   ...
 }:
@@ -12,10 +13,38 @@ let
 
   memosPort = 5230;
   caddyHttpsPort = 443;
+  mediaFixerPort = 8081;
+
+  mediaIp = topology.nodes."minz-media-0".networks.incus_bridge.ip;
+  loki = hostEndpoints."minz-obs-0".loki;
 in
 {
   networking.hostName = hostName;
   system.stateVersion = "25.11";
+
+  sops.secrets."media-fixer-env" = { };
+
+  # TODO: add Caddy route for the dashboard under admin.minz1.com/media when ready.
+  services.media-fixer = {
+    enable = true;
+    addr = ":${toString mediaFixerPort}";
+    baseURL = "/media";
+    environmentFile = config.sops.secrets."media-fixer-env".path;
+
+    discord = {
+      guildID = "915483669219655711";
+      ownerID = "162286895827648514";
+    };
+
+    llm.model = "deepseek/deepseek-v4-flash";
+
+    decypharr.url = "http://${mediaIp}:8282";
+    jellyfin.url = "http://${mediaIp}:8096";
+    sonarr.url = "http://${mediaIp}:8989/sonarr";
+    radarr.url = "http://${mediaIp}:7878/radarr";
+    loki.url = "https://${loki.ip}:${toString loki.port}";
+    mediaAgent.url = "http://${mediaIp}:9191";
+  };
 
   services.memos = {
     enable = true;
@@ -67,6 +96,10 @@ in
     acmeHttpPort
   ];
 
+  networking.firewall.extraCommands = ''
+    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString mediaFixerPort} -j nixos-fw-accept
+  '';
+
   homelab.endpoints.caddy = {
     ip = servicesIp;
     port = caddyHttpsPort;
@@ -84,6 +117,10 @@ in
       directory = "/var/lib/caddy";
       user = "caddy";
       group = "caddy";
+      mode = "0700";
+    }
+    {
+      directory = "/var/lib/private/media-fixer";
       mode = "0700";
     }
   ];

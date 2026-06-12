@@ -15,6 +15,7 @@ let
 
   caddyHttpsPort = 443;
   jellyfinPort = 8096;
+  mediaAgentPort = 9191;
   seerrPort = 5055;
   sonarrPort = 8989;
   radarrPort = 7878;
@@ -31,6 +32,7 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
+  sops.secrets."media-agent-env" = { };
   sops.secrets.jellyfin_admin_password.mode = "0400";
   sops.secrets.sonarr_api_key = { };
   sops.secrets.radarr_api_key = { };
@@ -362,6 +364,17 @@ in
 
   services.ffprobe-monitor.enable = true;
 
+  services.media-agent = {
+    enable = true;
+    addr = ":${toString mediaAgentPort}";
+    environmentFile = config.sops.secrets."media-agent-env".path;
+    diskMounts = [
+      "/mnt/decypharr"
+      "/var/cache/decypharr"
+      "/data"
+    ];
+  };
+
   # The cache volume root is root:root after creation; fix ownership before decypharr starts.
   systemd.services.decypharr.serviceConfig = {
     ExecStartPre = lib.mkAfter [
@@ -598,6 +611,7 @@ in
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString prowlarrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString mediaAgentPort} -j nixos-fw-accept
   '';
 
   homelab.endpoints.caddy = {
