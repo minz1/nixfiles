@@ -3,11 +3,11 @@
 
 export PATH="@binPath@:$PATH"
 
-# Configuration
-MIN_AGE_SEC="60"
-POKE_TIMEOUT="15"
-MAX_STUCK_PER_FILE="3"     # Max probes stuck in D state per file before we lock it out
-INTERVAL_SEC="30"
+MIN_AGE_SEC="@minAgeSec@"
+POKE_TIMEOUT="@pokeTimeoutSec@"
+MAX_STUCK_PER_FILE="@maxStuckPerFile@"
+INTERVAL_SEC="@intervalSec@"
+MIN_POKE_INTERVAL_SEC="@minPokeIntervalSec@"
 LOCK_DIR="/tmp/ffprobe-monitor-locks"
 RATE_LIMIT_DIR="/tmp/ffprobe-monitor-poked"
 CACHE_TTL_SEC="3600"
@@ -18,7 +18,6 @@ cleanup_old_data() {
   local cutoff
   cutoff=$(($(date +%s) - CACHE_TTL_SEC))
   find "$RATE_LIMIT_DIR" -type f -not -newermt "@$cutoff" -delete 2>/dev/null || true
-  # Clean up old lock files that aren't currently held
   find "$LOCK_DIR" -type f -not -newermt "@$cutoff" -delete 2>/dev/null || true
 }
 
@@ -81,23 +80,14 @@ while true; do
     fpath=${file_path_map[$fid]}
 
     if [ "$count" -ge "$MAX_STUCK_PER_FILE" ]; then
-      # If we have many stuck, escalate to a "shadow lock"
       logger -t ffprobe-monitor "ALERT: Deadlock detected on file: $fpath ($count probes stuck in D state). SUGGESTION: Replace or delete this file to resolve the hang."
-
-      (
-        if flock -n 9; then
-          logger -t ffprobe-monitor "Shadow lock acquired for $fpath, attempting one final probe."
-          timeout "$POKE_TIMEOUT" ffprobe -loglevel error -probesize 32 -show_format "$fpath" >/dev/null 2>&1 || true
-        fi
-      ) 9>>"$fpath" 2>/dev/null &
     else
-      # Normal "poke" logic for single hangs
       poke_file="$RATE_LIMIT_DIR/$fid"
       now=$(date +%s)
       last_poke=$(cat "$poke_file" 2>/dev/null || echo 0)
 
-      if [ "$((now - last_poke))" -ge 300 ]; then
-        logger -t ffprobe-monitor "Poking stuck ffprobe (PID $pid) for: $fpath (age=$age s)"
+      if [ "$((now - last_poke))" -ge "$MIN_POKE_INTERVAL_SEC" ]; then
+        logger -t ffprobe-monitor "Poking stuck ffprobe for: $fpath (count=$count, age>=${MIN_AGE_SEC}s)"
         timeout "$POKE_TIMEOUT" ffprobe -loglevel error -probesize 32 -show_format "$fpath" >/dev/null 2>&1 &
         printf '%s' "$now" > "$poke_file"
       fi

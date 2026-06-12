@@ -9,6 +9,12 @@
   gnugrep,
   util-linux,
   gnused,
+  # tunables — overridden by the NixOS module
+  intervalSec ? 30,
+  minAgeSec ? 60,
+  minPokeIntervalSec ? 300,
+  pokeTimeoutSec ? 15,
+  maxStuckPerFile ? 3,
 }:
 
 let
@@ -25,13 +31,14 @@ let
 in
 stdenvNoCC.mkDerivation {
   pname = "ffprobe-monitor";
-  version = "1.0.1";
+  version = "1.0.2";
 
   src = ./ffprobe-monitor.sh;
   dontUnpack = true;
 
   binPath = lib.makeBinPath runtimePkgs;
   shell = stdenvNoCC.shell;
+  inherit intervalSec minAgeSec minPokeIntervalSec pokeTimeoutSec maxStuckPerFile;
 
   installPhase = ''
     runHook preInstall

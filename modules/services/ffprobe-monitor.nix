@@ -14,8 +14,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.ffprobe-monitor;
-      defaultText = "pkgs.ffprobe-monitor";
+      defaultText = "pkgs.ffprobe-monitor (built with module options)";
       description = "ffprobe-monitor package to use.";
     };
 
@@ -51,6 +50,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    services.ffprobe-monitor.package = lib.mkDefault (pkgs.ffprobe-monitor.override {
+      inherit (cfg) intervalSec minPokeIntervalSec pokeTimeoutSec;
+      minAgeSec = cfg.minProcessAgeSec;
+      maxStuckPerFile = cfg.maxPokesPerCycle;
+    });
+
     environment.systemPackages = [ cfg.package ];
 
     systemd.services.ffprobe-monitor = {

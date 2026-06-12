@@ -203,10 +203,6 @@ in
       vfsCachePollInterval = "5m";
       vfsCacheMinFreeSpace = "5G";
       vfsDiskSpaceTotal = "100G";
-      bufferSize = "32M";
-      transfers = 8;
-      asyncRead = true;
-      attrTimeout = "1h";
       dirCacheTime = "24h";
     };
 
