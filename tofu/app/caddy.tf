@@ -28,7 +28,10 @@ resource "authentik_outpost" "proxy" {
   name = "authentik Embedded Outpost"
   type = "proxy"
 
-  protocol_providers = [authentik_provider_proxy.arrs.id]
+  protocol_providers = [
+    authentik_provider_proxy.arrs.id,
+    authentik_provider_proxy.media_fixer.id,
+  ]
 
   config = jsonencode({
     authentik_host = "https://auth.minz1.com"

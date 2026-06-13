@@ -36,7 +36,7 @@ in
       ownerID = "162286895827648514";
     };
 
-    llm.model = "deepseek/deepseek-v4-flash";
+    llm.model = "google/gemini-2.5-flash";
 
     decypharr.url = "http://${mediaIp}:8282";
     jellyfin.url = "http://${mediaIp}:8096";
@@ -102,6 +102,7 @@ in
 
   networking.firewall.extraCommands = ''
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString mediaFixerPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.edge.subnet} -p tcp --dport ${toString mediaFixerPort} -j nixos-fw-accept
   '';
 
   homelab.endpoints.caddy = {

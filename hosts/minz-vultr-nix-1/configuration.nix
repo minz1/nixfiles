@@ -16,6 +16,7 @@ let
   grafana = hostEndpoints.minz-obs-0.grafana;
   media = hostEndpoints.minz-media-0.caddy;
   memos = hostEndpoints.minz-services-0.caddy;
+  mediaFixer = hostEndpoints.minz-services-0.mediafixer;
 
   fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
   arrApps = [
@@ -219,6 +220,28 @@ in
           crowdsec
           reverse_proxy https://${memos.ip}:${toString memos.port} {
             header_up Host {http.request.host}
+          }
+        '';
+      };
+
+      "admin.minz1.com" = {
+        extraConfig = ''
+          import security_headers
+          crowdsec
+
+          handle /outpost.goauthentik.io/* {
+            reverse_proxy https://${authentik.ip}:${toString authentik.port}
+          }
+
+          handle /media* {
+            import forward_auth_authentik
+            reverse_proxy http://${mediaFixer.ip}:${toString mediaFixer.port} {
+              header_up Host {http.request.host}
+            }
+          }
+
+          handle {
+            respond "Not found" 404
           }
         '';
       };
