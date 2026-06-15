@@ -13,6 +13,10 @@ let
   '';
 in
 {
+  imports = [
+    ../../modules/nixos/rootless-podman.nix
+  ];
+
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
@@ -20,6 +24,12 @@ in
 
   # No Caddy on this host, but group is required by common.nix / observability-agent.nix.
   users.groups.caddy = { };
+
+  services.rootless-podman = {
+    enable = true;
+    user = "oci";
+    uid = 902;
+  };
 
   sops.secrets.rcon_password = { };
   sops.secrets.curseforge_api_key = { };
@@ -31,11 +41,10 @@ in
       RCON_PASSWORD=${config.sops.placeholder.rcon_password}
       CF_API_KEY=${config.sops.placeholder.curseforge_api_key}
     '';
+    owner = "oci";
     mode = "0400";
   };
 
-  # Installed to /data/config/ before container start so proxy-compatible-forge
-  # can verify modern Velocity forwarding on first boot.
   sops.templates.mc-proxyforge-config = {
     content = ''
       version = 2.0
@@ -59,29 +68,17 @@ in
     mode = "0400";
   };
 
-  virtualisation.podman = {
-    enable = true;
-    defaultNetwork.settings.dns_enabled = true;
-    autoPrune = {
-      enable = true;
-      dates = "weekly";
-    };
-  };
-
-  # Bootstrap: game ACL blocks internet egress. Temporarily allow 443/tcp in
-  # tofu/infra/acls.tf for first deploy so itzg can fetch the modpack, then remove.
-  virtualisation.oci-containers = {
-    backend = "podman";
-    containers.atm10 = {
+  virtualisation.quadlet.containers.atm10 = {
+    rootlessConfig.uid = 902;
+    containerConfig = {
       # Tag is pinned; image updates require a deliberate change here.
       image = "docker.io/itzg/minecraft-server:java25-graalvm";
-      autoStart = true;
       volumes = [ "/persist/atm10:/data" ];
-      ports = [
+      publishPorts = [
         "${toString gamePort}:${toString gamePort}"
         "${toString rconPort}:${toString rconPort}"
       ];
-      environment = {
+      environments = {
         EULA = "TRUE";
         MODPACK_PLATFORM = "AUTO_CURSEFORGE";
         CF_SLUG = "all-the-mods-10";
@@ -93,26 +90,18 @@ in
         CURSEFORGE_FILES = "better-sparse-structures,distant-horizons";
         MODRINTH_PROJECTS = "proxy-compatible-forge";
       };
-      # RCON_PASSWORD and CF_API_KEY injected via env-file.
-      # --no-healthcheck: itzg healthcheck fires during modpack download, causing false failures.
-      extraOptions = [
-        "--env-file=${config.sops.templates.mc-env.path}"
-        "--no-healthcheck"
-      ];
+      environmentFiles = [ config.sops.templates.mc-env.path ];
+      # itzg healthcheck fires during modpack download causing false failures.
+      podmanArgs = [ "--no-healthcheck" ];
     };
-  };
-
-  systemd.services."podman-atm10" = {
     serviceConfig = {
-      ExecStartPre = [
-        "${pkgs.coreutils}/bin/install -Dm 644 ${config.sops.templates.mc-proxyforge-config.path} /persist/atm10/config/proxy-compatible-forge.toml"
-      ];
+      # + runs as root regardless of User=oci so we can write into /persist/atm10
+      # before it exists; itzg's entrypoint then chowns /data recursively to UID
+      # 1000, making the file writable so proxy-compatible-forge can rewrite it.
+      ExecStartPre = "+${pkgs.coreutils}/bin/install -Dm 644 ${config.sops.templates.mc-proxyforge-config.path} /persist/atm10/config/proxy-compatible-forge.toml";
       RestartSec = "30s";
     };
-    restartTriggers = [
-      config.sops.templates.mc-env.content
-      config.sops.templates.mc-proxyforge-config.content
-    ];
+    unitConfig."X-Restart-Triggers" = "${config.sops.templates.mc-env.content} ${config.sops.templates.mc-proxyforge-config.content}";
   };
 
   systemd.services.minecraft-whitelist-sync = {
@@ -136,13 +125,19 @@ in
     };
   };
 
+  systemd.tmpfiles.rules = [
+    # oci (uid 902) owns the data root; container init (UID 0 inside = oci on host)
+    # sets up subdirs, then drops to UID 1000 for the Minecraft process.
+    "d /persist/atm10 0750 oci oci -"
+  ];
+
   environment.persistence."/persist".directories = [
     # Avoids re-pulling itzg/minecraft-server on every reboot.
     {
-      directory = "/var/lib/containers";
-      user = "root";
-      group = "root";
-      mode = "0755";
+      directory = "/var/lib/oci";
+      user = "oci";
+      group = "oci";
+      mode = "0700";
     }
   ];
 }

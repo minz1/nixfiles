@@ -1,7 +1,7 @@
 config-version = "2.8"
 bind = "0.0.0.0:@velocityPort@"
-motd = "<gray>ATM10 Server</gray>"
-show-max-players = 5
+motd = "<gray>minz1's ATM10 Server</gray>"
+show-max-players = 10
 online-mode = true
 force-key-authentication = true
 prevent-client-proxy-connections = false
@@ -54,5 +54,5 @@ kick-after-rate-limited-tab-completes = 0
 [query]
 enabled = false
 port = 25565
-map = "Velocity"
+map = "minz1's World"
 show-plugins = false
