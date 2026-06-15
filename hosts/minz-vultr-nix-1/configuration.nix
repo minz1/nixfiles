@@ -25,6 +25,16 @@ let
     "prowlarr"
     "bazarr"
   ];
+
+  gameIp = topology.nodes."minz-game-0".networks.incus_bridge.ip;
+  gamePort = 25565;
+  velocityPort = 25565;
+
+  velocityToml = pkgs.replaceVars ./velocity.toml {
+    inherit gameIp;
+    gamePort = toString gamePort;
+    velocityPort = toString velocityPort;
+  };
 in
 {
   imports = [ ./hardware-configuration.nix ];
@@ -56,6 +66,8 @@ in
   ];
 
   sops.secrets.crowdsec_caddy_api_key = { };
+
+  sops.secrets.minecraft_velocity_forwarding_secret = { };
 
   sops.templates.crowdsec-caddy-env = {
     content = "CROWDSEC_API_KEY=${config.sops.placeholder.crowdsec_caddy_api_key}";
@@ -277,6 +289,30 @@ in
   systemd.services.caddy.after = lib.mkAfter [ "crowdsec.service" ];
   systemd.services.caddy.requires = [ "crowdsec.service" ];
 
+  systemd.services.velocity = {
+    description = "Velocity Minecraft proxy";
+    after = [ "network.target" "wireguard-wg1.service" ];
+    wants = [ "wireguard-wg1.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      DynamicUser = true;
+      StateDirectory = "velocity";
+      WorkingDirectory = "/var/lib/velocity";
+      ExecStartPre = [
+        # No +: runs as DynamicUser so velocity.toml is owned by that UID and
+        # Velocity can write back for config migrations.
+        "${pkgs.coreutils}/bin/install -m 644 ${velocityToml} /var/lib/velocity/velocity.toml"
+        # + required: forwarding.secret is a sops path readable only by root.
+        "+${pkgs.coreutils}/bin/install -m 644 ${config.sops.secrets.minecraft_velocity_forwarding_secret.path} /var/lib/velocity/forwarding.secret"
+      ];
+      ExecStart = "${pkgs.velocity}/bin/velocity -Dvelocity.max-known-packs=1024 -Dvelocity.max-plugin-message-payload-size=16777216";
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+  };
+
+  networking.firewall.allowedTCPPorts = [ velocityPort ];
+
   environment.persistence."/persist".directories = [
     {
       directory = "/var/lib/caddy";
@@ -287,6 +323,12 @@ in
     # CrowdSec uses DynamicUser; real state is at /var/lib/private/crowdsec.
     {
       directory = "/var/lib/private/crowdsec";
+      mode = "0700";
+    }
+    # Velocity uses DynamicUser; real state is at /var/lib/private/velocity.
+    # Persisting avoids losing logs across reboots; config is re-written by ExecStartPre.
+    {
+      directory = "/var/lib/private/velocity";
       mode = "0700";
     }
   ];

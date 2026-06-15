@@ -38,6 +38,7 @@ in
   security.acme.acceptTerms = true;
   security.acme.defaults.server = lib.mkDefault "https://minz-pki-0.internal:${toString pkiPort}/acme/acme/directory";
   security.acme.defaults.email = lib.mkDefault "emerytang@gmail.com";
+  security.acme.defaults.renewInterval = "*-*-* 0/6:00:00";
   security.acme.certs."${config.networking.hostName}.internal" = {
     listenHTTP = ":80";
     group = "caddy";

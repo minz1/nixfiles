@@ -103,7 +103,11 @@ in
   };
 
   sops.templates.decypharr-auth-json = {
-    content = ''{"username":"${config.sops.placeholder.decypharr_username}","password":"${config.sops.placeholder.decypharr_password_hash}","api_token":"${config.sops.placeholder.decypharr_api_token}"}'';
+    content = builtins.toJSON {
+      username = config.sops.placeholder.decypharr_username;
+      password = config.sops.placeholder.decypharr_password_hash;
+      api_token = config.sops.placeholder.decypharr_api_token;
+    };
     owner = "decypharr";
     mode = "0600";
   };
@@ -197,6 +201,7 @@ in
     openFirewall = true;
     extraGroups = [ "media" ];
     mediaGroup = "media";
+    authFile = config.sops.templates.decypharr-auth-json.path;
 
     port = 8282;
     downloadFolder = "/data/downloads";
@@ -389,7 +394,6 @@ in
   systemd.services.decypharr.serviceConfig = {
     ExecStartPre = lib.mkAfter [
       "+${pkgs.coreutils}/bin/chown decypharr:decypharr /var/cache/decypharr"
-      "+${pkgs.coreutils}/bin/install -m 600 -o decypharr -g decypharr ${config.sops.templates.decypharr-auth-json.path} /var/lib/decypharr/auth.json"
     ];
     IOWeight = 100;
     OOMScoreAdjust = 500;

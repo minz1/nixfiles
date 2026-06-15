@@ -26,11 +26,13 @@ resource "sonarr_media_management" "sonarr" {
 }
 
 resource "sonarr_download_client_qbittorrent" "decypharr" {
-  name     = "decypharr"
-  enable   = true
-  priority = 1
-  host     = "127.0.0.1"
-  port     = 8282
+  name        = "decypharr"
+  enable      = true
+  priority    = 1
+  host        = "127.0.0.1"
+  port        = 8282
+  username    = "http://127.0.0.1:8989/sonarr"
+  password    = var.sonarr_api_key
   tv_category = "sonarr"
 }
 
@@ -78,6 +80,8 @@ resource "radarr_download_client_qbittorrent" "decypharr" {
   priority       = 1
   host           = "127.0.0.1"
   port           = 8282
+  username       = "http://127.0.0.1:7878/radarr"
+  password       = var.radarr_api_key
   movie_category = "radarr"
 }
 

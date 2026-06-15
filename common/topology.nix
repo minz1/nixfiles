@@ -148,6 +148,22 @@
       networks.incus_bridge.ip = "10.10.0.8";
     };
 
+    minz-game-0 = {
+      os = "nixos";
+      sshUser = "minz1";
+      provisioner = "incus";
+      deployed = true;
+      incus = {
+        nix_size = "20G";
+        persist_size = "60GiB";
+        cpus = 4;
+        memory = "14GiB";
+      };
+      networks.incus_bridge = {
+        ip = "10.10.0.9";
+      };
+    };
+
     minz-services-0 = {
       os = "nixos";
       sshUser = "minz1";

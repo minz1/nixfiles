@@ -47,6 +47,7 @@ locals {
     "minz-obs-0"       = incus_network_acl.obs.name
     "minz-authentik-0" = incus_network_acl.authentik.name
     "minz-services-0"  = incus_network_acl.services.name
+    "minz-game-0"      = incus_network_acl.game.name
   }
 
   container_acl_map = {
@@ -184,6 +185,63 @@ resource "incus_network_acl" "obs" {
   ]
 }
 
+# game-0: ATM10 Minecraft server + RCON for whitelist sync from edge.
+resource "incus_network_acl" "game" {
+  name        = "game"
+  description = "minz-game-0: Minecraft + RCON from edge; 443 egress for CurseForge"
+
+  ingress = concat(local.common_ingress, [
+    {
+      action           = "allow"
+      source           = local.edge_subnet
+      destination_port = "25565"
+      protocol         = "tcp"
+      description      = "Minecraft from Velocity (wg1 edge)"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      source           = local.mgmt_subnet
+      destination_port = "25565"
+      protocol         = "tcp"
+      description      = "Minecraft direct access from mgmt WireGuard"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      source           = local.edge_subnet
+      destination_port = "25575"
+      protocol         = "tcp"
+      description      = "RCON from whitelist sync on vultr-nix-1 (wg1 edge)"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      source           = local.mgmt_subnet
+      destination_port = "25575"
+      protocol         = "tcp"
+      description      = "RCON admin access from mgmt WireGuard"
+      state            = "enabled"
+    },
+  ])
+
+  egress = [
+    {
+      action      = "allow"
+      destination = local.incus_bridge_subnet
+      description = "Bridge-internal traffic"
+      state       = "enabled"
+    },
+    {
+      action           = "allow"
+      protocol         = "tcp"
+      destination_port = "443"
+      description      = "CurseForge / CDN — modpack install and updates"
+      state            = "enabled"
+    },
+  ]
+}
+
 # authentik-0: serves HTTPS (OIDC/forward-auth) and LDAPS; sends SMTP via Resend.
 resource "incus_network_acl" "authentik" {
   name        = "authentik"
@@ -212,6 +270,14 @@ resource "incus_network_acl" "authentik" {
       destination = local.incus_bridge_subnet
       description = "Bridge-internal traffic"
       state       = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = "0.0.0.0/0,::/0"
+      destination_port = "443"
+      protocol         = "tcp"
+      description      = "HTTPS egress for external APIs (Mojang UUID lookup, OAuth JWKS)"
+      state            = "enabled"
     },
     {
       action           = "allow"
