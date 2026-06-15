@@ -87,6 +87,7 @@ in
         ENABLE_RCON = "TRUE";
         RCON_PORT = toString rconPort;
         MEMORY = "10G";
+        MAX_PLAYERS = "10";
         JVM_OPTS = "-XX:+UseZGC -XX:+UseCompactObjectHeaders";
         ALLOW_FLIGHT = "TRUE";
         CURSEFORGE_FILES = "better-sparse-structures,distant-horizons,c2me";
