@@ -46,6 +46,9 @@ in
     extraDomainNames = allHostIps;
   };
 
+  # NixOS ACME module doesn't auto-open the listenHTTP port; add it here.
+  networking.firewall.allowedTCPPorts = [ 80 ];
+
   services.openssh = {
     enable = true;
     settings = {

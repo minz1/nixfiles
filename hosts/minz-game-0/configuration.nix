@@ -72,7 +72,7 @@ in
     rootlessConfig.uid = 902;
     containerConfig = {
       # Tag is pinned; image updates require a deliberate change here.
-      image = "docker.io/itzg/minecraft-server:java25-graalvm";
+      image = "docker.io/itzg/minecraft-server:java25";
       volumes = [ "/persist/atm10:/data" ];
       publishPorts = [
         "${toString gamePort}:${toString gamePort}"
@@ -87,8 +87,10 @@ in
         ENABLE_RCON = "TRUE";
         RCON_PORT = toString rconPort;
         MEMORY = "10G";
-        CURSEFORGE_FILES = "better-sparse-structures,distant-horizons";
-        MODRINTH_PROJECTS = "proxy-compatible-forge";
+        JVM_OPTS = "-XX:+UseZGC -XX:+UseCompactObjectHeaders";
+        ALLOW_FLIGHT = "TRUE";
+        CURSEFORGE_FILES = "better-sparse-structures,distant-horizons,c2me";
+        MODRINTH_PROJECTS = "proxy-compatible-forge,noisiumforked";
       };
       environmentFiles = [ config.sops.templates.mc-env.path ];
       # itzg healthcheck fires during modpack download causing false failures.

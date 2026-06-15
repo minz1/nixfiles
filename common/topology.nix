@@ -155,7 +155,7 @@
       deployed = true;
       incus = {
         nix_size = "20G";
-        persist_size = "60GiB";
+        persist_size = "100GiB";
         cpus = 4;
         memory = "14GiB";
       };
