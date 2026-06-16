@@ -4,8 +4,9 @@ variable "app_name" {
 }
 
 variable "group_id" {
-  description = "Authentik group ID to add users to on enrollment and join."
+  description = "Authentik group ID to add users to on enrollment and join. Omit for generic account creation with no group."
   type        = string
+  default     = null
 }
 
 variable "join_require_invitation" {

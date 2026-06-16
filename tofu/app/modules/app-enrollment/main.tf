@@ -76,7 +76,7 @@ resource "authentik_stage_user_write" "enrollment" {
   create_users_as_inactive = false
   user_creation_mode       = "always_create"
   user_type                = "internal"
-  create_users_group       = var.group_id
+  create_users_group       = var.group_id != null ? var.group_id : null
 }
 
 resource "authentik_stage_user_login" "enrollment" {
@@ -141,7 +141,7 @@ resource "authentik_stage_identification" "join" {
 resource "authentik_stage_user_write" "join" {
   name               = "${var.app_name}-join-write"
   user_creation_mode = "never_create"
-  create_users_group = var.group_id
+  create_users_group = var.group_id != null ? var.group_id : null
 }
 
 resource "authentik_stage_user_login" "join" {
