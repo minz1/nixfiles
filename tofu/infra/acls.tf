@@ -188,7 +188,7 @@ resource "incus_network_acl" "obs" {
 # game-0: ATM10 Minecraft server + RCON for whitelist sync from edge.
 resource "incus_network_acl" "game" {
   name        = "game"
-  description = "minz-game-0: Minecraft + RCON from edge; 443 egress for CurseForge"
+  description = "minz-game-0: Minecraft + RCON from edge; 443 egress"
 
   ingress = concat(local.common_ingress, [
     {

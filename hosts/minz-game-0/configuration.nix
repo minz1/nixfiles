@@ -90,7 +90,7 @@ in
         MAX_PLAYERS = "10";
         JVM_OPTS = "-XX:+UseZGC -XX:+UseCompactObjectHeaders";
         ALLOW_FLIGHT = "TRUE";
-        CURSEFORGE_FILES = "better-sparse-structures,distant-horizons,c2me";
+        CURSEFORGE_FILES = "better-sparse-structures,distant-horizons,c2me,discord-integration";
         MODRINTH_PROJECTS = "proxy-compatible-forge,noisiumforked";
       };
       environmentFiles = [ config.sops.templates.mc-env.path ];
