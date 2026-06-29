@@ -157,7 +157,7 @@
         nix_size = "20G";
         persist_size = "100GiB";
         cpus = 4;
-        memory = "14GiB";
+        memory = "20GiB";
       };
       networks.incus_bridge = {
         ip = "10.10.0.9";

@@ -1,11 +1,16 @@
-{ hostName, config, lib, pkgs, hostEndpoints, ... }:
+{
+  hostName,
+  config,
+  pkgs,
+  hostEndpoints,
+  ...
+}:
 
 let
-  topology = import ../../common/topology.nix;
   gamePort = 25565;
   rconPort = 25575;
 
-  authentikIp   = hostEndpoints.minz-authentik-0.authentik.ip;
+  authentikIp = hostEndpoints.minz-authentik-0.authentik.ip;
   authentikPort = hostEndpoints.minz-authentik-0.authentik.port;
 
   whitelistSyncScript = pkgs.writeShellScript "minecraft-whitelist-sync" ''
@@ -86,12 +91,14 @@ in
         ONLINE_MODE = "FALSE";
         ENABLE_RCON = "TRUE";
         RCON_PORT = toString rconPort;
-        MEMORY = "10G";
+        MEMORY = "16G";
         MAX_PLAYERS = "10";
-        JVM_OPTS = "-XX:+UseZGC -XX:+UseCompactObjectHeaders";
+        JVM_OPTS = "-XX:+UseZGC -XX:+UseCompactObjectHeaders -XX:SoftMaxHeapSize=13G -XX:ConcGCThreads=2";
         ALLOW_FLIGHT = "TRUE";
-        CURSEFORGE_FILES = "better-sparse-structures,distant-horizons,c2me,discord-integration";
-        MODRINTH_PROJECTS = "proxy-compatible-forge,noisiumforked";
+        SIMULATION_DISTANCE = "6";
+        MAX_TICK_TIME = "-1";
+        CURSEFORGE_FILES = "distant-horizons,c2me,discord-integration";
+        MODRINTH_PROJECTS = "proxy-compatible-forge,zfastnoise,lithium,achievements-optimizer,servercore";
       };
       environmentFiles = [ config.sops.templates.mc-env.path ];
       # itzg healthcheck fires during modpack download causing false failures.
@@ -104,7 +111,8 @@ in
       ExecStartPre = "+${pkgs.coreutils}/bin/install -Dm 644 ${config.sops.templates.mc-proxyforge-config.path} /persist/atm10/config/proxy-compatible-forge.toml";
       RestartSec = "30s";
     };
-    unitConfig."X-Restart-Triggers" = "${config.sops.templates.mc-env.content} ${config.sops.templates.mc-proxyforge-config.content}";
+    unitConfig."X-Restart-Triggers" =
+      "${config.sops.templates.mc-env.content} ${config.sops.templates.mc-proxyforge-config.content}";
   };
 
   systemd.services.minecraft-whitelist-sync = {

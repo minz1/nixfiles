@@ -32,6 +32,10 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
+  # lxc-container.nix disables programs.fuse, stripping the setuid fusermount3 wrapper
+  # that rclone needs for non-root FUSE mounts. Re-enable it explicitly.
+  programs.fuse.enable = lib.mkForce true;
+
   sops.secrets."media-agent-env" = { };
   sops.secrets.jellyfin_admin_password.mode = "0400";
   sops.secrets.sonarr_api_key = { };
@@ -214,9 +218,9 @@ in
       vfsCacheMaxSize = "85G";
       vfsCacheMaxAge = "168h";
       vfsReadChunkSize = "128M";
-      vfsReadChunkSizeLimit = "off";
-      vfsReadChunkStreams = 4;
-      vfsReadAhead = "256M";
+      vfsReadChunkSizeLimit = "512M";
+      vfsReadChunkStreams = 2;
+      vfsReadAhead = "64M";
       vfsCachePollInterval = "5m";
       vfsCacheMinFreeSpace = "5G";
       vfsDiskSpaceTotal = "100G";

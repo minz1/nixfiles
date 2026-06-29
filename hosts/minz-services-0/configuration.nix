@@ -22,6 +22,10 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
+  # Go caches the TLS cert pool at startup; try-reload-or-restart triggers a full restart
+  # for services without ExecReload, which is what we need after cert renewal.
+  security.acme.certs."${hostName}.internal".reloadServices = [ "media-fixer.service" ];
+
   sops.secrets."media-fixer-env" = { };
 
   # TODO: add Caddy route for the dashboard under admin.minz1.com/media when ready.
