@@ -212,19 +212,10 @@ in
     maxDownloads = 10;
     removeStalledAfter = "10m";
 
-    rclone = {
+    dfs = {
       cacheDir = "/var/cache/decypharr";
-      vfsCacheMode = "full";
-      vfsCacheMaxSize = "85G";
-      vfsCacheMaxAge = "168h";
-      vfsReadChunkSize = "128M";
-      vfsReadChunkSizeLimit = "512M";
-      vfsReadChunkStreams = 2;
-      vfsReadAhead = "64M";
-      vfsCachePollInterval = "5m";
-      vfsCacheMinFreeSpace = "5G";
-      vfsDiskSpaceTotal = "100G";
-      dirCacheTime = "24h";
+      diskCacheSize = "85GB";
+      chunkSize = "10MB";
     };
 
     usenet = {
@@ -246,7 +237,7 @@ in
       default_download_action = "symlink";
 
       mount = {
-        type = "rclone";
+        type = "dfs";
         mount_path = "/mnt/decypharr";
       };
 

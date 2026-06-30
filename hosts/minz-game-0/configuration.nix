@@ -98,7 +98,7 @@ in
         SIMULATION_DISTANCE = "6";
         MAX_TICK_TIME = "-1";
         CURSEFORGE_FILES = "distant-horizons,c2me,discord-integration";
-        MODRINTH_PROJECTS = "proxy-compatible-forge,zfastnoise,lithium,achievements-optimizer,servercore";
+        MODRINTH_PROJECTS = "proxy-compatible-forge,zfastnoise,lithium,achievements-optimizer,servercore,scalablelux";
       };
       environmentFiles = [ config.sops.templates.mc-env.path ];
       # itzg healthcheck fires during modpack download causing false failures.
