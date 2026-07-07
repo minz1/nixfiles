@@ -33,6 +33,10 @@
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
     decypharr.url = "github:minz1/decypharr/minz";
     mediafixer.url = "github:minz1/media-fixer";
+    nix-topology = {
+      url = "github:oddlama/nix-topology";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -50,6 +54,7 @@
       quadlet-nix,
       decypharr,
       mediafixer,
+      nix-topology,
     }:
     let
       system = "x86_64-linux";
@@ -59,6 +64,7 @@
       overlays = [
         rustfs.overlays.default
         overlay
+        nix-topology.overlays.default
       ];
 
       nixosNodes = nixpkgs.lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
@@ -176,6 +182,7 @@
               services.media-fixer.package = mediafixer.packages.${system}.media-fixer;
               services.media-agent.package = mediafixer.packages.${system}.media-agent;
             }
+            nix-topology.nixosModules.default
             ./modules/nixos/base.nix
           ]
           ++ vmModule
@@ -188,12 +195,18 @@
         }
       ) configurableNodes;
 
-      hostEndpoints = nixpkgs.lib.mapAttrs (
-        _: nixos: nixos.config.homelab.endpoints
-      ) nixosConfigurations;
+      hostEndpoints = nixpkgs.lib.mapAttrs (_: nixos: nixos.config.homelab.endpoints) nixosConfigurations;
     in
     {
       inherit nixosConfigurations hostEndpoints;
+
+      topology.${system} = import nix-topology {
+        inherit pkgs;
+        modules = [
+          ./common/nix-topology.nix
+          { inherit nixosConfigurations; }
+        ];
+      };
 
       deploy.nodes = builtins.mapAttrs (name: node: {
         hostname = deployHostname name node;

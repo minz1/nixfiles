@@ -223,6 +223,7 @@ in
       readAhead = "16MB";
       processingTimeout = "10m";
       availabilitySamplePercent = 10;
+      importAvailabilitySamplePercent = 20;
       maxConcurrentNZB = 2;
     };
 
