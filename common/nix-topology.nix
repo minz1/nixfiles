@@ -79,6 +79,7 @@ let
   quadletNodes = lib.mapAttrs (hostName: nixos: {
     services = lib.mapAttrs (containerName: container: {
       name = containerName;
+      icon = ./icons/podman.svg;
       info = container.containerConfig.image or "";
     }) (nixos.config.virtualisation.quadlet.containers or { });
   }) config.nixosConfigurations;
