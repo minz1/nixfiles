@@ -141,7 +141,7 @@ in
         plugins = [
           "github.com/hslatman/caddy-crowdsec-bouncer/http@v0.13.1"
         ];
-        hash = "sha256-9wxFVwd+s3woOvX5n7U+FEpw9Sri4b9SEftpSSOAArk=";
+        hash = "sha256-yiwpa6VHi9h9G4SrlzOEPCYEDBI//+Vw4i3uWM2BEwM=";
       }).overrideAttrs
         (_: {
           doInstallCheck = false;

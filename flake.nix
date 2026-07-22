@@ -8,10 +8,6 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    rustfs = {
-      url = "github:rustfs/rustfs-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -45,7 +41,6 @@
       nixpkgs,
       deploy-rs,
       sops-nix,
-      rustfs,
       disko,
       nixos-anywhere,
       impermanence,
@@ -62,7 +57,6 @@
       topology = import ./common/topology.nix;
 
       overlays = [
-        rustfs.overlays.default
         overlay
         nix-topology.overlays.default
       ];
@@ -173,8 +167,6 @@
           modules = [
             sops-nix.nixosModules.sops
             quadlet-nix.nixosModules.quadlet
-            rustfs.nixosModules.rustfs
-            { services.rustfs.package = rustfs.packages.${system}.default; }
             decypharr.nixosModules.default
             mediafixer.nixosModules.media-fixer
             mediafixer.nixosModules.media-agent

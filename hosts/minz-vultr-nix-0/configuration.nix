@@ -55,6 +55,16 @@ in
     mode = "0400";
   };
 
+  sops.templates.rustfs-env = {
+    content = ''
+      RUSTFS_ACCESS_KEY=${config.sops.placeholder.rustfs-access-key}
+      RUSTFS_SECRET_KEY=${config.sops.placeholder.rustfs-secret-key}
+    '';
+    owner = config.services.rustfs.user;
+    group = config.services.rustfs.group;
+    mode = "0400";
+  };
+
   sops.templates.tofu-env = {
     content = ''
       AWS_ACCESS_KEY_ID=${config.sops.placeholder.rustfs-access-key}
@@ -66,14 +76,10 @@ in
 
   sops.secrets.rustfs-access-key = {
     mode = "0400";
-    owner = config.services.rustfs.user;
-    group = config.services.rustfs.group;
     restartUnits = [ "rustfs.service" ];
   };
   sops.secrets.rustfs-secret-key = {
     mode = "0400";
-    owner = config.services.rustfs.user;
-    group = config.services.rustfs.group;
     restartUnits = [ "rustfs.service" ];
   };
 
@@ -154,13 +160,14 @@ in
 
   services.rustfs = {
     enable = true;
-    accessKeyFile = config.sops.secrets.rustfs-access-key.path;
-    secretKeyFile = config.sops.secrets.rustfs-secret-key.path;
-    volumes = "/var/lib/rustfs";
-    address = ":9000";
-    consoleEnable = true;
-    consoleAddress = "127.0.0.1:9001";
-    logLevel = "info";
+    environmentFile = config.sops.templates.rustfs-env.path;
+    settings = {
+      RUSTFS_VOLUMES = "/var/lib/rustfs";
+      RUSTFS_ADDRESS = ":9000";
+      RUSTFS_CONSOLE_ENABLE = "true";
+      RUSTFS_CONSOLE_ADDRESS = "127.0.0.1:9001";
+      RUSTFS_LOG_LEVEL = "info";
+    };
   };
 
   systemd.services.rustfs-bucket-setup = {
@@ -177,10 +184,9 @@ in
       AWS_ENDPOINT_URL = "http://127.0.0.1:9000";
     };
     script = ''
-      ACCESS_KEY=$(cat ${config.sops.secrets.rustfs-access-key.path})
-      SECRET_KEY=$(cat ${config.sops.secrets.rustfs-secret-key.path})
-      export AWS_ACCESS_KEY_ID="$ACCESS_KEY"
-      export AWS_SECRET_ACCESS_KEY="$SECRET_KEY"
+      source ${config.sops.templates.rustfs-env.path}
+      export AWS_ACCESS_KEY_ID="$RUSTFS_ACCESS_KEY"
+      export AWS_SECRET_ACCESS_KEY="$RUSTFS_SECRET_KEY"
 
       aws=${pkgs.awscli2}/bin/aws
 
