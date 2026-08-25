@@ -80,9 +80,7 @@ jobs:
       - name: Deploy
         if: steps.affected.outputs.hosts != ''
         run: |
-          for host in ${{ steps.affected.outputs.hosts }}; do
-            nix run .#deploy-rs -- ".#$host"
-          done
+          nix develop --command just deploy phased ${{ steps.affected.outputs.hosts }}
 
       - name: Save Nix cache
         if: always()

@@ -88,6 +88,35 @@
             "nixfiles: all nodes deployed"
         ) filtered;
 
+      # Dependency-ordered deploy phases, derived from the routing topology
+      topologyList = nixpkgs.lib.mapAttrsToList (name: node: node // { inherit name; }) topology.nodes;
+      mgmtHubName =
+        (nixpkgs.lib.findFirst (n: n.networks.mgmt.role or "" == "server") null topologyList).name or null;
+      incusHostName =
+        (nixpkgs.lib.findFirst (n: (n.provisioner or "") == "incus-host") null topologyList).name or null;
+
+      deployDependency =
+        name: node:
+        if (node.provisioner or "") == "incus" then
+          (if incusHostName != null && incusHostName != name then incusHostName else null)
+        else if node.networks ? mgmt then
+          (if mgmtHubName != null && mgmtHubName != name then mgmtHubName else null)
+        else
+          null;
+
+      deployLevel =
+        name:
+        let
+          dep = deployDependency name deployableNodes.${name};
+        in
+        if dep == null then 0 else 1 + deployLevel dep;
+
+      deployLevels = nixpkgs.lib.mapAttrs (name: _: deployLevel name) deployableNodes;
+      maxDeployLevel = nixpkgs.lib.foldl' nixpkgs.lib.max 0 (nixpkgs.lib.attrValues deployLevels);
+      deployPhases = map (
+        l: nixpkgs.lib.attrNames (nixpkgs.lib.filterAttrs (_: lvl: lvl == l) deployLevels)
+      ) (nixpkgs.lib.range 0 maxDeployLevel);
+
       pkgs = import nixpkgs {
         inherit system;
         inherit overlays;
@@ -199,6 +228,8 @@
           { inherit nixosConfigurations; }
         ];
       };
+
+      inherit deployPhases;
 
       deploy.nodes = builtins.mapAttrs (name: node: {
         hostname = deployHostname name node;
