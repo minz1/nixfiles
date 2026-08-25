@@ -1,5 +1,6 @@
 export ROOT_DIR := justfile_directory()
 
+mod admin "just/admin.just"
 mod bootstrap "just/bootstrap.just"
 mod deploy "just/deploy.just"
 mod tofu "just/tofu.just"
