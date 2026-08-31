@@ -54,6 +54,8 @@ in
     settings = {
       PasswordAuthentication = false;
       PermitRootLogin = "no";
+      AllowTcpForwarding = false;
+      AllowAgentForwarding = false;
     };
     startWhenNeeded = false;
   };
