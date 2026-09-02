@@ -257,7 +257,7 @@
       formatter.${system} = pkgs.nixfmt;
 
       packages.${system} = {
-        inherit (pkgs) seerr-oidc adguard-exporter;
+        inherit (pkgs) adguard-exporter;
         decypharr = decypharr.packages.${system}.default;
         deploy-rs = deployPkgs.deploy-rs.deploy-rs;
         nixos-anywhere = nixos-anywhere.packages.${system}.nixos-anywhere;
