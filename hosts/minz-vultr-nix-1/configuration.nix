@@ -29,6 +29,8 @@ let
   gameIp = topology.nodes."minz-game-0".networks.incus_bridge.ip;
   gamePort = 25565;
 
+  # own Caddy holds :80 for its own public ACME; internal-cert ACME (lego) gets this local port instead, fronted by the :80 catch-all below (docs/main-plan.md S4)
+  internalAcmeHttpPort = 18080;
   velocityPort = 25565;
 
   velocityToml = pkgs.replaceVars ./velocity.toml {
@@ -131,23 +133,20 @@ in
 
   networking.nftables.enable = true;
 
-  # TODO: internal-cert ACME loses the :80 race to Caddy's own public ACME, falls back to a minica
-  # self-signed cert (docs/main-plan.md S4 recovery). A Caddy :80 catch-all relaying the challenge
-  # caused a caddy.service reload timeout on deploy (auto-rolled-back, no outage) — root cause not
-  # yet understood, deferred pending safe offline reproduction before retrying live.
+  # Caddy already owns :80 for its own public ACME; lego listens locally and Caddy relays the challenge (docs/main-plan.md S4)
+  security.acme.certs."${hostName}.internal".listenHTTP = "127.0.0.1:${toString internalAcmeHttpPort}";
 
   services.caddy = {
     enable = true;
     email = "emerytang@gmail.com";
     openFirewall = true;
 
-    # doInstallCheck=false: plugin path check false-negatives on subpackage imports.
     package =
       (pkgs.caddy.withPlugins {
         plugins = [
-          "github.com/hslatman/caddy-crowdsec-bouncer/http@v0.13.1"
+          "github.com/hslatman/caddy-crowdsec-bouncer/http@v0.14.1"
         ];
-        hash = "sha256-yiwpa6VHi9h9G4SrlzOEPCYEDBI//+Vw4i3uWM2BEwM=";
+        hash = "sha256-htcwX2DVQgyWZfW3e+Ycop1PzVk9Zgi6WDC1VhQIqlg=";
       }).overrideAttrs
         (_: {
           doInstallCheck = false;
@@ -292,6 +291,19 @@ in
               }
             }
           '') arrApps}
+
+          handle {
+            respond "Not found" 404
+          }
+        '';
+      };
+
+      # catch-all, no Host match: relays the internal-cert ACME challenge; named vhosts above still win their own ACME via automatic HTTPS (docs/main-plan.md S4)
+      ":80" = {
+        extraConfig = ''
+          handle /.well-known/acme-challenge/* {
+            reverse_proxy 127.0.0.1:${toString internalAcmeHttpPort}
+          }
 
           handle {
             respond "Not found" 404
