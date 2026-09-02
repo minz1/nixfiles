@@ -417,7 +417,7 @@ in
         zilean-postgres = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "docker.io/library/postgres:16-alpine";
+            image = "docker.io/library/postgres:16-alpine@sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229";
             pod = pods.zilean.ref;
             volumes = [ "${volumes.zilean-pg.ref}:/var/lib/postgresql/data" ];
             environments = {
@@ -431,7 +431,9 @@ in
         zilean-app = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "ipromknight/zilean:latest";
+            # No upstream release since 2025-04-21 (project looks dormant); pinned to
+            # what's been running rather than following an inactive :latest tag.
+            image = "ipromknight/zilean:latest@sha256:1b828ac0604235de7adb7757d11c88c1b3bb1a6319071b0c9d99325bc0f9d477";
             pod = pods.zilean.ref;
             volumes = [ "/var/lib/zilean:/app/data" ];
             environmentFiles = [ config.sops.templates.zilean-app-env.path ];
@@ -445,7 +447,7 @@ in
         flaresolverr = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "ghcr.io/flaresolverr/flaresolverr:latest";
+            image = "ghcr.io/flaresolverr/flaresolverr:latest@sha256:139dfee1c6f89249c8d665d1333a42e8ec74ec0a86bc6bb1c8461e10d3a66a47";
             publishPorts = [ "127.0.0.1:8191:8191" ];
             environments.LOG_LEVEL = "info";
           };
@@ -454,7 +456,7 @@ in
         seadexerr = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "ghcr.io/ryder-c/seadexerr:latest";
+            image = "ghcr.io/ryder-c/seadexerr:latest@sha256:89d938f61e55e78a50d5b485bc77f2fd16819576bcdad3750d2aab77a4d39d26";
             publishPorts = [ "127.0.0.1:6868:6767" ];
             # incus_bridge IP because 127.0.0.1 is the container's own loopback.
             environments = {

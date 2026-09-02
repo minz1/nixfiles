@@ -130,7 +130,7 @@ in
       tokenFile = config.sops.templates.forgejo-runner-env.path;
       url = "http://${wgAddr}:${toString forgejoPort}";
       labels = [
-        "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04"
+        "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:ba462524eef12b7af3ed50b97d29c5c5eb7ba0eacb26d338d4c3957bbda76d58"
       ];
       settings.cache = {
         enabled = true;

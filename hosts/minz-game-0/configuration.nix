@@ -76,8 +76,9 @@ in
   virtualisation.quadlet.containers.atm10 = {
     rootlessConfig.uid = 902;
     containerConfig = {
-      # Tag is pinned; image updates require a deliberate change here.
-      image = "docker.io/itzg/minecraft-server:java25";
+      # Digest is pinned; image updates require a deliberate change here (world
+      # backup + play-test — a new digest re-resolves the CurseForge modpack).
+      image = "docker.io/itzg/minecraft-server:java25@sha256:d54e9c99dfc77b18c02b896772798884b430f8e65865e785a2f5a9780d566320";
       volumes = [ "/persist/atm10:/data" ];
       publishPorts = [
         "${toString gamePort}:${toString gamePort}"
