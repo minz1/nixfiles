@@ -50,11 +50,6 @@ in
     owner = "podman-runner";
   };
 
-  sops.templates.forgejo-runner-env = {
-    content = "TOKEN=${config.sops.placeholder.forgejo_runner_token}";
-    mode = "0400";
-  };
-
   sops.templates.rustfs-env = {
     content = ''
       RUSTFS_ACCESS_KEY=${config.sops.placeholder.rustfs-access-key}
@@ -101,7 +96,7 @@ in
       mode = "0750";
     }
     {
-      directory = "/var/lib/gitea-runner";
+      directory = "/var/lib/forgejo-runner";
       user = "podman-runner";
       group = "podman-runner";
       mode = "0750";
@@ -122,33 +117,45 @@ in
     };
   };
 
-  services.gitea-actions-runner = {
+  services.forgejo-runner = {
     package = pkgs.forgejo-runner;
     instances.minz_forgejo = {
       enable = true;
-      name = "minz_forgejo-runner-0";
-      tokenFile = config.sops.templates.forgejo-runner-env.path;
-      url = "http://${wgAddr}:${toString forgejoPort}";
-      labels = [
-        "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:ba462524eef12b7af3ed50b97d29c5c5eb7ba0eacb26d338d4c3957bbda76d58"
-      ];
-      settings.cache = {
-        enabled = true;
-        host = wgAddr;
-      };
-      settings.container = {
-        docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
-        valid_volumes = [ "/run/secrets/**" ];
-        options = lib.concatStringsSep " " [
-          "-v ${config.sops.secrets.forgejo_deploy_key.path}:/run/secrets/deploy_ssh_key:ro"
-          "-v ${config.sops.secrets.incus_client_key.path}:/run/secrets/incus_client_key:ro"
-          "-v ${config.sops.templates.tofu-env.path}:/run/secrets/tofu-env:ro"
+      # Reuses the pre-existing runner's identity (nixfiles docs/ops.md) so it keeps
+      # its registration and job history across the gitea-actions-runner -> forgejo-runner
+      # module migration, rather than re-registering as a new runner.
+      settings = {
+        runner.labels = [
+          "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:ba462524eef12b7af3ed50b97d29c5c5eb7ba0eacb26d338d4c3957bbda76d58"
         ];
+        server.connections.default = {
+          url = "http://${wgAddr}:${toString forgejoPort}";
+          uuid = "f7ef4a1d-816d-482f-a645-153425f66f73";
+        };
+        cache = {
+          enabled = true;
+          host = wgAddr;
+        };
+        container = {
+          docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
+          valid_volumes = [ "/run/secrets/**" ];
+          options = lib.concatStringsSep " " [
+            "-v ${config.sops.secrets.forgejo_deploy_key.path}:/run/secrets/deploy_ssh_key:ro"
+            "-v ${config.sops.secrets.incus_client_key.path}:/run/secrets/incus_client_key:ro"
+            "-v ${config.sops.templates.tofu-env.path}:/run/secrets/tofu-env:ro"
+          ];
+        };
       };
+      secrets.server.connections.default.token_url = config.sops.secrets.forgejo_runner_token.path;
+      # Rootless podman under a dedicated user, not the rootful setup this option targets
+      # (module TODO: "Add support for rootless Podman"); avoid the rootful defaults
+      # (podman.service ordering, "podman" supplementary group) it would otherwise infer
+      # from the ":docker" label.
+      runtimes.podman = false;
     };
   };
 
-  systemd.services."gitea-runner-minz_forgejo" = {
+  systemd.services."forgejo-runner-minz_forgejo" = {
     after = [ "user@${toString config.users.users.podman-runner.uid}.service" ];
     wants = [ "user@${toString config.users.users.podman-runner.uid}.service" ];
     serviceConfig = {
