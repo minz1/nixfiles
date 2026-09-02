@@ -94,7 +94,7 @@
       incus = {
         nix_size = "30G";
         cpus = 2;
-        memory = "2GiB";
+        memory = "4GiB";
       };
       networks.incus_bridge = {
         ip = "10.10.0.2";

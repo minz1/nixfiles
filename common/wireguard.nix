@@ -121,13 +121,16 @@ in
     _: netCfg: netCfg.interface
   ) wireguardNetworks;
 
-  # sshd must start after all WireGuard interfaces are up — otherwise it fails
-  # to bind if configured to listen on a WireGuard IP, then races to success
-  # on a later restart attempt.
+  # sshd binds a WG IP but wireguard-wgN.service going active doesn't guarantee the address is bindable yet; see docs/main-plan.md S4
   systemd.services.sshd.after = lib.mapAttrsToList (
     _: netCfg: "wireguard-${netCfg.interface}.service"
   ) wireguardNetworks;
   systemd.services.sshd.wants = lib.mapAttrsToList (
     _: netCfg: "wireguard-${netCfg.interface}.service"
   ) wireguardNetworks;
+
+  # default RestartSec=100ms + StartLimitBurst=5/10s burns the whole retry budget in ~0.5s
+  systemd.services.sshd.serviceConfig.RestartSec = lib.mkIf (wireguardNetworks != { }) 5;
+  systemd.services.sshd.startLimitBurst = lib.mkIf (wireguardNetworks != { }) 20;
+  systemd.services.sshd.startLimitIntervalSec = lib.mkIf (wireguardNetworks != { }) 300;
 }

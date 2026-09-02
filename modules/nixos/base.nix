@@ -75,4 +75,15 @@
     admin_space_left_action = "suspend";
   };
 
+  # routes audit events into journald -> existing mTLS Loki pipeline, avoids tailing 0700 audit.log (docs/main-plan.md S4)
+  security.auditd.plugins.syslog.active = lib.mkIf (!config.boot.isContainer) true;
+
+  # auditd doesn't hot-reload; restart doesn't auto-apply either (RefuseManualStart, needs reboot — docs/main-plan.md S4)
+  systemd.services.auditd.restartTriggers = lib.mkIf (!config.boot.isContainer) [
+    config.environment.etc."audit/plugins.d/syslog.conf".source
+  ];
+
+  # default 10000/30s; a nixos-rebuild burst can otherwise silently drop audit records
+  services.journald.extraConfig = "RateLimitBurst=50000";
+
 }

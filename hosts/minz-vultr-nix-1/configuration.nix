@@ -28,6 +28,7 @@ let
 
   gameIp = topology.nodes."minz-game-0".networks.incus_bridge.ip;
   gamePort = 25565;
+
   velocityPort = 25565;
 
   velocityToml = pkgs.replaceVars ./velocity.toml {
@@ -130,6 +131,11 @@ in
 
   networking.nftables.enable = true;
 
+  # TODO: internal-cert ACME loses the :80 race to Caddy's own public ACME, falls back to a minica
+  # self-signed cert (docs/main-plan.md S4 recovery). A Caddy :80 catch-all relaying the challenge
+  # caused a caddy.service reload timeout on deploy (auto-rolled-back, no outage) — root cause not
+  # yet understood, deferred pending safe offline reproduction before retrying live.
+
   services.caddy = {
     enable = true;
     email = "emerytang@gmail.com";
@@ -227,6 +233,17 @@ in
       };
 
       "memos.minz1.com" = {
+        extraConfig = ''
+          import security_headers
+          crowdsec
+          reverse_proxy https://${memos.ip}:${toString memos.port} {
+            header_up Host {http.request.host}
+          }
+        '';
+      };
+
+      # same Caddy instance as memos (services-0), routed by Host header to the ntfy route there
+      "ntfy.minz1.com" = {
         extraConfig = ''
           import security_headers
           crowdsec

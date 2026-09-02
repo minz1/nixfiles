@@ -14,6 +14,7 @@ let
   memosPort = 5230;
   caddyHttpsPort = 443;
   mediaFixerPort = 8081;
+  ntfyPort = 2586; # module default listen-http = "127.0.0.1:2586"
 
   mediaIp = topology.nodes."minz-media-0".networks.incus_bridge.ip;
   loki = hostEndpoints."minz-obs-0".loki;
@@ -66,6 +67,34 @@ in
     };
   };
 
+  # bcrypt HASHES (from `ntfy user hash`), not plaintext — see docs/ops.md for the plaintext counterpart on obs-0
+  sops.secrets."ntfy_grafana_password_hash" = { };
+  sops.secrets."ntfy_phone_password_hash" = { };
+
+  sops.templates."ntfy-env" = {
+    content = ''
+      NTFY_AUTH_USERS='grafana:${config.sops.placeholder.ntfy_grafana_password_hash}:user,phone:${config.sops.placeholder.ntfy_phone_password_hash}:user'
+      NTFY_AUTH_ACCESS='grafana:homelab-alerts:write-only,phone:homelab-alerts:read-only'
+    '';
+  };
+
+  services.ntfy-sh = {
+    enable = true;
+    settings = {
+      base-url = "https://ntfy.minz1.com";
+      # per-visitor rate limiting; without this every request looks like it's from Caddy's loopback
+      behind-proxy = true;
+      # default is read-write; unset this and the topic is world-publishable once the vhost exists
+      auth-default-access = "deny-all";
+    };
+    environmentFile = config.sops.templates."ntfy-env".path;
+  };
+
+  # environmentFile content changes don't restart the service on their own (docs/main-plan.md S4)
+  systemd.services.ntfy-sh.restartTriggers = [
+    config.sops.templates."ntfy-env".content
+  ];
+
   services.caddy = {
     enable = true;
     settings = {
@@ -85,10 +114,29 @@ in
           ];
           routes = [
             {
+              match = [ { host = [ "memos.minz1.com" ]; } ];
               handle = [
                 {
                   handler = "reverse_proxy";
                   upstreams = [ { dial = "localhost:${toString memosPort}"; } ];
+                  headers.request.set."Host" = [ "{http.request.host}" ];
+                }
+              ];
+            }
+            {
+              # .internal alias lets Grafana publish over the bridge instead of hairpinning through the edge
+              match = [
+                {
+                  host = [
+                    "ntfy.minz1.com"
+                    "minz-services-0.internal"
+                  ];
+                }
+              ];
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "localhost:${toString ntfyPort}"; } ];
                   headers.request.set."Host" = [ "{http.request.host}" ];
                 }
               ];
@@ -138,6 +186,11 @@ in
     }
     {
       directory = "/var/lib/private/media-fixer";
+      mode = "0700";
+    }
+    # DynamicUser: persist /var/lib/private/ntfy-sh, not the /var/lib/ntfy-sh symlink.
+    {
+      directory = "/var/lib/private/ntfy-sh";
       mode = "0700";
     }
   ];

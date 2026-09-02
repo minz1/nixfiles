@@ -73,3 +73,21 @@ gc-all older_than="14d":
       echo "Failed: ${failed[*]}" >&2
       exit 1
     fi
+
+# Reboot a single host and wait for it to come back healthy.
+reboot host:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target=$(just admin _target {{ host }})
+    echo "==> Rebooting {{ host }} ($target)"
+    ssh "$target" 'sudo reboot' || true
+    echo "Waiting for {{ host }} to come back..."
+    ${ROOT_DIR}/scripts/deploy-wait-healthy.sh {{ host }} 180
+
+# Fleet-wide health check: failed units, crash-looping services, obs-0 functional probes. Not wired into deploy.
+health:
+    ${ROOT_DIR}/scripts/health-check.sh
+
+# Reboot the full fleet (standalone hosts, then home-nix-0 which cascades its Incus guests).
+reboot-all:
+    ${ROOT_DIR}/scripts/reboot-fleet.sh

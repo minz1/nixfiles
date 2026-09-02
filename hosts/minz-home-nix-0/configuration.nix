@@ -2,6 +2,7 @@
   pkgs,
   lib,
   hostName,
+  config,
   ...
 }:
 
@@ -16,6 +17,11 @@ let
   incusClientCert = pkgs.writeText "incus-client.crt" (
     builtins.readFile ../../secrets/incus-client.crt
   );
+
+  # fed by stunnel client mode on the router (S4c, manual) — see docs/main-plan.md S4
+  routerSyslogPort = 1514; # unprivileged; DynamicUser Alloy lacks CAP_NET_BIND_SERVICE
+  certDir = "/var/lib/acme/${hostName}.internal";
+  routerIp = "192.168.0.1";
 in
 {
   imports = [
@@ -164,6 +170,32 @@ in
   # Intel I219 (e1000e) hardware unit hang fix — TSO/GSO cause tx ring stalls.
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="net", KERNEL=="eno1", RUN+="${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off"
+  '';
+
+  # idle until S4c (router side) lands; syslog_format is a best guess, confirm once real traffic arrives
+  homelab.observability.extraAlloyConfig = ''
+    loki.source.syslog "router" {
+      listener {
+        address       = "0.0.0.0:${toString routerSyslogPort}"
+        protocol      = "tcp"
+        syslog_format = "rfc3164"
+        labels = {
+          job = "openwrt-syslog",
+        }
+
+        tls_config {
+          cert_file = "${certDir}/fullchain.pem"
+          key_file  = "${certDir}/key.pem"
+        }
+      }
+
+      forward_to = [loki.write.default.receiver]
+    }
+  '';
+
+  # nftables-native equivalent of extraCommands — required since this host has networking.nftables.enable = true
+  networking.firewall.extraInputRules = ''
+    ip saddr ${routerIp} tcp dport ${toString routerSyslogPort} accept
   '';
 
   systemd.services.incus-add-tofu-cert = {

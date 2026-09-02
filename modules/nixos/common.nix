@@ -40,7 +40,8 @@ in
   security.acme.defaults.email = lib.mkDefault "emerytang@gmail.com";
   security.acme.defaults.renewInterval = "*-*-* 0/6:00:00";
   security.acme.certs."${config.networking.hostName}.internal" = {
-    listenHTTP = ":80";
+    # overridable: hosts whose own Caddy already owns :80 (e.g. vultr-nix-1) need an alt port (docs/main-plan.md S4)
+    listenHTTP = lib.mkDefault ":80";
     group = "caddy";
     reloadServices = lib.optional config.services.caddy.enable "caddy.service";
     extraDomainNames = allHostIps;
