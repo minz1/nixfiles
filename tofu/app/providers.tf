@@ -4,23 +4,28 @@ terraform {
   required_providers {
     authentik = {
       source  = "goauthentik/authentik"
-      version = "~> 2026.2"
+      version = "~> 2026.5"
     }
     sonarr = {
       source  = "devopsarr/sonarr"
-      version = "~> 3.4"
+      version = "~> 3.5"
     }
     radarr = {
       source  = "devopsarr/radarr"
-      version = "~> 2.3"
+      version = "~> 2.5"
     }
     prowlarr = {
       source  = "devopsarr/prowlarr"
       version = "~> 3.2"
     }
     seerr = {
-      source  = "josh-archer/seerr"
-      version = "~> 0.19"
+      source = "josh-archer/seerr"
+      # Exact pin: fetching any release fresh (0.19.5 through 1.1.0-rc.2, tested)
+      # fails "authentication signature from unknown issuer" on `tofu init -upgrade`,
+      # a broken/rotated signing key upstream — not specific to any one version.
+      # 0.19.3 only works because it's already trusted via .terraform.lock.hcl
+      # (trust-on-first-use, no fresh fetch needed). Revisit once upstream re-signs.
+      version = "0.19.3"
     }
   }
 
