@@ -23,8 +23,9 @@ resource "authentik_provider_oauth2" "grafana" {
   property_mappings  = data.authentik_property_mapping_provider_scope.oidc.ids
   allowed_redirect_uris = [
     {
-      matching_mode = "strict"
-      url           = "https://grafana.minz1.com/login/generic_oauth"
+      matching_mode     = "strict"
+      redirect_uri_type = "authorization"
+      url               = "https://grafana.minz1.com/login/generic_oauth"
     }
   ]
 }

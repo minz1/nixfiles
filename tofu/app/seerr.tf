@@ -15,8 +15,8 @@ resource "seerr_api_object" "jellyfin_settings" {
 }
 
 resource "seerr_main_settings" "main" {
-  local_login  = false
-  trust_proxy  = true
+  local_login = false
+  trust_proxy = true
 }
 
 resource "seerr_sonarr_server" "default" {
@@ -30,7 +30,7 @@ resource "seerr_sonarr_server" "default" {
   is_default            = true
   enable_season_folders = true
   quality_profile_id    = 7 # WEB-2160p (Combined)
-  extra_payload_json    = jsonencode({
+  extra_payload_json = jsonencode({
     activeAnimeProfileId = 8 # Remux-1080p Anime
   })
   lifecycle { ignore_changes = [quality_profile_name, active_anime_directory, anime_tags, tags] }
@@ -58,8 +58,9 @@ resource "authentik_provider_oauth2" "seerr" {
   property_mappings  = data.authentik_property_mapping_provider_scope.oidc.ids
   allowed_redirect_uris = [
     {
-      matching_mode = "strict"
-      url           = "https://seerr.minz1.com/login"
+      matching_mode     = "strict"
+      redirect_uri_type = "authorization"
+      url               = "https://seerr.minz1.com/login"
     }
   ]
 }

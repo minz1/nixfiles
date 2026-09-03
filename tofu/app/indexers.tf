@@ -23,7 +23,6 @@ resource "prowlarr_indexer" "zilean" {
 data "prowlarr_indexer_schema" "leet"          { name = "1337x" }
 data "prowlarr_indexer_schema" "yts"           { name = "YTS" }
 data "prowlarr_indexer_schema" "eztv"          { name = "EZTV" }
-data "prowlarr_indexer_schema" "torrentgalaxy" { name = "TorrentGalaxyClone" }
 data "prowlarr_indexer_schema" "nyaa"          { name = "Nyaa.si" }
 data "prowlarr_indexer_schema" "animetosho"    { name = "AnimeTosho" }
 
@@ -76,25 +75,6 @@ resource "prowlarr_indexer" "eztv" {
 
   fields = [
     { name = "definitionFile", text_value = "eztv" },
-  ]
-
-  lifecycle {
-    ignore_changes = [fields]
-  }
-}
-
-resource "prowlarr_indexer" "torrentgalaxy" {
-  enable          = false
-  name            = "TorrentGalaxyClone"
-  implementation  = data.prowlarr_indexer_schema.torrentgalaxy.implementation
-  config_contract = data.prowlarr_indexer_schema.torrentgalaxy.config_contract
-  protocol        = data.prowlarr_indexer_schema.torrentgalaxy.protocol
-  app_profile_id  = 1
-  priority        = 25
-
-  fields = [
-    { name = "definitionFile", text_value = "torrentgalaxyclone" },
-    { name = "baseUrl", text_value = "https://torrentgalaxy.to" },
   ]
 
   lifecycle {

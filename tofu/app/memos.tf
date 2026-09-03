@@ -11,8 +11,9 @@ resource "authentik_provider_oauth2" "memos" {
   property_mappings  = data.authentik_property_mapping_provider_scope.oidc.ids
   allowed_redirect_uris = [
     {
-      matching_mode = "strict"
-      url           = "https://memos.minz1.com/auth/callback"
+      matching_mode     = "strict"
+      redirect_uri_type = "authorization"
+      url               = "https://memos.minz1.com/auth/callback"
     }
   ]
 }
