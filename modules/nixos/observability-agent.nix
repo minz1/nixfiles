@@ -1,4 +1,9 @@
-{ config, lib, hostEndpoints, ... }:
+{
+  config,
+  lib,
+  hostEndpoints,
+  ...
+}:
 
 let
   mkHardened = import ../lib/hardening.nix { inherit lib; };
@@ -45,28 +50,25 @@ in
     services.prometheus.exporters.node = {
       enable = true;
       openFirewall = true;
-      extraFlags =
-        lib.optional enableClientCert "--web.config.file=/etc/node-exporter-web.yml"
-        ++ [
-          # scoped to .service units to bound cardinality; prereq for "service down"/"cert renewal failing" alerts (docs/main-plan.md S4)
-          "--collector.systemd"
-          "--collector.systemd.unit-include=.+\\.service"
-        ];
+      extraFlags = lib.optional enableClientCert "--web.config.file=/etc/node-exporter-web.yml" ++ [
+        # scoped to .service units to bound cardinality; prereq for "service down"/"cert renewal failing" alerts (docs/main-plan.md S4)
+        "--collector.systemd"
+        "--collector.systemd.unit-include=.+\\.service"
+      ];
     };
 
     # upstream's default hardening lacks AF_UNIX, silently breaking the systemd collector's dbus dial (docs/main-plan.md S4)
-    systemd.services.prometheus-node-exporter.serviceConfig =
-      {
-        RestrictAddressFamilies = [
-          "AF_INET"
-          "AF_INET6"
-          "AF_NETLINK"
-          "AF_UNIX"
-        ];
-      }
-      // lib.optionalAttrs enableClientCert {
-        SupplementaryGroups = [ "caddy" ];
-      };
+    systemd.services.prometheus-node-exporter.serviceConfig = {
+      RestrictAddressFamilies = [
+        "AF_INET"
+        "AF_INET6"
+        "AF_NETLINK"
+        "AF_UNIX"
+      ];
+    }
+    // lib.optionalAttrs enableClientCert {
+      SupplementaryGroups = [ "caddy" ];
+    };
     systemd.services.prometheus-node-exporter.after = lib.mkIf enableClientCert [
       "acme-${certName}.service"
     ];

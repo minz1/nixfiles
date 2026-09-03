@@ -604,12 +604,14 @@ in
     ];
   };
 
-  systemd.services.victoriametrics.serviceConfig = (mkHardened {
-    umask = "0077";
-    privateUsers = false;
-  }) // {
-    SupplementaryGroups = [ "caddy" ];
-  };
+  systemd.services.victoriametrics.serviceConfig =
+    (mkHardened {
+      umask = "0077";
+      privateUsers = false;
+    })
+    // {
+      SupplementaryGroups = [ "caddy" ];
+    };
   systemd.services.victoriametrics.after = [ "acme-minz-obs-0.internal.service" ];
   systemd.services.victoriametrics.wants = [ "acme-minz-obs-0.internal.service" ];
 
@@ -634,22 +636,22 @@ in
 
   # TEMPORARILY DISABLED 2026-09-01: blocks fleet-wide deploys until adguard_exporter_env exists; re-enable steps in docs/ops.md
   /*
-  sops.secrets."adguard_exporter_env" = { };
+    sops.secrets."adguard_exporter_env" = { };
 
-  systemd.services.adguard-exporter = {
-    description = "Prometheus exporter for AdGuard Home";
-    after = [ "network-online.target" ];
-    wants = [ "network-online.target" ];
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = mkHardened { } // {
-      DynamicUser = true;
-      EnvironmentFile = config.sops.secrets."adguard_exporter_env".path;
-      Environment = [ "BIND_ADDR=127.0.0.1:${toString adguardExporterPort}" ];
-      ExecStart = lib.getExe pkgs.adguard-exporter;
-      Restart = "on-failure";
-      RestartSec = "10s";
+    systemd.services.adguard-exporter = {
+      description = "Prometheus exporter for AdGuard Home";
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = mkHardened { } // {
+        DynamicUser = true;
+        EnvironmentFile = config.sops.secrets."adguard_exporter_env".path;
+        Environment = [ "BIND_ADDR=127.0.0.1:${toString adguardExporterPort}" ];
+        ExecStart = lib.getExe pkgs.adguard-exporter;
+        Restart = "on-failure";
+        RestartSec = "10s";
+      };
     };
-  };
   */
 
   homelab.endpoints = {

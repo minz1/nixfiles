@@ -134,7 +134,8 @@ in
   networking.nftables.enable = true;
 
   # Caddy already owns :80 for its own public ACME; lego listens locally and Caddy relays the challenge (docs/main-plan.md S4)
-  security.acme.certs."${hostName}.internal".listenHTTP = "127.0.0.1:${toString internalAcmeHttpPort}";
+  security.acme.certs."${hostName}.internal".listenHTTP =
+    "127.0.0.1:${toString internalAcmeHttpPort}";
 
   services.caddy = {
     enable = true;
@@ -320,7 +321,10 @@ in
 
   systemd.services.velocity = {
     description = "Velocity Minecraft proxy";
-    after = [ "network.target" "wireguard-wg1.service" ];
+    after = [
+      "network.target"
+      "wireguard-wg1.service"
+    ];
     wants = [ "wireguard-wg1.service" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {

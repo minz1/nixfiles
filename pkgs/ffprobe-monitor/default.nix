@@ -38,7 +38,13 @@ stdenvNoCC.mkDerivation {
 
   binPath = lib.makeBinPath runtimePkgs;
   shell = stdenvNoCC.shell;
-  inherit intervalSec minAgeSec minPokeIntervalSec pokeTimeoutSec maxStuckPerFile;
+  inherit
+    intervalSec
+    minAgeSec
+    minPokeIntervalSec
+    pokeTimeoutSec
+    maxStuckPerFile
+    ;
 
   installPhase = ''
     runHook preInstall

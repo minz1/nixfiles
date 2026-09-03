@@ -10,10 +10,9 @@ let
   node = topology.nodes.${hostName} or (throw "No topology entry for ${hostName}");
   vmIp = node.networks.incus_bridge.ip;
   nixSize = node.incus.nix_size or "60G";
-  incusHostNode = lib.findFirst
-    (n: (n.provisioner or "") == "incus-host")
-    (throw "No incus-host node in topology")
-    (lib.attrValues topology.nodes);
+  incusHostNode = lib.findFirst (
+    n: (n.provisioner or "") == "incus-host"
+  ) (throw "No incus-host node in topology") (lib.attrValues topology.nodes);
   gatewayIp = incusHostNode.networks.incus_bridge.ip;
 in
 {
@@ -36,7 +35,7 @@ in
   services.timesyncd.servers = [ gatewayIp ];
 
   # Egress ACL blocks cache.nixos.org; deploy-rs nix copy provides the full closure.
-  nix.settings.substituters = lib.mkForce [];
+  nix.settings.substituters = lib.mkForce [ ];
 
   services.openssh.listenAddresses = [
     {

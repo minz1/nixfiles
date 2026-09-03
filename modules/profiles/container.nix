@@ -6,10 +6,9 @@
 
 let
   topology = import ../../common/topology.nix;
-  incusHostNode = lib.findFirst
-    (n: (n.provisioner or "") == "incus-host")
-    (throw "No incus-host node in topology")
-    (lib.attrValues topology.nodes);
+  incusHostNode = lib.findFirst (
+    n: (n.provisioner or "") == "incus-host"
+  ) (throw "No incus-host node in topology") (lib.attrValues topology.nodes);
   gatewayIp = incusHostNode.networks.incus_bridge.ip;
 in
 
@@ -51,5 +50,5 @@ in
   services.timesyncd.servers = [ gatewayIp ];
 
   # Egress ACL blocks cache.nixos.org; deploy-rs nix copy provides the full closure.
-  nix.settings.substituters = lib.mkForce [];
+  nix.settings.substituters = lib.mkForce [ ];
 }

@@ -50,11 +50,13 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    services.ffprobe-monitor.package = lib.mkDefault (pkgs.ffprobe-monitor.override {
-      inherit (cfg) intervalSec minPokeIntervalSec pokeTimeoutSec;
-      minAgeSec = cfg.minProcessAgeSec;
-      maxStuckPerFile = cfg.maxPokesPerCycle;
-    });
+    services.ffprobe-monitor.package = lib.mkDefault (
+      pkgs.ffprobe-monitor.override {
+        inherit (cfg) intervalSec minPokeIntervalSec pokeTimeoutSec;
+        minAgeSec = cfg.minProcessAgeSec;
+        maxStuckPerFile = cfg.maxPokesPerCycle;
+      }
+    );
 
     environment.systemPackages = [ cfg.package ];
 
