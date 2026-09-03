@@ -16,7 +16,7 @@ jobs:
       INCUS_CONF: /tmp/incus-conf
       INCUS_REMOTE: minz-home-nix-0
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
 
