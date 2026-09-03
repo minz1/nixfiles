@@ -126,7 +126,7 @@ in
       # module migration, rather than re-registering as a new runner.
       settings = {
         runner.labels = [
-          "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:ba462524eef12b7af3ed50b97d29c5c5eb7ba0eacb26d338d4c3957bbda76d58"
+          "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:62d572b92f9f32d3427b6d220ad1f9dca9c7b6ffad37d295425037dbff78abaf"
         ];
         server.connections.default = {
           url = "http://${wgAddr}:${toString forgejoPort}";

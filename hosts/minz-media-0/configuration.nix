@@ -417,7 +417,7 @@ in
         zilean-postgres = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "docker.io/library/postgres:16-alpine@sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229";
+            image = "docker.io/library/postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685";
             pod = pods.zilean.ref;
             volumes = [ "${volumes.zilean-pg.ref}:/var/lib/postgresql/data" ];
             environments = {
@@ -456,7 +456,7 @@ in
         seadexerr = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "ghcr.io/ryder-c/seadexerr:latest@sha256:89d938f61e55e78a50d5b485bc77f2fd16819576bcdad3750d2aab77a4d39d26";
+            image = "ghcr.io/ryder-c/seadexerr:latest@sha256:d0855f27ae7c8fd89c366516b148ef62f9e94f05db30134318ce5faef6426180";
             publishPorts = [ "127.0.0.1:6868:6767" ];
             # incus_bridge IP because 127.0.0.1 is the container's own loopback.
             environments = {
