@@ -91,3 +91,31 @@ health:
 # Reboot the full fleet (standalone hosts, then home-nix-0 which cascades its Incus guests).
 reboot-all:
     ${ROOT_DIR}/scripts/reboot-fleet.sh
+
+# Update flake inputs, then build every host closure so hash breakage (e.g. a
+# pkgs.caddy.withPlugins vendor hash going stale) surfaces now, not at deploy time.
+# Does not touch anything outside flake.lock — see docs/ops.md "Non-flake
+# dependencies" for pins nix flake update never sees.
+update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    nix flake update
+    echo "==> Building all host closures..."
+    attrs=()
+    for host in $(just deploy list); do
+      attrs+=(".#nixosConfigurations.${host}.config.system.build.toplevel")
+    done
+    nix build --no-link "${attrs[@]}"
+    echo "All host closures built. Review flake.lock and commit."
+
+# nix flake check + formatting + shellcheck on all scripts. Read-only; run
+# before committing.
+check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "==> nix flake check"
+    nix flake check
+    echo "==> nix fmt --check"
+    nix fmt -- --check "${ROOT_DIR}"
+    echo "==> shellcheck scripts/*.sh"
+    (cd "${ROOT_DIR}/scripts" && shellcheck -x ./*.sh)
