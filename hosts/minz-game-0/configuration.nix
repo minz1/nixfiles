@@ -78,7 +78,7 @@ in
     containerConfig = {
       # Digest is pinned; image updates require a deliberate change here (world
       # backup + play-test — a new digest re-resolves the CurseForge modpack).
-      image = "docker.io/itzg/minecraft-server:java25@sha256:d54e9c99dfc77b18c02b896772798884b430f8e65865e785a2f5a9780d566320";
+      image = "docker.io/itzg/minecraft-server:java25@sha256:59feb0a1ef286f20a20560c56adf5b927155bfa842951f5db8b8bbc5a1a3ebde";
       volumes = [ "/persist/atm10:/data" ];
       publishPorts = [
         "${toString gamePort}:${toString gamePort}"
