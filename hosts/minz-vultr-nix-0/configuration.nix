@@ -121,9 +121,7 @@ in
     package = pkgs.forgejo-runner;
     instances.minz_forgejo = {
       enable = true;
-      # Reuses the pre-existing runner's identity (nixfiles docs/ops.md) so it keeps
-      # its registration and job history across the gitea-actions-runner -> forgejo-runner
-      # module migration, rather than re-registering as a new runner.
+      # Reuses the pre-existing runner's identity so it keeps its registration and job history across the gitea-actions-runner -> forgejo-runner module migration, rather than re-registering as a new runner.
       settings = {
         runner.labels = [
           "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:62d572b92f9f32d3427b6d220ad1f9dca9c7b6ffad37d295425037dbff78abaf"
@@ -147,10 +145,7 @@ in
         };
       };
       secrets.server.connections.default.token_url = config.sops.secrets.forgejo_runner_token.path;
-      # Rootless podman under a dedicated user, not the rootful setup this option targets
-      # (module TODO: "Add support for rootless Podman"); avoid the rootful defaults
-      # (podman.service ordering, "podman" supplementary group) it would otherwise infer
-      # from the ":docker" label.
+      # Rootless podman under a dedicated user, not the rootful setup this option targets (module TODO: "Add support for rootless Podman") — avoids the rootful defaults (podman.service ordering, "podman" supplementary group) it would otherwise infer from the ":docker" label.
       runtimes.podman = false;
     };
   };

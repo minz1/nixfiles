@@ -40,7 +40,7 @@ in
   security.acme.defaults.email = lib.mkDefault "emerytang@gmail.com";
   security.acme.defaults.renewInterval = "*-*-* 0/6:00:00";
   security.acme.certs."${config.networking.hostName}.internal" = {
-    # overridable: hosts whose own Caddy already owns :80 (e.g. vultr-nix-1) need an alt port (docs/main-plan.md S4)
+    # overridable: hosts whose own Caddy already owns :80 (e.g. vultr-nix-1) need an alt port
     listenHTTP = lib.mkDefault ":80";
     group = "caddy";
     reloadServices = lib.optional config.services.caddy.enable "caddy.service";
@@ -69,11 +69,7 @@ in
 
   nix.settings.trusted-users = [ "minz1" ];
 
-  # Fleet-wide GC: bound Nix store growth on every host (most Incus VM /nix
-  # partitions are 10-30G). nix.gc is a weekly time-based sweep + store GC;
-  # configurationLimit is a per-activation, count-based backstop so a burst
-  # of same-day deploys can't accumulate unbounded generations/boot entries
-  # between weekly GC runs. Both are complementary, not redundant.
+  # Fleet-wide GC: weekly time-based sweep, plus a count-based backstop so a burst of same-day deploys can't accumulate unbounded generations between GC runs.
   nix.gc = {
     automatic = true;
     dates = "weekly";
@@ -81,8 +77,7 @@ in
   };
   nix.optimise.automatic = true;
 
-  # No-op on hosts without systemd-boot (e.g. the minz-media-0 LXC container);
-  # only consumed by the systemd-boot activation script (vm.nix, baremetal.nix).
+  # No-op on hosts without systemd-boot (e.g. the minz-media-0 LXC container).
   boot.loader.systemd-boot.configurationLimit = lib.mkDefault 10;
   security.sudo.wheelNeedsPassword = false;
   users.mutableUsers = false;

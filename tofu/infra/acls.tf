@@ -9,7 +9,7 @@ resource "incus_network" "incusbr0" {
   config = {
     "security.acls.default.egress.action"  = "reject"
     "security.acls.default.ingress.action" = "reject"
-    # network-level logged is a verified no-op on Incus 7.0.1; use the NIC-device override in vms.tf instead (docs/main-plan.md S4)
+    # network-level logged is a verified no-op on Incus 7.0.1; use the NIC-device override in vms.tf instead
   }
 }
 
@@ -188,7 +188,7 @@ resource "incus_network_acl" "obs" {
       destination      = "0.0.0.0/0"
       destination_port = "587"
       protocol         = "tcp"
-      description      = "SMTP egress for Grafana alert email via Resend (docs/main-plan.md S4)"
+      description      = "SMTP egress for Grafana alert email via Resend"
       state            = "enabled"
     },
   ]
@@ -249,7 +249,7 @@ resource "incus_network_acl" "game" {
       state            = "enabled"
     },
     {
-      # unlogged reject, matched before the logged default — ~215k/day of Minecraft LAN discovery noise (docs/main-plan.md S4)
+      # unlogged reject, matched before the logged default — ~215k/day of Minecraft LAN discovery noise
       action           = "reject"
       protocol         = "udp"
       destination_port = "4445"

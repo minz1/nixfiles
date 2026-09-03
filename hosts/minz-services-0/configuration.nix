@@ -23,8 +23,7 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
-  # Go caches the TLS cert pool at startup; try-reload-or-restart triggers a full restart
-  # for services without ExecReload, which is what we need after cert renewal.
+  # Go caches the TLS cert pool at startup; try-reload-or-restart triggers a full restart for services without ExecReload, which is what we need after cert renewal.
   security.acme.certs."${hostName}.internal".reloadServices = [ "media-fixer.service" ];
 
   sops.secrets."media-fixer-env" = { };
@@ -67,7 +66,7 @@ in
     };
   };
 
-  # bcrypt HASHES (from `ntfy user hash`), not plaintext — see docs/ops.md for the plaintext counterpart on obs-0
+  # bcrypt HASHES (from `ntfy user hash`), not plaintext — obs-0 holds the plaintext counterpart
   sops.secrets."ntfy_grafana_password_hash" = { };
   sops.secrets."ntfy_phone_password_hash" = { };
 
@@ -90,7 +89,7 @@ in
     environmentFile = config.sops.templates."ntfy-env".path;
   };
 
-  # environmentFile content changes don't restart the service on their own (docs/main-plan.md S4)
+  # environmentFile content changes don't restart the service on their own
   systemd.services.ntfy-sh.restartTriggers = [
     config.sops.templates."ntfy-env".content
   ];

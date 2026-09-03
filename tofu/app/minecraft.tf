@@ -1,6 +1,4 @@
-# Minecraft player registration flow: lets users link their Mojang account.
-# After applying, users visit the Authentik self-service panel and run "Link Minecraft Account".
-# The whitelist sync on game-0 polls for users with minecraft_uuid set and writes whitelist.json.
+# Minecraft account-linking flow: users run "Link Minecraft Account" in the Authentik self-service panel; game-0's whitelist sync polls for minecraft_uuid and writes whitelist.json.
 
 resource "authentik_group" "minecraft_players" {
   name = "minecraft-players"
@@ -49,8 +47,7 @@ resource "authentik_flow_stage_binding" "minecraft_write" {
   order  = 20
 }
 
-# Expression policy: validate username against Mojang API and inject the UUID into
-# prompt_data before user_write persists the attributes.
+# Expression policy: validates the username against the Mojang API and injects the UUID into prompt_data before user_write persists it.
 resource "authentik_policy_expression" "minecraft_uuid_lookup" {
   name              = "minecraft-uuid-lookup"
   execution_logging = true

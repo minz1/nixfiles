@@ -3,8 +3,7 @@ resource "sonarr_root_folder" "tv" {
 }
 
 resource "sonarr_media_management" "sonarr" {
-  # hardlinks_copy = false: /data/downloads symlinks resolve through the
-  # decypharr FUSE VFS; hardlinking across a FUSE mount to ext4 fails.
+  # hardlinks_copy = false: /data/downloads resolves through the decypharr FUSE VFS; hardlinking across a FUSE mount to ext4 fails.
   hardlinks_copy              = false
   create_empty_folders        = false
   delete_empty_folders        = true

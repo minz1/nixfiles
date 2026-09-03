@@ -7,8 +7,7 @@ failed=()
 check_host() {
     local host="$1" target out
     target=$(just admin _target "$host")
-    # heredoc is quoted ('REMOTE') so it runs server-side verbatim; restart_threshold
-    # is passed as $1 rather than interpolated, so no client/server escaping to track.
+    # heredoc is quoted ('REMOTE') so it runs server-side verbatim; restart_threshold is passed as $1 rather than interpolated, so no client/server escaping to track.
     out=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" bash -s -- "$restart_threshold" <<'REMOTE'
 set -uo pipefail
 restart_threshold="$1"
@@ -36,8 +35,7 @@ REMOTE
     fi
 
     echo "==> ${host}: UNHEALTHY"
-    # sed prefixes every line of a multi-line value; bash's ${var//search/replace} has
-    # no line-anchor equivalent, so it can't do this in one shot.
+    # sed prefixes every line of a multi-line value; bash's ${var//search/replace} has no line-anchor equivalent.
     # shellcheck disable=SC2001
     [ -n "$failed_units" ] && echo "$failed_units" | sed 's/^/  failed: /'
     # shellcheck disable=SC2001
@@ -45,9 +43,7 @@ REMOTE
     return 1
 }
 
-# obs-0-specific: the pieces that can be "active" while functionally dead —
-# exactly the P0a/P0b failure mode from 2026-09-01, which is why this script
-# exists (see docs/main-plan.md S4 recovery).
+# obs-0-specific: catches the pieces that can be "active" while functionally dead.
 check_obs0_functional() {
     local target
     target=$(just admin _target minz-obs-0)
@@ -58,8 +54,7 @@ grafana_code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 https://127.
 loki_result=$(curl -s --max-time 5 --get "http://127.0.0.1:3100/loki/api/v1/query" \
   --data-urlencode 'query=sum(count_over_time({job="systemd-journal"}[10m]))' 2>/dev/null \
   | grep -oE '"result":\[[^]]*\]')
-# adguard job is intentionally down (adguard-exporter disabled pending secret, docs/ops.md); excluded here
-vm_up=$(curl -s --max-time 5 "http://127.0.0.1:9090/api/v1/query?query=up%7Bjob!%3D%22adguard%22%7D" 2>/dev/null \
+vm_up=$(curl -s --max-time 5 "http://127.0.0.1:9090/api/v1/query?query=up" 2>/dev/null \
   | grep -oc '"value":\[[0-9.]*,"0"\]' || true)
 echo "grafana_code=${grafana_code:-none}"
 if [ "$loki_result" = '"result":[]' ] || [ -z "$loki_result" ]; then

@@ -69,7 +69,7 @@ resource "incus_instance" "vm" {
       },
       lookup(local.vm_acl_map, each.key, "") != "" ? {
         "security.acls" = lookup(local.vm_acl_map, each.key, "")
-        # NIC-device override, not network-level (that's a documented no-op on this Incus build — docs/main-plan.md S4)
+        # NIC-device override, not network-level (that's a documented no-op on this Incus build)
         "security.acls.default.ingress.logged" = "true"
         "security.acls.default.egress.logged"  = "true"
       } : {}

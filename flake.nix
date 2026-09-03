@@ -69,7 +69,7 @@
 
       # incus nodes: bridge IP because the WG tunnel doesn't route to VMs from the runner
       deployHostname =
-        name: node:
+        _: node:
         if node.provisioner or "" == "incus" then node.networks.incus_bridge.ip else node.networks.mgmt.ip;
 
       deployableNodes =
@@ -233,7 +233,7 @@
 
       deploy.nodes = builtins.mapAttrs (name: node: {
         hostname = deployHostname name node;
-        sshUser = node.sshUser;
+        inherit (node) sshUser;
         timeout = 600; # rootless podman session init can be slow on first container pull
         profiles.system = {
           user = "root";
@@ -241,7 +241,7 @@
         };
       }) deployableNodes;
 
-      checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
+      checks = builtins.mapAttrs (_: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
 
       devShells.${system}.default = pkgs.mkShell {
         packages = with pkgs; [

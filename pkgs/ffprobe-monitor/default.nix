@@ -37,7 +37,7 @@ stdenvNoCC.mkDerivation {
   dontUnpack = true;
 
   binPath = lib.makeBinPath runtimePkgs;
-  shell = stdenvNoCC.shell;
+  inherit (stdenvNoCC) shell;
   inherit
     intervalSec
     minAgeSec

@@ -76,7 +76,7 @@ let
   ) nodes;
 
   # nix-topology has no podman/docker extractor, so pick up virtualisation.quadlet.containers ourselves
-  quadletNodes = lib.mapAttrs (hostName: nixos: {
+  quadletNodes = lib.mapAttrs (_hostName: nixos: {
     services = lib.mapAttrs (containerName: container: {
       name = containerName;
       icon = ./icons/podman.svg;
@@ -88,7 +88,7 @@ in
   networks = topoNetworks;
 
   nodes = lib.recursiveUpdate (lib.recursiveUpdate topoNodes quadletNodes) {
-    # decorative link to match docs/architecture.md; not part of common/topology.nix
+    # decorative link; not part of common/topology.nix
     internet = {
       deviceType = "internet";
       name = "Internet";

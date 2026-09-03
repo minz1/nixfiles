@@ -5,9 +5,6 @@
 }:
 
 let
-  topology = import ../../common/topology.nix;
-  node = topology.nodes."${hostName}";
-  pkiIp = node.networks.incus_bridge.ip;
   stepCaPort = 9443;
 in
 {

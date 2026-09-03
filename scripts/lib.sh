@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Shared helpers — source this file, do not execute it directly.
 
-# Find a writable tmpfs directory suitable for staging secrets in RAM.
-# Prints the path to stdout. Exits non-zero with an error message if none found.
+# Find a writable tmpfs directory suitable for staging secrets in RAM; prints the path to stdout, exits non-zero if none found.
 find_ram_dir() {
     local dir
     for dir in "/run/user/$(id -u)" "/run" "/dev/shm"; do

@@ -20,11 +20,7 @@ terraform {
     }
     seerr = {
       source = "josh-archer/seerr"
-      # Exact pin: fetching any release fresh (0.19.5 through 1.1.0-rc.2, tested)
-      # fails "authentication signature from unknown issuer" on `tofu init -upgrade`,
-      # a broken/rotated signing key upstream — not specific to any one version.
-      # 0.19.3 only works because it's already trusted via .terraform.lock.hcl
-      # (trust-on-first-use, no fresh fetch needed). Revisit once upstream re-signs.
+      # Exact pin: any other version (0.19.5-1.1.0-rc.2, tested) fails "unknown issuer" on `tofu init -upgrade` (broken/rotated upstream signing key); 0.19.3 only works via .terraform.lock.hcl trust-on-first-use. Revisit once upstream re-signs.
       version = "0.19.3"
     }
   }
@@ -49,8 +45,7 @@ provider "authentik" {
   url = "https://10.10.0.3:9443"
 }
 
-# API keys sourced from TF_VAR_* in secrets/tofu.env.
-# URLs: topology.nix nodes.minz-media-0.networks.incus_bridge.ip + service ports.
+# API keys from TF_VAR_* in secrets/tofu.env; URLs are topology.nix's minz-media-0 incus_bridge IP + service ports.
 variable "sonarr_api_key"   { sensitive = true }
 variable "radarr_api_key"   { sensitive = true }
 variable "prowlarr_api_key" { sensitive = true }

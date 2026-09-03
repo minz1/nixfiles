@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
-# Publishes both the VM bootstrap image and the container bootstrap image to the
-# S3 simplestreams registry as two products in a single images.json.
-#
-# Prerequisites:
-#   - result/{nixos.qcow2,metadata.tar.xz} built (nix build .#incus-bootstrap-image)
-#   - result-container/{rootfs.tar.xz,metadata.tar.xz} built (nix build .#incus-bootstrap-container-image)
-#   - incus-images bucket exists (created by rustfs-bucket-setup)
-#   - secrets/tofu.env is sops-encrypted and contains AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+# Publishes both bootstrap images to the S3 simplestreams registry as two products in one images.json. Prereqs: result/{nixos.qcow2,metadata.tar.xz} + result-container/{rootfs.tar.xz,metadata.tar.xz} built, incus-images bucket exists (rustfs-bucket-setup), secrets/tofu.env has AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY.
 set -euo pipefail
 
 cd "${ROOT_DIR}"

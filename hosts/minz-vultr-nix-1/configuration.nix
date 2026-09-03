@@ -29,7 +29,7 @@ let
   gameIp = topology.nodes."minz-game-0".networks.incus_bridge.ip;
   gamePort = 25565;
 
-  # own Caddy holds :80 for its own public ACME; internal-cert ACME (lego) gets this local port instead, fronted by the :80 catch-all below (docs/main-plan.md S4)
+  # own Caddy holds :80 for its own public ACME; internal-cert ACME (lego) gets this local port instead, fronted by the :80 catch-all below
   internalAcmeHttpPort = 18080;
   velocityPort = 25565;
 
@@ -133,7 +133,7 @@ in
 
   networking.nftables.enable = true;
 
-  # Caddy already owns :80 for its own public ACME; lego listens locally and Caddy relays the challenge (docs/main-plan.md S4)
+  # Caddy already owns :80 for its own public ACME; lego listens locally and Caddy relays the challenge
   security.acme.certs."${hostName}.internal".listenHTTP =
     "127.0.0.1:${toString internalAcmeHttpPort}";
 
@@ -299,7 +299,7 @@ in
         '';
       };
 
-      # catch-all, no Host match: relays the internal-cert ACME challenge; named vhosts above still win their own ACME via automatic HTTPS (docs/main-plan.md S4)
+      # catch-all, no Host match: relays the internal-cert ACME challenge; named vhosts above still win their own ACME via automatic HTTPS
       ":80" = {
         extraConfig = ''
           handle /.well-known/acme-challenge/* {
@@ -332,8 +332,7 @@ in
       StateDirectory = "velocity";
       WorkingDirectory = "/var/lib/velocity";
       ExecStartPre = [
-        # No +: runs as DynamicUser so velocity.toml is owned by that UID and
-        # Velocity can write back for config migrations.
+        # No +: runs as DynamicUser so velocity.toml is owned by that UID and Velocity can write back for config migrations.
         "${pkgs.coreutils}/bin/install -m 644 ${velocityToml} /var/lib/velocity/velocity.toml"
         # + required: forwarding.secret is a sops path readable only by root.
         "+${pkgs.coreutils}/bin/install -m 644 ${config.sops.secrets.minecraft_velocity_forwarding_secret.path} /var/lib/velocity/forwarding.secret"
@@ -358,8 +357,7 @@ in
       directory = "/var/lib/private/crowdsec";
       mode = "0700";
     }
-    # Velocity uses DynamicUser; real state is at /var/lib/private/velocity.
-    # Persisting avoids losing logs across reboots; config is re-written by ExecStartPre.
+    # Velocity uses DynamicUser (real state at /var/lib/private/velocity) — persisting avoids losing logs across reboots; config is re-written by ExecStartPre.
     {
       directory = "/var/lib/private/velocity";
       mode = "0700";

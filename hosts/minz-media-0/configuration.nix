@@ -32,8 +32,7 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
-  # lxc-container.nix disables programs.fuse, stripping the setuid fusermount3 wrapper
-  # that rclone needs for non-root FUSE mounts. Re-enable it explicitly.
+  # lxc-container.nix disables programs.fuse, stripping the setuid fusermount3 wrapper rclone needs for non-root FUSE mounts — re-enable it explicitly.
   programs.fuse.enable = lib.mkForce true;
 
   sops.secrets."media-agent-env" = { };
@@ -431,8 +430,7 @@ in
         zilean-app = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            # No upstream release since 2025-04-21 (project looks dormant); pinned to
-            # what's been running rather than following an inactive :latest tag.
+            # No upstream release since 2025-04-21 (project looks dormant); pinned to what's been running rather than following an inactive :latest tag.
             image = "ipromknight/zilean:latest@sha256:1b828ac0604235de7adb7757d11c88c1b3bb1a6319071b0c9d99325bc0f9d477";
             pod = pods.zilean.ref;
             volumes = [ "/var/lib/zilean:/app/data" ];
@@ -511,8 +509,7 @@ in
                 }
               ];
             }
-            # Path-specific routes before the seerr catch-all; mediaIp allows direct
-            # WireGuard access (e.g. from the Tofu runner at https://10.10.0.7/sonarr).
+            # Path-specific routes before the seerr catch-all; mediaIp allows direct WireGuard access (e.g. from the Tofu runner at https://10.10.0.7/sonarr).
             {
               match = [
                 {

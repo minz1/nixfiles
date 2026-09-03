@@ -32,8 +32,7 @@ in
 
     users.users.${cfg.user} = {
       isSystemUser = true;
-      uid = cfg.uid;
-      group = cfg.group;
+      inherit (cfg) uid group;
       home = "/var/lib/${cfg.user}";
       createHome = true;
       linger = true;

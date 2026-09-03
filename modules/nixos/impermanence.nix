@@ -1,8 +1,5 @@
-{ ... }:
-
 {
-  # Pre-create /persist/var/lib/private at 0700 before impermanence runs, or it resets to 0755 and breaks DynamicUser (status=238).
-  # upstream: https://github.com/nix-community/impermanence/issues/254
+  # Pre-create /persist/var/lib/private at 0700 — impermanence resets it to 0755 otherwise, breaking DynamicUser (status=238; nix-community/impermanence#254).
   system.activationScripts."createPersistentStorageDirs".deps = [ "fix-var-lib-private-perms" ];
   system.activationScripts."fix-var-lib-private-perms" = {
     deps = [ "specialfs" ];

@@ -1,11 +1,7 @@
-# /run/user/$UID (XDG_RUNTIME_DIR), just's default tempdir for shebang
-# recipes, is mounted noexec on many systems (e.g. WSL2, systemd user
-# sessions) which makes every shebang recipe below fail with EACCES.
+# /run/user/$UID, just's default tempdir for shebang recipes, is mounted noexec on many systems (e.g. WSL2) which makes every shebang recipe below fail with EACCES.
 set tempdir := "/tmp"
 
-# Fleet administration: disk usage reporting and Nix store GC.
-# SSH targets are resolved via the deploy-rs flake output so IP-resolution
-# logic (mgmt vs incus_bridge IP) is never duplicated here.
+# Fleet administration: disk usage reporting and Nix store GC. SSH targets are resolved via the deploy-rs flake output so IP-resolution logic is never duplicated here.
 
 # Resolve `user@host` SSH target for a node from the deploy.nodes flake output.
 [private]
@@ -92,10 +88,7 @@ health:
 reboot-all:
     ${ROOT_DIR}/scripts/reboot-fleet.sh
 
-# Update flake inputs, then build every host closure so hash breakage (e.g. a
-# pkgs.caddy.withPlugins vendor hash going stale) surfaces now, not at deploy time.
-# Does not touch anything outside flake.lock — see docs/ops.md "Non-flake
-# dependencies" for pins nix flake update never sees.
+# Update flake inputs, then build every host closure so hash breakage (e.g. a pkgs.caddy.withPlugins vendor hash going stale) surfaces now, not at deploy time. Does not touch anything outside flake.lock.
 update:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -108,8 +101,7 @@ update:
     nix build --no-link "${attrs[@]}"
     echo "All host closures built. Review flake.lock and commit."
 
-# nix flake check + formatting + shellcheck on all scripts. Read-only; run
-# before committing.
+# nix flake check + formatting + shellcheck on all scripts. Read-only; run before committing.
 check:
     #!/usr/bin/env bash
     set -euo pipefail

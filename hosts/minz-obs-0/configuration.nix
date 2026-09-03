@@ -33,7 +33,7 @@ let
     "${ip}:9100"
   ) nixosNodes;
 
-  # public vhosts on the edge Caddy, probed for availability + cert expiry (docs/main-plan.md S4)
+  # public vhosts on the edge Caddy, probed for availability + cert expiry
   publicVhosts = [
     "https://auth.minz1.com"
     "https://grafana.minz1.com"
@@ -70,9 +70,8 @@ let
       instant ? true,
     }:
     {
-      inherit uid title;
+      inherit uid title for;
       condition = "C";
-      for = for;
       noDataState = "OK";
       execErrState = "Error";
       annotations.summary = summary;
@@ -110,10 +109,7 @@ let
       ];
     };
 
-  # NB: `logql` must wrap its count_over_time(...) in `sum by (...) (...)`. Loki
-  # shards high-volume streams internally (__stream_shard__), so an unaggregated
-  # count_over_time returns one series per shard per host — Grafana then creates
-  # a separate alert instance per shard, and per-shard churn defeats repeat_interval.
+  # NB: `logql` must wrap its count_over_time(...) in `sum by (...) (...)` — Loki shards high-volume streams internally (__stream_shard__), so an unaggregated query returns one series per shard per host, and per-shard churn defeats repeat_interval.
   mkLogCountRule =
     {
       uid,
@@ -124,9 +120,8 @@ let
       summary,
     }:
     {
-      inherit uid title;
+      inherit uid title for;
       condition = "C";
-      for = for;
       noDataState = "OK";
       execErrState = "Error";
       annotations.summary = summary;
@@ -194,7 +189,7 @@ in
         static_configs = [ { targets = [ "127.0.0.1:${toString lokiPort}" ]; } ];
       }
       {
-        # no fleet-wide node-cert exporter: internal 24h certs make a days-remaining threshold meaningless (docs/main-plan.md S4)
+        # no fleet-wide node-cert exporter: internal 24h certs make a days-remaining threshold meaningless
         job_name = "blackbox";
         metrics_path = "/probe";
         params.module = [ "http_2xx" ];
@@ -371,7 +366,7 @@ in
     };
     provision = {
       enable = true;
-      # uid pinned for alert rules; deleteDatasources avoids the update-path crash (docs/main-plan.md S4)
+      # uid pinned for alert rules; deleteDatasources avoids the update-path crash
       datasources.settings = {
         deleteDatasources = [
           {
@@ -399,7 +394,7 @@ in
           }
         ];
       };
-      # alerting provisioning only interpolates $VAR from the process env, not $__file{} (docs/main-plan.md S4)
+      # alerting provisioning only interpolates $VAR from the process env, not $__file{}
       alerting.contactPoints.settings = {
         apiVersion = 1;
         contactPoints = [
@@ -419,7 +414,7 @@ in
                 settings = {
                   url = "https://minz-services-0.internal/homelab-alerts";
                   httpMethod = "POST";
-                  # ngalert's webhook schema, not the legacy basicAuthUsername/basicAuthPassword names (docs/main-plan.md S4)
+                  # ngalert's webhook schema, not the legacy basicAuthUsername/basicAuthPassword names
                   username = "grafana";
                   password = "$NTFY_PASSWORD";
                 };
@@ -428,7 +423,7 @@ in
           }
         ];
       };
-      # nft-drop/AdGuard/OpenWRT rules deliberately omitted — no data yet; see docs/main-plan.md S4
+      # nft-drop/AdGuard/OpenWRT rules deliberately omitted — no data yet
       alerting.rules.settings = {
         apiVersion = 1;
         groups = [
@@ -505,13 +500,7 @@ in
               (mkLogCountRule {
                 uid = "auditd-svc-execve";
                 title = "auditd: execve by non-interactive service user";
-                # Baseline verified benign against 24h of live Loki data across the fleet
-                # (2026-09-02): ACME's renewal post-hook (chown/chmod on the cert dir, plus
-                # the lego/minica/coreutils calls it and the systemd-unit-named script
-                # ("acme-<truncated>") shell out to) and rootless-podman's per-boot user
-                # systemd instance (comm truncated to 15 chars by the kernel, e.g.
-                # "systemd-tmpfile", "9"; UID is "oci" on game-0, "podman-runner" on
-                # vultr-nix-0 — same activity, different service account name per host).
+                # Benign sources of svc-exec events: ACME's renewal post-hook (chown/chmod on the cert dir, plus lego/minica/coreutils it shells out to) and rootless-podman's per-boot user systemd instance (comm truncated to 15 chars, e.g. "systemd-tmpfile"; UID is "oci" on game-0, "podman-runner" on vultr-nix-0).
                 logql = ''
                   sum by (host) (
                     count_over_time(
@@ -618,7 +607,7 @@ in
   systemd.services.grafana.serviceConfig = mkHardened { } // {
     EnvironmentFile = config.sops.templates."grafana-alerting-env".path;
   };
-  # environmentFile content changes don't restart the service on their own (docs/main-plan.md S4)
+  # environmentFile content changes don't restart the service on their own
   systemd.services.grafana.restartTriggers = [
     config.sops.templates."grafana-alerting-env".content
   ];
@@ -634,25 +623,22 @@ in
   # umask = null: upstream's own module already sets UMask 0077, conflicts if both set it
   systemd.services.prometheus-blackbox-exporter.serviceConfig = mkHardened { umask = null; };
 
-  # TEMPORARILY DISABLED 2026-09-01: blocks fleet-wide deploys until adguard_exporter_env exists; re-enable steps in docs/ops.md
-  /*
-    sops.secrets."adguard_exporter_env" = { };
+  sops.secrets."adguard_exporter_env" = { };
 
-    systemd.services.adguard-exporter = {
-      description = "Prometheus exporter for AdGuard Home";
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig = mkHardened { } // {
-        DynamicUser = true;
-        EnvironmentFile = config.sops.secrets."adguard_exporter_env".path;
-        Environment = [ "BIND_ADDR=127.0.0.1:${toString adguardExporterPort}" ];
-        ExecStart = lib.getExe pkgs.adguard-exporter;
-        Restart = "on-failure";
-        RestartSec = "10s";
-      };
+  systemd.services.adguard-exporter = {
+    description = "Prometheus exporter for AdGuard Home";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = mkHardened { } // {
+      DynamicUser = true;
+      EnvironmentFile = config.sops.secrets."adguard_exporter_env".path;
+      Environment = [ "BIND_ADDR=127.0.0.1:${toString adguardExporterPort}" ];
+      ExecStart = lib.getExe pkgs.adguard-exporter;
+      Restart = "on-failure";
+      RestartSec = "10s";
     };
-  */
+  };
 
   homelab.endpoints = {
     loki = {

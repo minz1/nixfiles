@@ -2,7 +2,6 @@
   pkgs,
   lib,
   hostName,
-  config,
   ...
 }:
 
@@ -13,12 +12,11 @@ let
   incusNodeNetwork = node.networks.incus_bridge;
   wgAddr = node.networks.mgmt.ip;
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
-  incusBridgeIp = incusNodeNetwork.ip;
   incusClientCert = pkgs.writeText "incus-client.crt" (
     builtins.readFile ../../secrets/incus-client.crt
   );
 
-  # fed by stunnel client mode on the router (S4c, manual) — see docs/main-plan.md S4
+  # fed by stunnel client mode on the router
   routerSyslogPort = 1514; # unprivileged; DynamicUser Alloy lacks CAP_NET_BIND_SERVICE
   certDir = "/var/lib/acme/${hostName}.internal";
   routerIp = "192.168.0.1";
@@ -172,7 +170,7 @@ in
     ACTION=="add", SUBSYSTEM=="net", KERNEL=="eno1", RUN+="${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off"
   '';
 
-  # idle until S4c (router side) lands; syslog_format is a best guess, confirm once real traffic arrives
+  # syslog_format = rfc3164 is a best guess for the real logread output — no parse errors seen, but confirm live in Grafana Explore.
   homelab.observability.extraAlloyConfig = ''
     loki.source.syslog "router" {
       listener {
@@ -197,6 +195,17 @@ in
   networking.firewall.extraInputRules = ''
     ip saddr ${routerIp} tcp dport ${toString routerSyslogPort} accept
   '';
+
+  # Alloy's syslog listener loads cert_file/key_file once at startup and never re-reads them (Go TLS caching); acme's reloadServices would only SIGHUP it, which isn't reliable here, so this path unit forces a full restart whenever cert.pem's content changes.
+  systemd.paths.alloy-cert-renewed = {
+    wantedBy = [ "multi-user.target" ];
+    pathConfig.PathChanged = "${certDir}/cert.pem";
+  };
+  systemd.services.alloy-cert-renewed = {
+    serviceConfig.Type = "oneshot";
+    script = "systemctl restart alloy.service";
+    path = [ pkgs.systemd ];
+  };
 
   systemd.services.incus-add-tofu-cert = {
     description = "Add tofu-automation client certificate to Incus trust store";

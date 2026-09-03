@@ -76,8 +76,7 @@ in
   virtualisation.quadlet.containers.atm10 = {
     rootlessConfig.uid = 902;
     containerConfig = {
-      # Digest is pinned; image updates require a deliberate change here (world
-      # backup + play-test — a new digest re-resolves the CurseForge modpack).
+      # Digest is pinned; image updates require a deliberate change here (world backup + play-test — a new digest re-resolves the CurseForge modpack).
       image = "docker.io/itzg/minecraft-server:java25@sha256:59feb0a1ef286f20a20560c56adf5b927155bfa842951f5db8b8bbc5a1a3ebde";
       volumes = [ "/persist/atm10:/data" ];
       publishPorts = [
@@ -106,9 +105,7 @@ in
       podmanArgs = [ "--no-healthcheck" ];
     };
     serviceConfig = {
-      # + runs as root regardless of User=oci so we can write into /persist/atm10
-      # before it exists; itzg's entrypoint then chowns /data recursively to UID
-      # 1000, making the file writable so proxy-compatible-forge can rewrite it.
+      # + runs as root regardless of User=oci so we can write into /persist/atm10 before it exists; itzg's entrypoint then chowns /data recursively to UID 1000, making the file writable so proxy-compatible-forge can rewrite it.
       ExecStartPre = "+${pkgs.coreutils}/bin/install -Dm 644 ${config.sops.templates.mc-proxyforge-config.path} /persist/atm10/config/proxy-compatible-forge.toml";
       RestartSec = "30s";
     };
@@ -138,8 +135,7 @@ in
   };
 
   systemd.tmpfiles.rules = [
-    # oci (uid 902) owns the data root; container init (UID 0 inside = oci on host)
-    # sets up subdirs, then drops to UID 1000 for the Minecraft process.
+    # oci (uid 902) owns the data root; container init (UID 0 inside = oci on host) sets up subdirs, then drops to UID 1000 for the Minecraft process.
     "d /persist/atm10 0750 oci oci -"
   ];
 

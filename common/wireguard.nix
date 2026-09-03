@@ -1,14 +1,9 @@
-# NixOS module — automatically configures WireGuard interfaces and IP forwarding
-# for any host that has a wireguard-type network in common/topology.nix.
-#
-# Reads config.networking.hostName to self-identify in the topology.
-# Private key convention: sops secret named "wg_private_<networkName>" (e.g. wg_private_mgmt).
+# Auto-configures WireGuard interfaces + IP forwarding for hosts with a wireguard-type network in common/topology.nix; private keys are sops secrets named wg_private_<networkName>.
 { config, lib, ... }:
 
 let
   topology = import ./topology.nix;
-  nodes = topology.nodes;
-  networks = topology.networks;
+  inherit (topology) nodes networks;
 
   hostName = config.networking.hostName;
   currentNode =
@@ -35,9 +30,7 @@ let
 
       nodesInNetwork = lib.filterAttrs (_: node: builtins.hasAttr networkName node.networks) nodes;
 
-      # All extraAllowedIPs declared by other nodes in this network.
-      # Clients receive these so they can reach subnets routed through other peers,
-      # excluding our own to prevent local routing conflicts.
+      # extraAllowedIPs from other nodes so clients can reach subnets routed through peers, excluding our own to avoid local routing conflicts.
       otherNodesExtraAllowedIPs = lib.flatten (
         lib.mapAttrsToList (
           n: node: if n != hostName then (node.networks.${networkName}.extraAllowedIPs or [ ]) else [ ]
@@ -58,7 +51,7 @@ let
           peerCfg = node.networks.${networkName};
         in
         {
-          publicKey = peerCfg.publicKey;
+          inherit (peerCfg) publicKey;
           allowedIPs =
             if isServer then
               [ "${peerCfg.ip}/32" ] ++ (peerCfg.extraAllowedIPs or [ ])
@@ -66,7 +59,7 @@ let
               lib.unique ([ networkConfig.subnet ] ++ otherNodesExtraAllowedIPs);
         }
         // lib.optionalAttrs (peerCfg ? endpoint) {
-          endpoint = peerCfg.endpoint;
+          inherit (peerCfg) endpoint;
           persistentKeepalive = 25;
         };
     in
@@ -121,7 +114,7 @@ in
     _: netCfg: netCfg.interface
   ) wireguardNetworks;
 
-  # sshd binds a WG IP but wireguard-wgN.service going active doesn't guarantee the address is bindable yet; see docs/main-plan.md S4
+  # sshd binds a WG IP but wireguard-wgN.service going active doesn't guarantee the address is bindable yet.
   systemd.services.sshd.after = lib.mapAttrsToList (
     _: netCfg: "wireguard-${netCfg.interface}.service"
   ) wireguardNetworks;

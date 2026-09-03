@@ -51,13 +51,13 @@ in
       enable = true;
       openFirewall = true;
       extraFlags = lib.optional enableClientCert "--web.config.file=/etc/node-exporter-web.yml" ++ [
-        # scoped to .service units to bound cardinality; prereq for "service down"/"cert renewal failing" alerts (docs/main-plan.md S4)
+        # scoped to .service units to bound cardinality; prereq for "service down"/"cert renewal failing" alerts
         "--collector.systemd"
         "--collector.systemd.unit-include=.+\\.service"
       ];
     };
 
-    # upstream's default hardening lacks AF_UNIX, silently breaking the systemd collector's dbus dial (docs/main-plan.md S4)
+    # upstream's default hardening lacks AF_UNIX, silently breaking the systemd collector's dbus dial
     systemd.services.prometheus-node-exporter.serviceConfig = {
       RestrictAddressFamilies = [
         "AF_INET"
@@ -105,7 +105,7 @@ in
             source_labels = ["__journal__priority"]
             target_label  = "level"
           }
-          // kernel messages have no _SYSTEMD_UNIT; see docs/main-plan.md S4
+          // kernel messages have no _SYSTEMD_UNIT
           rule {
             source_labels = ["__journal__transport"]
             target_label  = "transport"

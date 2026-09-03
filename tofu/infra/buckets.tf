@@ -1,6 +1,4 @@
-# incus-images bucket is created by the rustfs-bucket-setup systemd service on
-# minz-vultr-nix-0. Tofu only manages the bucket policy so it can apply without
-# needing to first create the bucket (bootstrapping order: deploy → publish-image → apply).
+# incus-images bucket is created by rustfs-bucket-setup on minz-vultr-nix-0; Tofu only manages the policy so apply doesn't need the bucket to exist first (bootstrap order: deploy → publish-image → apply).
 resource "aws_s3_bucket_policy" "incus_images_public_read" {
   bucket = "incus-images"
   policy = jsonencode({

@@ -4,11 +4,11 @@
   fetchFromGitHub,
 }:
 
-buildGoModule (finalAttrs: {
+buildGoModule {
   pname = "adguard-exporter";
   version = "0-unstable-2025-09-14";
 
-  # chosen over znandev/adguardexporter and JonanekDev (no license) — see docs/main-plan.md S4
+  # chosen over znandev/adguardexporter and JonanekDev (no license)
   src = fetchFromGitHub {
     owner = "henrywhitaker3";
     repo = "adguard-exporter";
@@ -25,4 +25,4 @@ buildGoModule (finalAttrs: {
     platforms = lib.platforms.linux;
     mainProgram = "adguard-exporter";
   };
-})
+}
