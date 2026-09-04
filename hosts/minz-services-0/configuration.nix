@@ -72,6 +72,8 @@ in
       behind-proxy = true;
       # default is read-write; unset this and the topic is world-publishable once the vhost exists
       auth-default-access = "deny-all";
+      # iOS can't hold a background connection; relays a poll_request (message ID + topic hash only, not content) to ntfy.sh so it can push via APNS
+      upstream-base-url = "https://ntfy.sh";
     };
     environmentFile = config.sops.templates."ntfy-env".path;
   };

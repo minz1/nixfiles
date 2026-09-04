@@ -69,12 +69,14 @@ in
 
   nix.settings.trusted-users = [ "minz1" ];
 
-  # Fleet-wide GC: weekly time-based sweep, plus a count-based backstop so a burst of same-day deploys can't accumulate unbounded generations between GC runs.
+  # Fleet-wide GC: weekly time-based sweep; min-free/max-free below is the actual burst backstop.
   nix.gc = {
     automatic = true;
     dates = "weekly";
     options = "--delete-older-than 14d";
   };
+  nix.settings.min-free = 1024 * 1024 * 1024; # 1 GiB — GC kicks in below this
+  nix.settings.max-free = 3 * 1024 * 1024 * 1024; # free up to this, then stop
   nix.optimise.automatic = true;
 
   # No-op on hosts without systemd-boot (e.g. the minz-media-0 LXC container).

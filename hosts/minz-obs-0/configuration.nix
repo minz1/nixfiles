@@ -403,26 +403,40 @@ in
       # alerting provisioning only interpolates $VAR from the process env, not $__file{}
       alerting.contactPoints.settings = {
         apiVersion = 1;
+        # file provisioning never auto-deletes a receiver removed from `receivers` below — same as alerting.rules.settings.deleteRules
+        deleteContactPoints = [
+          {
+            orgId = 1;
+            uid = "homelab-email";
+          }
+        ];
         contactPoints = [
           {
             orgId = 1;
             name = "homelab-alerts";
             receivers = [
               {
-                uid = "homelab-email";
-                type = "email";
-                settings.addresses = "emerytang@gmail.com";
-              }
-              # TODO: SMS receiver via carrier email-to-SMS gateway, needs a phone number/carrier filled in by hand
-              {
                 uid = "homelab-ntfy";
                 type = "webhook";
                 settings = {
-                  url = "https://minz-services-0.internal/homelab-alerts";
+                  # root URL, not the topic path: ntfy only parses structured JSON (title/priority/tags/click) at the root, keyed by the "topic" field below
+                  url = "https://minz-services-0.internal/";
                   httpMethod = "POST";
                   # ngalert's webhook schema, not the legacy basicAuthUsername/basicAuthPassword names
                   username = "grafana";
                   password = "$NTFY_PASSWORD";
+                  # settings.payload.template (not payloadTemplate); no `$name` vars (os.Expand blanks unknown $words); tmpl.Exec/define is broken in this Grafana version, and ntfy needs "tags" as a JSON array — all confirmed live against the receiver test API
+                  payload.template = ''
+                    {{ coll.Dict
+                      "topic" "homelab-alerts"
+                      "title" (print .CommonLabels.alertname " — " .Status)
+                      "message" (print (len .Alerts) " alert(s) — " .CommonAnnotations.summary)
+                      "priority" (or (and (eq .Status "firing") 4) 3)
+                      "tags" (coll.Slice (or (and (eq .Status "firing") "warning") "white_check_mark") (or .CommonLabels.host .CommonLabels.instance "homelab"))
+                      "markdown" true
+                      "click" (or (and (gt (len .Alerts) 0) (index .Alerts 0).GeneratorURL) "https://grafana.minz1.com/alerting/list")
+                      | data.ToJSON }}
+                  '';
                 };
               }
             ];
@@ -432,6 +446,13 @@ in
       # nft-drop/AdGuard/OpenWRT rules deliberately omitted — no data yet
       alerting.rules.settings = {
         apiVersion = 1;
+        # file provisioning never auto-deletes orphaned rules removed from `groups` below — needs an explicit entry here or it keeps evaluating forever
+        deleteRules = [
+          {
+            orgId = 1;
+            uid = "auditd-svc-execve";
+          }
+        ];
         groups = [
           {
             orgId = 1;
@@ -445,6 +466,7 @@ in
                 expr = ''100 - (node_filesystem_avail_bytes{mountpoint="/persist"} / node_filesystem_size_bytes{mountpoint="/persist"} * 100)'';
                 evaluatorType = "gt";
                 evaluatorParams = [ 85 ];
+                for = "30m"; # 5m default flapped on boundary crossings (seen on game-0's /persist)
                 summary = "{{ $labels.instance }} /persist usage above 85%";
               })
               (mkThresholdRule {
@@ -453,6 +475,7 @@ in
                 expr = ''100 - (node_filesystem_avail_bytes{mountpoint="/nix"} / node_filesystem_size_bytes{mountpoint="/nix"} * 100)'';
                 evaluatorType = "gt";
                 evaluatorParams = [ 85 ];
+                for = "30m";
                 summary = "{{ $labels.instance }} /nix usage above 85%";
               })
               (mkThresholdRule {
@@ -504,22 +527,90 @@ in
                 summary = "Decypharr FUSE mount error logged on media-0";
               })
               (mkLogCountRule {
-                uid = "auditd-svc-execve";
-                title = "auditd: execve by non-interactive service user";
-                # Benign sources of svc-exec events: ACME's renewal post-hook (chown/chmod on the cert dir, plus lego/minica/coreutils it shells out to) and rootless-podman's per-boot user systemd instance (comm truncated to 15 chars, e.g. "systemd-tmpfile"; UID is "oci" on game-0, "podman-runner" on vultr-nix-0).
+                uid = "svc-exec-nonstore";
+                title = "Service exec from outside /nix/store";
+                # UID="oci" excluded: game-0's container has its own rootfs, not /nix/store.
                 logql = ''
                   sum by (host) (
                     count_over_time(
                       {syslog_identifier="audisp-syslog"}
                         |= "key=\"svc-exec\""
-                        !~ "comm=\"(chmod|chown|cmp|cp|mv|touch|find|flock|seq|cat|ln|lego|minica|acme-[^\"]*)\".*UID=\"acme\""
-                        !~ "comm=\"(systemd-xdg-aut|podman-user-gen|30-systemd-envi|systemd-tmpfile|systemd-executor|switch-to-confi|systemd|9)\".*UID=\"(oci|podman-runner)\""
+                        !~ "exe=\"/nix/store/"
+                        !~ "UID=\"oci\""
+                        !~ "exe=\"/var/lib/grafana/plugins/"
                       [10m]
                     )
                   )
                 '';
                 threshold = 0;
-                summary = "Unexpected execve by a service-user (uid<1000) — {{ $labels.host }}";
+                summary = "{{ $labels.host }}: service user exec'd a binary outside /nix/store";
+              })
+              (mkLogCountRule {
+                uid = "svc-exec-shell";
+                title = "Shell/interpreter spawned by service user";
+                # comm="sh" + UID="postgres" excluded: pg_dumpall spawns its own shell.
+                logql = ''
+                  sum by (host) (
+                    count_over_time(
+                      {syslog_identifier="audisp-syslog"}
+                        |= "key=\"svc-exec\""
+                        |~ "comm=\"(sh|bash|dash|ash|zsh|ksh|python[0-9.]*|perl|ruby|php|node|lua[0-9.]*)\""
+                        !~ "comm=\"sh\".*UID=\"postgres\""
+                      [10m]
+                    )
+                  )
+                '';
+                threshold = 0;
+                summary = "{{ $labels.host }}: shell or interpreter exec'd by a service user — possible RCE follow-on";
+              })
+              (mkLogCountRule {
+                uid = "ssh-unexpected-source";
+                title = "SSH login from unexpected source";
+                # SSH is WireGuard-only on this fleet; anything outside these prefixes is anomalous.
+                logql = ''
+                  sum by (host) (
+                    count_over_time(
+                      {unit="sshd.service"}
+                        |= "Accepted"
+                        !~ " from (10\\.8\\.0\\.|10\\.10\\.0\\.|192\\.168\\.)"
+                      [10m]
+                    )
+                  )
+                '';
+                threshold = 0;
+                summary = "{{ $labels.host }}: accepted SSH login from outside WireGuard/bridge/LAN";
+              })
+              (mkLogCountRule {
+                uid = "ssh-password-auth";
+                title = "SSH password authentication used";
+                # Password auth is disabled fleet-wide; a successful one should be impossible.
+                logql = ''
+                  sum by (host) (
+                    count_over_time(
+                      {unit="sshd.service"} |= "Accepted password"
+                      [10m]
+                    )
+                  )
+                '';
+                threshold = 0;
+                summary = "{{ $labels.host }}: SSH password authentication succeeded";
+              })
+              (mkLogCountRule {
+                uid = "identity-file-write";
+                title = "Write to identity/sudoers/sshd config files";
+                # comm="perl" excluded: NixOS's update-users-groups.pl rewrites these every deploy.
+                logql = ''
+                  sum by (host) (
+                    count_over_time(
+                      {syslog_identifier="audisp-syslog"}
+                        |~ "key=\"(identity|sshd|sudoers)\""
+                        !~ "comm=\"perl\""
+                      [10m]
+                    )
+                  )
+                '';
+                threshold = 0;
+                summary = "{{ $labels.host }}: write to /etc/passwd, shadow, group, sudoers, or sshd_config outside a deploy";
               })
               (mkThresholdRule {
                 uid = "adguard-exporter-down";
@@ -553,7 +644,11 @@ in
               (mkThresholdRule {
                 uid = "restic-backup-stale";
                 title = "restic backup hasn't run recently";
-                expr = ''time() - node_systemd_timer_last_trigger_seconds{name=~"restic-backups-.+\\.timer"}'';
+                # "> 0" guard: the metric is 0 for a never-fired timer, else time()-0 reads as ~56y stale.
+                expr = ''
+                  (time() - node_systemd_timer_last_trigger_seconds{name=~"restic-backups-.+\\.timer"})
+                    and node_systemd_timer_last_trigger_seconds{name=~"restic-backups-.+\\.timer"} > 0
+                '';
                 evaluatorType = "gt";
                 evaluatorParams = [ 172800 ]; # 48h
                 for = "1h";

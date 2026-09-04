@@ -239,6 +239,8 @@ in
           crowdsec
           reverse_proxy https://${servicesCaddy.ip}:${toString servicesCaddy.port} {
             header_up Host {http.request.host}
+            # ntfy subscriptions are long-lived streams; without this Caddy buffers them.
+            flush_interval -1
           }
         '';
       };
