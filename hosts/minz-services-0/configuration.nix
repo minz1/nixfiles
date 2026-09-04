@@ -11,7 +11,6 @@ let
   servicesIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 
-  memosPort = 5230;
   caddyHttpsPort = 443;
   mediaFixerPort = 8081;
   ntfyPort = 2586; # module default listen-http = "127.0.0.1:2586"
@@ -54,18 +53,6 @@ in
     mediaAgent.url = "http://${mediaIp}:9191";
   };
 
-  services.memos = {
-    enable = true;
-    settings = {
-      MEMOS_MODE = "prod";
-      MEMOS_ADDR = "127.0.0.1";
-      MEMOS_PORT = toString memosPort;
-      MEMOS_DATA = "/var/lib/memos/";
-      MEMOS_DRIVER = "sqlite";
-      MEMOS_INSTANCE_URL = "https://memos.minz1.com";
-    };
-  };
-
   # bcrypt HASHES (from `ntfy user hash`), not plaintext — obs-0 holds the plaintext counterpart
   sops.secrets."ntfy_grafana_password_hash" = { };
   sops.secrets."ntfy_phone_password_hash" = { };
@@ -102,26 +89,16 @@ in
           {
             certificate = "/var/lib/acme/minz-services-0.internal/cert.pem";
             key = "/var/lib/acme/minz-services-0.internal/key.pem";
-            tags = [ "memos" ];
+            tags = [ "services" ];
           }
         ];
-        http.servers.memos = {
+        http.servers.services = {
           listen = [ ":${toString caddyHttpsPort}" ];
           automatic_https.disable = true;
           tls_connection_policies = [
-            { certificate_selection.any_tag = [ "memos" ]; }
+            { certificate_selection.any_tag = [ "services" ]; }
           ];
           routes = [
-            {
-              match = [ { host = [ "memos.minz1.com" ]; } ];
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "localhost:${toString memosPort}"; } ];
-                  headers.request.set."Host" = [ "{http.request.host}" ];
-                }
-              ];
-            }
             {
               # .internal alias lets Grafana publish over the bridge instead of hairpinning through the edge
               match = [
@@ -171,12 +148,6 @@ in
   systemd.services.media-fixer.serviceConfig.SupplementaryGroups = [ "caddy" ];
 
   environment.persistence."/persist".directories = [
-    {
-      directory = "/var/lib/memos";
-      user = config.services.memos.user;
-      group = config.services.memos.group;
-      mode = "0750";
-    }
     {
       directory = "/var/lib/caddy";
       user = "caddy";

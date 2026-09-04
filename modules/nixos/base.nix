@@ -5,6 +5,7 @@
     ./common.nix
     ./endpoints.nix
     ./observability-agent.nix
+    ./backups.nix
     ../../common/wireguard.nix
   ];
 

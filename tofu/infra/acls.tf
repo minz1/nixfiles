@@ -86,10 +86,18 @@ resource "incus_network_acl" "pki" {
       description      = "HTTP-01 ACME validation to WG hosts"
       state            = "enabled"
     },
+    {
+      action           = "allow"
+      destination      = local.mgmt_subnet
+      destination_port = "9000"
+      protocol         = "tcp"
+      description      = "S6: restic backups to RustFS on vultr-nix-0"
+      state            = "enabled"
+    },
   ]
 }
 
-# services-0: serves Memos HTTPS; media-fixer needs HTTPS egress to Discord and LLM APIs.
+# services-0: serves ntfy HTTPS; media-fixer needs HTTPS egress to Discord and LLM APIs.
 resource "incus_network_acl" "services" {
   name        = "services"
   description = "minz-services-0: bridge-internal egress + HTTPS for media-fixer"
@@ -302,6 +310,14 @@ resource "incus_network_acl" "authentik" {
       destination_port = "465,587"
       protocol         = "tcp"
       description      = "SMTP egress for Resend email delivery"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = local.mgmt_subnet
+      destination_port = "9000"
+      protocol         = "tcp"
+      description      = "S6: restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
   ]

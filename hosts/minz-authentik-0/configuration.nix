@@ -175,6 +175,31 @@ in
     tls = true;
   };
 
+  # setpriv privilege drop for pg_dumpall; see docs/main-plan.md's S6 section for why.
+  homelab.backups.targets.authentik-db = {
+    paths = [ "/var/backup/authentik-db.sql" ];
+    prepareCommand = ''
+      mkdir -p /var/backup
+      ${pkgs.util-linux}/bin/setpriv --reuid postgres --regid postgres --init-groups -- ${config.services.postgresql.package}/bin/pg_dumpall --clean --if-exists > /var/backup/authentik-db.sql
+    '';
+    extraCapabilities = [
+      "CAP_SETUID"
+      "CAP_SETGID"
+    ];
+    extraSystemCallFilter = [
+      "setuid"
+      "setgid"
+      "setresuid"
+      "setresgid"
+      "setreuid"
+      "setregid"
+      "setgroups"
+      "setfsuid"
+      "setfsgid"
+      "capset"
+    ];
+  };
+
   environment.persistence."/persist".directories = [
     {
       directory = "/var/lib/private/authentik";

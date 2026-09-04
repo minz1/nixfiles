@@ -39,7 +39,6 @@ let
     "https://grafana.minz1.com"
     "https://jellyfin.minz1.com"
     "https://seerr.minz1.com"
-    "https://memos.minz1.com"
     "https://ntfy.minz1.com"
     "https://admin.minz1.com/media"
     "https://arr.minz1.com/sonarr"
@@ -118,11 +117,18 @@ let
       threshold,
       for ? "5m",
       summary,
+      evaluatorType ? "gt",
+      noDataState ? "OK",
+      from ? 600,
     }:
     {
-      inherit uid title for;
+      inherit
+        uid
+        title
+        for
+        noDataState
+        ;
       condition = "C";
-      noDataState = "OK";
       execErrState = "Error";
       annotations.summary = summary;
       labels.severity = "warning";
@@ -131,7 +137,7 @@ let
           refId = "A";
           datasourceUid = "loki";
           relativeTimeRange = {
-            from = 600;
+            inherit from;
             to = 0;
           };
           model = {
@@ -149,7 +155,7 @@ let
             conditions = [
               {
                 evaluator = {
-                  type = "gt";
+                  type = evaluatorType;
                   params = [ threshold ];
                 };
               }
@@ -514,6 +520,44 @@ in
                 '';
                 threshold = 0;
                 summary = "Unexpected execve by a service-user (uid<1000) — {{ $labels.host }}";
+              })
+              (mkThresholdRule {
+                uid = "adguard-exporter-down";
+                title = "AdGuard exporter down";
+                expr = ''up{job="adguard"}'';
+                evaluatorType = "lt";
+                evaluatorParams = [ 1 ];
+                for = "10m";
+                summary = "adguard-exporter on obs-0 is not being scraped";
+              })
+              (mkThresholdRule {
+                uid = "adguard-unreachable";
+                title = "AdGuard unreachable from its exporter";
+                expr = "adguard_running";
+                evaluatorType = "lt";
+                evaluatorParams = [ 1 ];
+                for = "10m";
+                summary = "adguard-exporter is up but can't reach AdGuard Home on the router";
+              })
+              (mkLogCountRule {
+                uid = "router-syslog-silent";
+                title = "Router syslog stream silent";
+                logql = ''sum(count_over_time({job="openwrt-syslog"}[30m]))'';
+                threshold = 1;
+                evaluatorType = "lt";
+                noDataState = "Alerting";
+                from = 1800;
+                for = "15m";
+                summary = "No router syslog lines received in 30m — check stunnel/Alloy syslog listener on home-nix-0";
+              })
+              (mkThresholdRule {
+                uid = "restic-backup-stale";
+                title = "restic backup hasn't run recently";
+                expr = ''time() - node_systemd_timer_last_trigger_seconds{name=~"restic-backups-.+\\.timer"}'';
+                evaluatorType = "gt";
+                evaluatorParams = [ 172800 ]; # 48h
+                for = "1h";
+                summary = "{{ $labels.name }} on {{ $labels.instance }} hasn't triggered in over 48h";
               })
             ];
           }

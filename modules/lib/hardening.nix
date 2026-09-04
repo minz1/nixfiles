@@ -3,6 +3,8 @@
 {
   umask ? "0027",
   capabilityBoundingSet ? "",
+  # needed alongside capabilityBoundingSet for units with an explicit User= (even root)
+  ambientCapabilities ? "",
   privateUsers ? true,
   addressFamilies ? [
     "AF_INET"
@@ -15,6 +17,7 @@
 (lib.optionalAttrs (umask != null) { UMask = umask; })
 // {
   CapabilityBoundingSet = capabilityBoundingSet;
+  AmbientCapabilities = ambientCapabilities;
   NoNewPrivileges = true;
   ProtectHome = true;
   ProtectClock = true;

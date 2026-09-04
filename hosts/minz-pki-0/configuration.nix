@@ -1,6 +1,7 @@
 {
   hostName,
   config,
+  pkgs,
   ...
 }:
 
@@ -45,6 +46,21 @@ in
   users.groups.caddy = { };
 
   networking.firewall.allowedTCPPorts = [ stepCaPort ];
+
+  # badger isn't safe to snapshot hot, so stop/restart step-ca around the backup.
+  homelab.backups.targets.step-ca-db = {
+    paths = [ "/var/lib/private/step-ca" ];
+    prepareCommand = "systemctl stop step-ca.service";
+    cleanupCommand = "systemctl start step-ca.service";
+    timerConfig = {
+      OnCalendar = "*-*-* 03:00:00";
+      RandomizedDelaySec = "30m";
+      Persistent = true;
+    };
+  };
+
+  # backupPrepareCommand/backupCleanupCommand need systemctl on PATH — not there by default.
+  systemd.services."restic-backups-step-ca-db".path = [ pkgs.systemd ];
 
   environment.persistence."/persist".directories = [
     {

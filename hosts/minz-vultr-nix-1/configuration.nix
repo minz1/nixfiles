@@ -15,7 +15,7 @@ let
   authentik = hostEndpoints.minz-authentik-0.authentik;
   grafana = hostEndpoints.minz-obs-0.grafana;
   media = hostEndpoints.minz-media-0.caddy;
-  memos = hostEndpoints.minz-services-0.caddy;
+  servicesCaddy = hostEndpoints.minz-services-0.caddy;
   mediaFixer = hostEndpoints.minz-services-0.mediafixer;
 
   fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
@@ -232,22 +232,12 @@ in
         '';
       };
 
-      "memos.minz1.com" = {
-        extraConfig = ''
-          import security_headers
-          crowdsec
-          reverse_proxy https://${memos.ip}:${toString memos.port} {
-            header_up Host {http.request.host}
-          }
-        '';
-      };
-
-      # same Caddy instance as memos (services-0), routed by Host header to the ntfy route there
+      # routed by Host header to the ntfy route on services-0's shared Caddy instance
       "ntfy.minz1.com" = {
         extraConfig = ''
           import security_headers
           crowdsec
-          reverse_proxy https://${memos.ip}:${toString memos.port} {
+          reverse_proxy https://${servicesCaddy.ip}:${toString servicesCaddy.port} {
             header_up Host {http.request.host}
           }
         '';

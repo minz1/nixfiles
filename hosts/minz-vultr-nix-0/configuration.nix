@@ -7,6 +7,7 @@
 }:
 
 let
+  mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   wgAddr = node.networks.mgmt.ip;
@@ -76,6 +77,29 @@ in
   sops.secrets.rustfs-secret-key = {
     mode = "0400";
     restartUnits = [ "rustfs.service" ];
+  };
+
+  # rclone-conf, not the `rcloneConfig` option — that renders world-readable in the store.
+  sops.secrets.b2-key-id.mode = "0400";
+  sops.secrets.b2-application-key.mode = "0400";
+
+  sops.templates.rclone-conf = {
+    content = ''
+      [rustfs]
+      type = s3
+      provider = Other
+      env_auth = false
+      access_key_id = ${config.sops.placeholder.rustfs-access-key}
+      secret_access_key = ${config.sops.placeholder.rustfs-secret-key}
+      endpoint = http://127.0.0.1:9000
+      region = us-east-1
+
+      [b2]
+      type = b2
+      account = ${config.sops.placeholder.b2-key-id}
+      key = ${config.sops.placeholder.b2-application-key}
+    '';
+    mode = "0400";
   };
 
   swapDevices = [
@@ -150,6 +174,37 @@ in
     };
   };
 
+  # `until=24h` skips a job container/image that might still be under investigation.
+  systemd.services.podman-runner-prune = {
+    description = "Prune unused Podman images/containers/volumes for the CI runner cache";
+    after = [ "user@${toString config.users.users.podman-runner.uid}.service" ];
+    path = [ pkgs.podman ];
+    serviceConfig = {
+      Type = "oneshot";
+      User = "podman-runner";
+      Group = "podman-runner";
+      WorkingDirectory = "/tmp";
+      Environment = [
+        "HOME=/var/lib/podman-runner"
+        "XDG_RUNTIME_DIR=/run/user/${toString config.users.users.podman-runner.uid}"
+      ];
+    };
+    script = ''
+      podman container prune -f --filter "until=24h"
+      podman image prune -af --filter "until=24h"
+      podman volume prune -f
+    '';
+  };
+
+  systemd.timers.podman-runner-prune = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "weekly";
+      Persistent = true;
+      RandomizedDelaySec = "1h";
+    };
+  };
+
   systemd.services."forgejo-runner-minz_forgejo" = {
     after = [ "user@${toString config.users.users.podman-runner.uid}.service" ];
     wants = [ "user@${toString config.users.users.podman-runner.uid}.service" ];
@@ -203,6 +258,55 @@ in
       $aws s3api head-bucket --bucket incus-images 2>/dev/null \
         || $aws s3api create-bucket --bucket incus-images
     '';
+  };
+
+  # repos/LFS backed up hot; setpriv privilege drop matches minz-authentik-0's target.
+  homelab.backups.targets.forgejo = {
+    paths = [
+      "/var/lib/forgejo"
+      "/var/backup/forgejo-db.sql"
+    ];
+    prepareCommand = ''
+      mkdir -p /var/backup
+      ${pkgs.util-linux}/bin/setpriv --reuid postgres --regid postgres --init-groups -- ${config.services.postgresql.package}/bin/pg_dumpall --clean --if-exists > /var/backup/forgejo-db.sql
+    '';
+    extraCapabilities = [
+      "CAP_SETUID"
+      "CAP_SETGID"
+    ];
+    extraSystemCallFilter = [
+      "setuid"
+      "setgid"
+      "setresuid"
+      "setresgid"
+      "setreuid"
+      "setregid"
+      "setgroups"
+      "setfsuid"
+      "setfsgid"
+      "capset"
+    ];
+  };
+
+  # rclone (not restic copy, which would need every host's repo password); no hard-delete.
+  systemd.services.b2-mirror = {
+    description = "Mirror RustFS backups bucket to Backblaze B2";
+    after = [ "rustfs.service" ];
+    path = [ pkgs.rclone ];
+    serviceConfig = mkHardened { };
+    environment.RCLONE_CONFIG = config.sops.templates.rclone-conf.path;
+    script = ''
+      rclone sync rustfs:backups b2:minz-homelab-backups --checkers 8 --transfers 4
+    '';
+  };
+
+  systemd.timers.b2-mirror = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "*-*-* 06:00:00";
+      RandomizedDelaySec = "30m";
+      Persistent = true;
+    };
   };
 
   networking.firewall.allowedTCPPorts = fwPorts ++ [ 80 ];

@@ -17,7 +17,7 @@ keys:
 
   - &minz-game-0 age174430t8a74da6tgptns64argsf7jyxsep3x5wckcgetlvm6pr5cq7d0cwr
 
-  - &minz-desktop age1m7d8ymts4dhvdz8fzllxwtxhy8h6q5dm4h5fvsxuv7f5t68cedeskh8ksy
+  - &minz-desktop age134j43aaffphkr7x6ndx8hzwngp8p6m2kdyjk0vjphjw2l973fswqhvl5l5
 
 creation_rules:
   - path_regex: secrets/minz-vultr-nix-0\.yaml$
@@ -87,6 +87,11 @@ creation_rules:
           - *minz-desktop
 
   - path_regex: secrets/ca\.yaml$
+    key_groups:
+      - age:
+          - *minz-desktop
+
+  - path_regex: backblaze\.txt$
     key_groups:
       - age:
           - *minz-desktop

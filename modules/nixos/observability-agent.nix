@@ -51,9 +51,9 @@ in
       enable = true;
       openFirewall = true;
       extraFlags = lib.optional enableClientCert "--web.config.file=/etc/node-exporter-web.yml" ++ [
-        # scoped to .service units to bound cardinality; prereq for "service down"/"cert renewal failing" alerts
+        # scoped to bound cardinality; restic-backups-*.timer carve-out for staleness alerting
         "--collector.systemd"
-        "--collector.systemd.unit-include=.+\\.service"
+        "--collector.systemd.unit-include=(.+\\.service|restic-backups-.+\\.timer)"
       ];
     };
 
