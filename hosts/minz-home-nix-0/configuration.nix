@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   lib,
   hostName,
@@ -32,9 +33,35 @@ in
 
   # Bare-metal EFI — canTouchEfiVariables is required for lanzaboote key enrollment.
   boot.loader.efi.canTouchEfiVariables = true;
-  # linuxPackages_latest required for Intel Arc A310 (xe driver, stable from ~6.8+).
-  boot.kernelPackages = pkgs.linuxPackages_latest;
-  boot.supportedFilesystems = [ "nfs" ];
+  # Newest kernel with a working ZFS module — usually linuxPackages_latest (needed for Intel Arc A310).
+  boot.kernelPackages =
+    let
+      kmod = pkgs.zfs.kernelModuleAttribute;
+      isPlainVersioned = name: builtins.match "linux_[0-9]+_[0-9]+" name != null;
+      candidates = lib.filterAttrs (name: _: isPlainVersioned name) pkgs.linuxKernel.packages;
+      compatible = lib.filterAttrs (
+        _: lp: (builtins.tryEval (lp ? ${kmod} && !(lp.${kmod}.meta.broken or true))).value or false
+      ) candidates;
+    in
+    lib.last (
+      lib.sort (a: b: lib.versionOlder a.kernel.version b.kernel.version) (lib.attrValues compatible)
+    );
+  warnings =
+    lib.optional (config.boot.kernelPackages.kernel.version != pkgs.linuxPackages_latest.kernel.version)
+      "home-nix-0: ZFS pinned the kernel to ${config.boot.kernelPackages.kernel.version}, behind linuxPackages_latest (${pkgs.linuxPackages_latest.kernel.version}). Re-check Intel Arc transcoding on media-0.";
+  boot.supportedFilesystems = {
+    nfs = true;
+    zfs = true;
+  };
+  networking.hostId = "89cfdf56"; # unique per host, required by ZFS
+  boot.extraModprobeConfig = ''
+    options zfs zfs_arc_max=4294967296
+  '';
+  services.zfs.autoScrub = {
+    enable = true;
+    interval = "monthly";
+  };
+  boot.zfs.forceImportRoot = false; # no ZFS root pool here (tmpfs+ext4)
   # i915 for stability on Small BAR hardware; enable_guc=3 required for Arc DG2 scheduling.
   boot.kernelParams = [
     "intel_iommu=on"
