@@ -166,4 +166,16 @@ in
       mode = "0700";
     }
   ];
+
+  homelab.backups.targets.services-state = {
+    paths = [
+      "/var/lib/private/ntfy-sh"
+      "/var/lib/private/media-fixer"
+    ];
+    timerConfig = {
+      OnCalendar = "*-*-* 05:00:00";
+      RandomizedDelaySec = "30m";
+      Persistent = true;
+    };
+  };
 }

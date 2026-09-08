@@ -143,6 +143,14 @@ resource "incus_network_acl" "services" {
       description      = "HTTPS egress for Discord and LLM APIs (media-fixer)"
       state            = "enabled"
     },
+    {
+      action           = "allow"
+      destination      = local.mgmt_subnet
+      destination_port = "9000"
+      protocol         = "tcp"
+      description      = "S6: restic backups to RustFS on vultr-nix-0"
+      state            = "enabled"
+    },
   ]
 }
 
@@ -262,6 +270,14 @@ resource "incus_network_acl" "game" {
       protocol         = "udp"
       destination_port = "4445"
       description      = "Suppress Minecraft LAN discovery multicast (unlogged)"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = local.mgmt_subnet
+      destination_port = "9000"
+      protocol         = "tcp"
+      description      = "S6: restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
   ]

@@ -636,4 +636,23 @@ in
     port = caddyHttpsPort;
     tls = true;
   };
+
+  # Config + operational state only — not the media library itself (lives on NFS/decypharr mounts
+  # elsewhere) and not decypharr's disposable cache (docs/ops.md). Deliberately excludes zilean's
+  # postgres: it's a DMM/IMDb scrape cache the service rebuilds on its own, not user data. Plain
+  # file paths, no prepareCommand — nothing here is a live database needing a hot-dump step.
+  homelab.backups.targets.media-configs = {
+    paths = [
+      "/var/lib/sonarr"
+      "/var/lib/radarr"
+      "/var/lib/prowlarr"
+      "/var/lib/jellyfin"
+      "/var/lib/decypharr/db"
+    ];
+    timerConfig = {
+      OnCalendar = "*-*-* 04:30:00";
+      RandomizedDelaySec = "30m";
+      Persistent = true;
+    };
+  };
 }

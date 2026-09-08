@@ -139,6 +139,23 @@ in
     "d /persist/atm10 0750 oci oci -"
   ];
 
+  # Excludes are re-buildable/redundant (mods+libraries: CurseForge; simplebackups: the mod's own duplicate backup).
+  homelab.backups.targets.atm10-world = {
+    paths = [ "/persist/atm10" ];
+    exclude = [
+      "/persist/atm10/simplebackups"
+      "/persist/atm10/mods"
+      "/persist/atm10/libraries"
+      "/persist/atm10/libraries-integratedscripting"
+      "/persist/atm10/kubejs"
+    ];
+    timerConfig = {
+      OnCalendar = "*-*-* 01:30:00";
+      RandomizedDelaySec = "30m";
+      Persistent = true;
+    };
+  };
+
   environment.persistence."/persist".directories = [
     # Avoids re-pulling itzg/minecraft-server on every reboot.
     {

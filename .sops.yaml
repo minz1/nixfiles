@@ -90,8 +90,3 @@ creation_rules:
     key_groups:
       - age:
           - *minz-desktop
-
-  - path_regex: backblaze\.txt$
-    key_groups:
-      - age:
-          - *minz-desktop

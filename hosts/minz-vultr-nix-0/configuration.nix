@@ -109,10 +109,24 @@ in
     }
   ];
 
+  disko.devices.disk.rustfs = {
+    device = node.storage.rustfs_disk;
+    content = {
+      type = "gpt";
+      partitions.data = {
+        size = "100%";
+        content = {
+          type = "filesystem";
+          format = "ext4";
+          mountpoint = "/var/lib/rustfs";
+        };
+      };
+    };
+  };
+
   environment.persistence."/persist".directories = [
     "/var/lib/forgejo"
     "/var/lib/postgresql"
-    "/var/lib/rustfs"
     {
       directory = "/var/lib/podman-runner";
       user = "podman-runner";

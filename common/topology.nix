@@ -50,6 +50,7 @@
       storage = {
         disk = "/dev/vda";
         nix_size = "20G";
+        rustfs_disk = "/dev/disk/by-id/virtio-ord-0120c5fa42b742";
       };
       networks.mgmt = {
         ip = "10.8.0.1";
