@@ -7,8 +7,12 @@
 }:
 
 let
+  topology = import ../../common/topology.nix;
+  gameIp = topology.nodes.${hostName}.networks.incus_bridge.ip;
+
   gamePort = 25565;
   rconPort = 25575;
+  proxyPort = 3128;
 
   authentikIp = hostEndpoints.minz-authentik-0.authentik.ip;
   authentikPort = hostEndpoints.minz-authentik-0.authentik.port;
@@ -16,6 +20,28 @@ let
   whitelistSyncScript = pkgs.writeShellScript "minecraft-whitelist-sync" ''
     exec ${pkgs.python3}/bin/python3 ${./whitelist-sync.py} "$@"
   '';
+
+  forwardproxyVersion = "v0.0.0-20260321230143-0aab84dad4fc";
+
+  proxyAllowedHosts = [
+    "api.curseforge.com"
+    "*.forgecdn.net"
+    "api.modrinth.com"
+    "cdn.modrinth.com"
+    "raw.githubusercontent.com"
+    "v.kubejs.com"
+    "code.redspace.io"
+    "adastra.terrarium.earth"
+    "discord.com"
+    "*.discord.gg"
+    "*.discordapp.com"
+    "*.discordapp.net"
+    "*.mojang.com"
+    "libraries.minecraft.net"
+    "api.minecraftservices.com"
+    "maven.neoforged.net"
+    "repo1.maven.org"
+  ];
 in
 {
   imports = [
@@ -27,8 +53,55 @@ in
 
   networking.firewall.allowedTCPPorts = [ gamePort ];
 
-  # No Caddy on this host, but group is required by common.nix / observability-agent.nix.
-  users.groups.caddy = { };
+  networking.nftables.enable = true;
+
+  networking.nftables.tables.container-egress = {
+    family = "inet";
+    content = ''
+      chain output {
+        type filter hook output priority filter; policy accept;
+        meta skuid ${toString config.services.rootless-podman.uid} tcp dport 443 log prefix "oci-egress-bypass " counter
+      }
+    '';
+  };
+
+  services.caddy = {
+    enable = true;
+    package = pkgs.caddy.withPlugins {
+      plugins = [ "github.com/caddyserver/forwardproxy@${forwardproxyVersion}" ];
+      hash = "sha256-k4zJVrhH+6eXFAZwHd3hvXHvk3YLcTcskAlQTE+LecI=";
+    };
+    settings = {
+      logging.logs.default.level = "INFO";
+      apps.http.servers.forward_proxy = {
+        listen = [ "${gameIp}:${toString proxyPort}" ];
+        automatic_https.disable = true;
+        logs = { };
+        routes = [
+          {
+            handle = [
+              {
+                handler = "forward_proxy";
+                hide_ip = true;
+                hide_via = true;
+                allowed_ports = [ 443 ];
+                acl = [
+                  {
+                    subjects = proxyAllowedHosts;
+                    allow = true;
+                  }
+                  {
+                    subjects = [ "all" ];
+                    allow = false;
+                  }
+                ];
+              }
+            ];
+          }
+        ];
+      };
+    };
+  };
 
   services.rootless-podman = {
     enable = true;
@@ -93,12 +166,15 @@ in
         RCON_PORT = toString rconPort;
         MEMORY = "16G";
         MAX_PLAYERS = "10";
-        JVM_OPTS = "-XX:+UseZGC -XX:+UseCompactObjectHeaders -XX:SoftMaxHeapSize=13G -XX:ConcGCThreads=2";
         ALLOW_FLIGHT = "TRUE";
         SIMULATION_DISTANCE = "6";
         MAX_TICK_TIME = "-1";
         CURSEFORGE_FILES = "distant-horizons,c2me,discord-integration";
         MODRINTH_PROJECTS = "proxy-compatible-forge,zfastnoise,lithium,achievements-optimizer,servercore,scalablelux";
+        PROXY = "host.containers.internal:${toString proxyPort}";
+        PROXY_NON_PROXY_HOSTS = "localhost|127.*|10.*|169.254.*";
+        MC_IMAGE_HELPER_OPTS = "-Dhttps.proxyHost=host.containers.internal -Dhttps.proxyPort=${toString proxyPort}";
+        JVM_OPTS = "-XX:+UseZGC -XX:+UseCompactObjectHeaders -XX:SoftMaxHeapSize=13G -XX:ConcGCThreads=2 -Dhttp.proxyHost=host.containers.internal -Dhttp.proxyPort=${toString proxyPort} -Dhttps.proxyHost=host.containers.internal -Dhttps.proxyPort=${toString proxyPort}";
       };
       environmentFiles = [ config.sops.templates.mc-env.path ];
       # itzg healthcheck fires during modpack download causing false failures.
@@ -109,8 +185,12 @@ in
       ExecStartPre = "+${pkgs.coreutils}/bin/install -Dm 644 ${config.sops.templates.mc-proxyforge-config.path} /persist/atm10/config/proxy-compatible-forge.toml";
       RestartSec = "30s";
     };
-    unitConfig."X-Restart-Triggers" =
-      "${config.sops.templates.mc-env.content} ${config.sops.templates.mc-proxyforge-config.content}";
+    unitConfig = {
+      "X-Restart-Triggers" =
+        "${config.sops.templates.mc-env.content} ${config.sops.templates.mc-proxyforge-config.content}";
+      After = [ "caddy.service" ];
+      Wants = [ "caddy.service" ];
+    };
   };
 
   systemd.services.minecraft-whitelist-sync = {
@@ -162,6 +242,12 @@ in
       directory = "/var/lib/oci";
       user = "oci";
       group = "oci";
+      mode = "0700";
+    }
+    {
+      directory = "/var/lib/caddy";
+      user = "caddy";
+      group = "caddy";
       mode = "0700";
     }
   ];

@@ -261,7 +261,7 @@ resource "incus_network_acl" "game" {
       action           = "allow"
       protocol         = "tcp"
       destination_port = "443"
-      description      = "CurseForge / CDN — modpack install and updates"
+      description      = "HTTPS egress via Caddy forward proxy (allowlisted hosts only)"
       state            = "enabled"
     },
     {
