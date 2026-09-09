@@ -47,6 +47,13 @@ in
     extraDomainNames = allHostIps;
   };
 
+  # reloadServices only reloads Caddy after a renewal — it doesn't order startup, so a full
+  # reboot can race Caddy's first read of cert.pem against the cert's first-ever issuance.
+  systemd.services.caddy = lib.mkIf config.services.caddy.enable {
+    after = [ "acme-${config.networking.hostName}.internal.service" ];
+    wants = [ "acme-${config.networking.hostName}.internal.service" ];
+  };
+
   # NixOS ACME module doesn't auto-open the listenHTTP port; add it here.
   networking.firewall.allowedTCPPorts = [ 80 ];
 

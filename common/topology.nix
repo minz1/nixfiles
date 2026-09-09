@@ -94,6 +94,7 @@
       deployed = true;
       incus = {
         nix_size = "30G";
+        persist_size = "100GiB";
         cpus = 2;
         memory = "4GiB";
       };
@@ -127,6 +128,7 @@
       deployed = true;
       incus = {
         nix_size = "30G";
+        persist_size = "100GiB";
         cpus = 2;
         memory = "2GiB";
       };
@@ -189,7 +191,7 @@
         # 256GB NVMe — NixOS system disk
         disk = "/dev/disk/by-id/nvme-SAMSUNG_MZALQ256HAJD-000L1_S4YDNX0R638478";
         nix_size = "60G";
-        # 500GB SATA SSD — Incus storage pool, ext4, mounted at /var/lib/incus
+        # 500GB SATA SSD — ZFS pool "incus", backs the Incus storage pool and /var/lib/incus
         incus_disk = "/dev/disk/by-id/ata-WDC_WDBNCE5000PNC_21112L803982";
       };
       networks = {

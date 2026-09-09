@@ -148,9 +148,13 @@ in
       }
     );
 
-    # mkIf guards the whole cert key to avoid spurious ACME entries on WG-only hosts
+    # mkIf guards the whole cert key to avoid spurious ACME entries on WG-only hosts;
+    # node-exporter needs a reload too, or a renewal never reaches its already-running process
     security.acme.certs = lib.mkIf enableClientCert {
-      ${certName}.reloadServices = [ "alloy.service" ];
+      ${certName}.reloadServices = [
+        "alloy.service"
+        "prometheus-node-exporter.service"
+      ];
     };
 
     systemd.services.alloy.after = lib.mkIf enableClientCert [

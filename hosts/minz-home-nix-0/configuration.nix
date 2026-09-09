@@ -128,11 +128,36 @@ in
       type = "gpt";
       partitions.data = {
         size = "100%";
+        type = "BF00";
         content = {
-          type = "filesystem";
-          format = "ext4";
-          mountpoint = "/var/lib/incus";
+          type = "zfs";
+          pool = "incus";
         };
+      };
+    };
+  };
+
+  disko.devices.zpool.incus = {
+    type = "zpool";
+    options = {
+      ashift = "12";
+      autotrim = "on";
+    };
+    rootFsOptions = {
+      compression = "lz4";
+      atime = "off";
+      xattr = "sa";
+      acltype = "posixacl";
+      mountpoint = "none";
+    };
+    datasets = {
+      daemon = {
+        type = "zfs_fs";
+        mountpoint = "/var/lib/incus";
+      };
+      pool = {
+        type = "zfs_fs";
+        options.mountpoint = "none";
       };
     };
   };
@@ -156,9 +181,9 @@ in
       storage_pools = [
         {
           name = "default";
-          driver = "dir";
+          driver = "zfs";
           config = {
-            source = "/var/lib/incus/storage-pools/default";
+            source = "incus/pool";
           };
         }
       ];

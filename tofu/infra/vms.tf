@@ -50,8 +50,10 @@ resource "incus_instance" "vm" {
   for_each = local.nixos_vms
 
   name  = each.key
-  image = incus_image.bootstrap.fingerprint
+  image = "nixos-bootstrap" # stable alias — incus_image.bootstrap.fingerprint would force-replace on every republish
   type  = "virtual-machine"
+
+  depends_on = [incus_image.bootstrap]
 
   config = {
     "limits.cpu"    = tostring(each.value.incus.cpus)
