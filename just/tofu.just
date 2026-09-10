@@ -28,14 +28,15 @@ publish-image: build-image build-container-image
 infra-init flags="":
     @just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra init {{ flags }}'"
 
-infra-plan hostname="":
-    @just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra plan -var=\"hostname={{ hostname }}\" -out=${ROOT_DIR}/tofu/infra/tofu.plan'"
+infra-plan:
+    @just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra plan -out=${ROOT_DIR}/tofu/infra/tofu.plan'"
 
 infra-apply:
     @just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra apply ${ROOT_DIR}/tofu/infra/tofu.plan'"
 
-infra-destroy hostname="":
-    @just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra destroy -var=\"hostname={{ hostname }}\"'"
+# Destroys exactly one host's Incus instance + persist volume, via -target= (never a bare destroy).
+infra-destroy-host hostname:
+    ${ROOT_DIR}/scripts/tofu-destroy-host.sh {{ hostname }}
 
 # --- App layer ---
 

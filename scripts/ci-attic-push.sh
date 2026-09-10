@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Builds toplevels for the given hosts and pushes their closures to the Attic cache. Assumes
-# root in the job container (writes /etc/hosts and the system CA bundle) — true for the
-# Forgejo runner's docker:// job containers. The push token is read from a file, never an
-# env var or argv, via attic's token-file config form.
+# Builds + pushes closures to Attic. Assumes root in the job container (writes /etc/hosts, CA bundle).
 set -euo pipefail
 
 hosts=("$@")
@@ -38,7 +35,5 @@ for host in "${hosts[@]}"; do
     attrs+=(".#nixosConfigurations.${host}.config.system.build.toplevel")
 done
 
-# --ignore-upstream-cache-filter: the cache's upstream-cache-key filter (cache.nixos.org-1 by
-# default) skips physically storing paths it thinks are available upstream — fatal here, guests
-# can't reach cache.nixos.org at all.
+# --ignore-upstream-cache-filter: Attic skips storing paths it thinks are on cache.nixos.org — fatal, guests can't reach it.
 nix build --no-link --print-out-paths "${attrs[@]}" | attic push homelab --stdin --ignore-upstream-cache-filter

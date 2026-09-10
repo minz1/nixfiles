@@ -1,9 +1,3 @@
-variable "hostname" {
-  type        = string
-  default     = ""
-  description = "Specific VM hostname to target. Empty string targets all Incus VMs."
-}
-
 # Nix eval wraps the result in a JSON string so Tofu doesn't try to parse nested Nix types.
 data "external" "topology" {
   program = [
@@ -24,22 +18,18 @@ locals {
     if try(node.provisioner, "") == "incus"
   }
 
-  vms = var.hostname != "" ? {
-    for k, v in local.all_vms : k => v if k == var.hostname
-  } : local.all_vms
-
   nixos_vms = {
-    for name, node in local.vms : name => node
+    for name, node in local.all_vms : name => node
     if try(node.os, "") == "nixos" && try(node.incus.incus_type, "virtual-machine") != "container"
   }
 
   nixos_containers = {
-    for name, node in local.vms : name => node
+    for name, node in local.all_vms : name => node
     if try(node.os, "") == "nixos" && try(node.incus.incus_type, "virtual-machine") == "container"
   }
 
   other_vms = {
-    for name, node in local.vms : name => node
+    for name, node in local.all_vms : name => node
     if try(node.os, "") != "nixos"
   }
 }

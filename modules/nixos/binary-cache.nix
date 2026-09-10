@@ -14,14 +14,12 @@ let
   applies = attic != null && hostName != "minz-attic-0";
 in
 lib.mkMerge [
-  # guests have no path to cache.nixos.org (Incus ACL default-reject) — stay forced empty
-  # until Attic exists, same as the mkForce [] this replaces, then switch over to it.
+  # guests can't reach cache.nixos.org (ACL default-reject) — stay forced empty until Attic exists.
   (lib.mkIf isGuest {
     nix.settings.substituters = lib.mkForce (lib.optional applies atticUrl);
     nix.settings.trusted-public-keys = lib.mkIf applies atticKeys;
   })
-  # extra-substituters would render before this in nix.conf (nix.settings is emitted in
-  # attrset order) and get silently discarded; prepend via mkBefore instead.
+  # extra-substituters would render before this and get silently discarded; mkBefore instead.
   (lib.mkIf (!isGuest && applies) {
     nix.settings.substituters = lib.mkBefore [ atticUrl ];
     nix.settings.trusted-public-keys = atticKeys;

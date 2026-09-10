@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# Prints the space-separated list of NixOS hosts whose closure needs building for commits
-# between $1 (before-sha) and $2 (after-sha, default HEAD). An empty/all-zero $1 (first push
-# to a ref) or a change touching modules/common/flake.* triggers a full-fleet rebuild. Unlike
-# deploy.yaml's old version of this logic, ci_managed is not honored here — vultr-nix-0's
-# closure still needs building and caching even though CI never deploys to it directly.
+# Affected hosts for $1..$2 (default HEAD). Unlike deploy.yaml's old logic, ci_managed is not
+# honored — vultr-nix-0 still needs building/caching even though CI never deploys to it.
 set -euo pipefail
 
 before="${1:-}"
@@ -25,7 +22,10 @@ all=$(TOPO="${ROOT_DIR}/common/topology.nix" nix eval --raw --impure --expr '
   in
   builtins.concatStringsSep " " names')
 
-if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+# also falls back to the full fleet when $before isn't a commit this checkout knows about
+# (e.g. a workflow's first-ever run, before a range against it is even meaningful)
+if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ] \
+    || ! git -C "${ROOT_DIR}" cat-file -e "${before}^{commit}" 2>/dev/null; then
     echo "$all"
     exit 0
 fi
