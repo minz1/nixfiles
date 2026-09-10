@@ -41,6 +41,32 @@ locals {
       description      = "Prometheus node_exporter"
       state            = "enabled"
     },
+    {
+      action           = "reject"
+      protocol         = "udp"
+      destination      = "224.0.0.251"
+      destination_port = "5353"
+      description      = "Suppress media-0 mDNS multicast (unlogged)"
+      state            = "enabled"
+    },
+    {
+      action      = "reject"
+      protocol    = "icmp6"
+      icmp_type   = "143"
+      description = "Suppress MLDv2 multicast listener reports (unlogged)"
+      state       = "enabled"
+    },
+  ]
+
+  # Shared egress rules: each guest's own outbound MLDv2 report hits its egress list, not ingress.
+  common_egress = [
+    {
+      action      = "reject"
+      protocol    = "icmp6"
+      icmp_type   = "143"
+      description = "Suppress MLDv2 multicast listener reports (unlogged)"
+      state       = "enabled"
+    },
   ]
 
   vm_acl_map = {
@@ -71,7 +97,7 @@ resource "incus_network_acl" "pki" {
     },
   ])
 
-  egress = [
+  egress = concat(local.common_egress, [
     {
       action      = "allow"
       destination = local.incus_bridge_subnet
@@ -94,7 +120,7 @@ resource "incus_network_acl" "pki" {
       description      = "S6: restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
-  ]
+  ])
 }
 
 # services-0: serves ntfy HTTPS; media-fixer needs HTTPS egress to Discord and LLM APIs.
@@ -128,7 +154,7 @@ resource "incus_network_acl" "services" {
     },
   ])
 
-  egress = [
+  egress = concat(local.common_egress, [
     {
       action      = "allow"
       destination = local.incus_bridge_subnet
@@ -151,7 +177,7 @@ resource "incus_network_acl" "services" {
       description      = "S6: restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
-  ]
+  ])
 }
 
 # obs-0: bridge egress + node_exporter scraping of WG hosts.
@@ -176,7 +202,7 @@ resource "incus_network_acl" "obs" {
     },
   ])
 
-  egress = [
+  egress = concat(local.common_egress, [
     {
       action      = "allow"
       destination = local.incus_bridge_subnet
@@ -207,7 +233,7 @@ resource "incus_network_acl" "obs" {
       description      = "SMTP egress for Grafana alert email via Resend"
       state            = "enabled"
     },
-  ]
+  ])
 }
 
 # game-0: ATM10 Minecraft server + RCON for whitelist sync from edge.
@@ -234,14 +260,6 @@ resource "incus_network_acl" "game" {
     },
     {
       action           = "allow"
-      source           = local.edge_subnet
-      destination_port = "25575"
-      protocol         = "tcp"
-      description      = "RCON from whitelist sync on vultr-nix-1 (wg1 edge)"
-      state            = "enabled"
-    },
-    {
-      action           = "allow"
       source           = local.mgmt_subnet
       destination_port = "25575"
       protocol         = "tcp"
@@ -250,7 +268,7 @@ resource "incus_network_acl" "game" {
     },
   ])
 
-  egress = [
+  egress = concat(local.common_egress, [
     {
       action      = "allow"
       destination = local.incus_bridge_subnet
@@ -280,7 +298,7 @@ resource "incus_network_acl" "game" {
       description      = "S6: restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
-  ]
+  ])
 }
 
 # authentik-0: serves HTTPS (OIDC/forward-auth) and LDAPS; sends SMTP via Resend.
@@ -305,7 +323,7 @@ resource "incus_network_acl" "authentik" {
     },
   ])
 
-  egress = [
+  egress = concat(local.common_egress, [
     {
       action      = "allow"
       destination = local.incus_bridge_subnet
@@ -336,5 +354,5 @@ resource "incus_network_acl" "authentik" {
       description      = "S6: restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
-  ]
+  ])
 }

@@ -152,6 +152,7 @@ in
         ROOT_URL = "http://${wgAddr}:${toString forgejoPort}/";
       };
       service.DISABLE_REGISTRATION = true;
+      security.GLOBAL_TWO_FACTOR_REQUIREMENT = "admin";
     };
   };
 

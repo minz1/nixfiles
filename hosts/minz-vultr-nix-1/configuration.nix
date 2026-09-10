@@ -38,6 +38,22 @@ let
     gamePort = toString gamePort;
     velocityPort = toString velocityPort;
   };
+
+  mkProxyVhost =
+    {
+      endpoint,
+      headers ? "import security_headers",
+      extra ? null,
+    }:
+    {
+      extraConfig = ''
+        ${headers}
+        crowdsec
+        reverse_proxy https://${endpoint.ip}:${toString endpoint.port} {
+          header_up Host {http.request.host}${lib.optionalString (extra != null) "\n  ${extra}"}
+        }
+      '';
+    };
 in
 {
   imports = [ ./hardware-configuration.nix ];
@@ -185,64 +201,30 @@ in
     '';
 
     virtualHosts = {
-      "auth.minz1.com" = {
-        extraConfig = ''
-          import security_headers
-          crowdsec
-          reverse_proxy https://${authentik.ip}:${toString authentik.port} {
-            header_up Host {http.request.host}
-          }
-        '';
-      };
+      "auth.minz1.com" = mkProxyVhost { endpoint = authentik; };
 
-      "grafana.minz1.com" = {
-        extraConfig = ''
-          import security_headers
-          crowdsec
-          reverse_proxy https://${grafana.ip}:${toString grafana.port} {
-            header_up Host {http.request.host}
-          }
-        '';
-      };
+      "grafana.minz1.com" = mkProxyVhost { endpoint = grafana; };
 
       # X-Frame-Options omitted: Jellyfin uses iframes for some player views.
-      "jellyfin.minz1.com" = {
-        extraConfig = ''
+      "jellyfin.minz1.com" = mkProxyVhost {
+        endpoint = media;
+        headers = ''
           header {
             Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
             X-Content-Type-Options "nosniff"
             Referrer-Policy "strict-origin-when-cross-origin"
             -Server
-          }
-          crowdsec
-          reverse_proxy https://${media.ip}:${toString media.port} {
-            header_up Host {http.request.host}
-            flush_interval -1
-          }
-        '';
+          }'';
+        extra = "flush_interval -1";
       };
 
-      "seerr.minz1.com" = {
-        extraConfig = ''
-          import security_headers
-          crowdsec
-          reverse_proxy https://${media.ip}:${toString media.port} {
-            header_up Host {http.request.host}
-          }
-        '';
-      };
+      "seerr.minz1.com" = mkProxyVhost { endpoint = media; };
 
       # routed by Host header to the ntfy route on services-0's shared Caddy instance
-      "ntfy.minz1.com" = {
-        extraConfig = ''
-          import security_headers
-          crowdsec
-          reverse_proxy https://${servicesCaddy.ip}:${toString servicesCaddy.port} {
-            header_up Host {http.request.host}
-            # ntfy subscriptions are long-lived streams; without this Caddy buffers them.
-            flush_interval -1
-          }
-        '';
+      "ntfy.minz1.com" = mkProxyVhost {
+        endpoint = servicesCaddy;
+        # ntfy subscriptions are long-lived streams; without this Caddy buffers them.
+        extra = "flush_interval -1";
       };
 
       "admin.minz1.com" = {

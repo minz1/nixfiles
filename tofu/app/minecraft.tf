@@ -64,16 +64,20 @@ resource "authentik_application" "minecraft_registration" {
 
 # ── Whitelist sync service account ───────────────────────────────────────────
 
+resource "authentik_rbac_role" "minecraft_sync" {
+  name = "Minecraft Whitelist Sync"
+}
+
+resource "authentik_rbac_permission_role" "minecraft_sync_view_user" {
+  role       = authentik_rbac_role.minecraft_sync.id
+  permission = "authentik_core.view_user"
+}
+
 resource "authentik_user" "minecraft_sync" {
   username = "minecraft-whitelist-sync"
   name     = "Minecraft Whitelist Sync"
   type     = "service_account"
-}
-
-resource "authentik_group" "minecraft_sync" {
-  name         = "minecraft-sync"
-  is_superuser = true
-  users        = [tonumber(authentik_user.minecraft_sync.id)]
+  roles    = [authentik_rbac_role.minecraft_sync.id]
 }
 
 resource "authentik_token" "minecraft_sync" {

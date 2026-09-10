@@ -1,0 +1,13 @@
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''secrets/.*\.yaml$''',
+  '''\.sops\.yaml$''',
+  '''secrets/.*\.crt$''',
+  '''common/ssh-keys\.nix$''',
+  '''flake\.lock$''',
+  # Authentik built-in flow UUIDs, not secrets
+  '''tofu/app/brand\.tf$''',
+]

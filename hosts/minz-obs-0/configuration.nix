@@ -443,7 +443,7 @@ in
           }
         ];
       };
-      # nft-drop/AdGuard/OpenWRT rules deliberately omitted — no data yet
+      # openwrt-firewall-drops omitted: OpenWrt doesn't log firewall drops by default, no data source yet
       alerting.rules.settings = {
         apiVersion = 1;
         # file provisioning never auto-deletes orphaned rules removed from `groups` below — needs an explicit entry here or it keeps evaluating forever
@@ -653,6 +653,33 @@ in
                 evaluatorParams = [ 172800 ]; # 48h
                 for = "1h";
                 summary = "{{ $labels.name }} on {{ $labels.instance }} hasn't triggered in over 48h";
+              })
+              (mkThresholdRule {
+                uid = "adguard-nxdomain-spike";
+                title = "AdGuard NXDOMAIN rate spike";
+                expr = ''sum(rate(adguard_queries_details{reason="NotFilteredNotFound"}[5m]))'';
+                evaluatorType = "gt";
+                evaluatorParams = [ 25 ];
+                for = "15m";
+                summary = "AdGuard NXDOMAIN rate above 25 q/s (6d observed max: ~19 q/s)";
+              })
+              (mkLogCountRule {
+                uid = "nft-drop-denied";
+                title = "Incus ACL denying real traffic";
+                logql = ''
+                  sum by (host) (
+                    count_over_time(
+                      {transport="kernel"}
+                        |~ "eth0-(ingress|egress) "
+                        != "PROTO=ICMPv6"
+                        != "DST=224.0.0.251"
+                      [10m]
+                    )
+                  )
+                '';
+                threshold = 0;
+                for = "10m";
+                summary = "{{ $labels.host }} logged a non-multicast Incus ACL drop — check for a legitimate flow being denied";
               })
             ];
           }
