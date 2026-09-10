@@ -1,14 +1,18 @@
 on:
+  push:
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  publish:
+  build:
     runs-on: nixos-latest
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
 
@@ -18,15 +22,16 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
 
-      - name: Build image
-        run: nix build .#incus-bootstrap-image -o result
-
-      - name: Publish image
+      - name: Detect affected hosts
+        id: affected
         run: |
-          set -a; source /run/secrets/tofu-env; set +a
-          export ROOT_DIR="$GITHUB_WORKSPACE"
-          nix shell nixpkgs#awscli2 --command \
-            "$GITHUB_WORKSPACE/scripts/tofu-publish-image.sh"
+          hosts=$(nix develop --command just ci affected-hosts "${{ github.event.before }}" "${{ github.sha }}")
+          echo "hosts=$hosts" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push to Attic
+        if: steps.affected.outputs.hosts != ''
+        run: |
+          nix develop --command just ci attic-push ${{ steps.affected.outputs.hosts }}
 
       - name: Save Nix cache
         if: always()

@@ -75,6 +75,7 @@ locals {
     "minz-authentik-0" = incus_network_acl.authentik.name
     "minz-services-0"  = incus_network_acl.services.name
     "minz-game-0"      = incus_network_acl.game.name
+    "minz-attic-0"     = incus_network_acl.attic.name
   }
 
   container_acl_map = {
@@ -297,6 +298,31 @@ resource "incus_network_acl" "game" {
       protocol         = "tcp"
       description      = "S6: restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
+    },
+  ])
+}
+
+# attic-0: serves HTTPS binary cache to the bridge only; no external egress needed.
+resource "incus_network_acl" "attic" {
+  name        = "attic"
+  description = "minz-attic-0: bridge-internal only — HTTPS cache ingress, no external egress"
+
+  ingress = concat(local.common_ingress, [
+    {
+      action           = "allow"
+      destination_port = "443"
+      protocol         = "tcp"
+      description      = "Caddy HTTPS (Attic cache)"
+      state            = "enabled"
+    },
+  ])
+
+  egress = concat(local.common_egress, [
+    {
+      action      = "allow"
+      destination = local.incus_bridge_subnet
+      description = "Bridge-internal traffic (step-ca ACME, Loki push)"
+      state       = "enabled"
     },
   ])
 }

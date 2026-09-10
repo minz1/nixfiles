@@ -183,6 +183,20 @@
       };
     };
 
+    minz-attic-0 = {
+      os = "nixos";
+      sshUser = "minz1";
+      provisioner = "incus";
+      deployed = true;
+      incus = {
+        nix_size = "20G";
+        persist_size = "100GiB";
+        cpus = 2;
+        memory = "2GiB";
+      };
+      networks.incus_bridge.ip = "10.10.0.12";
+    };
+
     minz-home-nix-0 = {
       os = "nixos";
       sshUser = "minz1";

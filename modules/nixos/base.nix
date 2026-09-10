@@ -6,6 +6,7 @@
     ./endpoints.nix
     ./observability-agent.nix
     ./backups.nix
+    ./binary-cache.nix
     ../../common/wireguard.nix
   ];
 
@@ -85,6 +86,6 @@
   ];
 
   # default 10000/30s; a nixos-rebuild burst can otherwise silently drop audit records
-  services.journald.extraConfig = "RateLimitBurst=50000";
+  services.journald.settings.Journal.RateLimitBurst = 50000;
 
 }

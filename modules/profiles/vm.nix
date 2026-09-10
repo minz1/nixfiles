@@ -34,9 +34,6 @@ in
 
   services.timesyncd.servers = [ gatewayIp ];
 
-  # Egress ACL blocks cache.nixos.org; deploy-rs nix copy provides the full closure.
-  nix.settings.substituters = lib.mkForce [ ];
-
   services.openssh.listenAddresses = [
     {
       addr = "0.0.0.0";

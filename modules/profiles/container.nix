@@ -48,7 +48,4 @@ in
   systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
 
   services.timesyncd.servers = [ gatewayIp ];
-
-  # Egress ACL blocks cache.nixos.org; deploy-rs nix copy provides the full closure.
-  nix.settings.substituters = lib.mkForce [ ];
 }
