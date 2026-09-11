@@ -11,7 +11,6 @@ let
   forgejo = topology.nodes."minz-vultr-nix-0";
   forgejoAddr = forgejo.networks.mgmt.ip;
   forgejoPort = 3000;
-  runnerAddr = topology.nodes."${hostName}".networks.incus_bridge.ip;
 in
 {
   networking.hostName = hostName;
@@ -39,10 +38,7 @@ in
           url = "http://${forgejoAddr}:${toString forgejoPort}";
           uuid = "c0787101-0b04-4fc2-8abd-1c28262828ad";
         };
-        cache = {
-          enabled = true;
-          host = runnerAddr;
-        };
+        cache.enabled = false;
         container = {
           docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
           valid_volumes = [ "/run/secrets/**" ];

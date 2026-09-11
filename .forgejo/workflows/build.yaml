@@ -16,12 +16,6 @@ jobs:
 
       - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
 
-      - uses: https://github.com/nix-community/cache-nix-action/restore@v7
-        id: cache-nix
-        with:
-          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
-          restore-prefixes-first-match: nix-${{ runner.os }}-
-
       - name: Detect affected hosts
         id: affected
         run: |
@@ -32,18 +26,3 @@ jobs:
         if: steps.affected.outputs.hosts != ''
         run: |
           nix develop --command just ci attic-push ${{ steps.affected.outputs.hosts }}
-
-      # cache-nix-action's save step needs a "runner" user and sqlite3, neither present on this image.
-      - name: Prepare cache-nix-action prerequisites
-        if: always()
-        run: |
-          sudo groupadd -f runner
-          id -u runner &>/dev/null || sudo useradd -M -g runner runner
-          sudo apt-get update && sudo apt-get install -y sqlite3
-
-      - name: Save Nix cache
-        if: always()
-        uses: https://github.com/nix-community/cache-nix-action/save@v7
-        with:
-          primary-key: ${{ steps.cache-nix.outputs.primary-key }}
-          gc-max-store-size-linux: 10G
