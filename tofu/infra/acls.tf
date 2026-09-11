@@ -306,7 +306,7 @@ resource "incus_network_acl" "game" {
 # runner-0: CI job runner — needs real internet (nix builds, gitleaks) plus Forgejo's API on mgmt.
 resource "incus_network_acl" "runner" {
   name        = "runner"
-  description = "minz-runner-0: bridge-internal egress + Forgejo API + full HTTPS egress for nix builds"
+  description = "minz-runner-0: bridge-internal egress + Forgejo API + full HTTP/HTTPS egress for nix builds and apt"
 
   ingress = local.common_ingress
 
@@ -331,6 +331,14 @@ resource "incus_network_acl" "runner" {
       destination_port = "443"
       protocol         = "tcp"
       description      = "HTTPS egress for nix builds (cache.nixos.org) and CI tool fetches"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = "0.0.0.0/0"
+      destination_port = "80"
+      protocol         = "tcp"
+      description      = "HTTP egress for apt (Ubuntu's default archive mirrors)"
       state            = "enabled"
     },
   ])
