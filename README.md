@@ -9,8 +9,7 @@
 | `minz-home-nix-0` | Bare metal, Incus host | `10.8.0.5` / `10.10.0.1` |
 | `minz-obs-0` | Prometheus, Loki, Grafana | `10.10.0.2` |
 | `minz-authentik-0` | Authentik SSO + LDAP | `10.10.0.3` |
-| `minz-arr-0` | Sonarr, Radarr, Prowlarr, Bazarr, Decypharr | `10.10.0.4` |
-| `minz-jellyfin-0` | Jellyfin, Seerr | `10.10.0.5` |
+| `minz-media-0` | Jellyfin, Seerr, Sonarr, Radarr, Prowlarr, Bazarr, Decypharr | `10.10.0.7` |
 | `minz-services-0` | ntfy, media-fixer | `10.10.0.6` |
 
 Incus VMs/containers run on `minz-home-nix-0` bridged at `10.10.0.0/24`.

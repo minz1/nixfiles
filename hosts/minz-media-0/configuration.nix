@@ -21,6 +21,7 @@ let
   radarrPort = 7878;
   prowlarrPort = 9696;
   bazarrPort = 6767;
+  decypharrPort = 8282;
 in
 {
   imports = [
@@ -201,12 +202,12 @@ in
 
   services.decypharr = {
     enable = true;
-    openFirewall = true;
+    openFirewall = false;
     extraGroups = [ "media" ];
     mediaGroup = "media";
     authFile = config.sops.templates.decypharr-auth-json.path;
 
-    port = 8282;
+    port = decypharrPort;
     downloadFolder = "/data/downloads";
     maxDownloads = 10;
     removeStalledAfter = "10m";
@@ -235,6 +236,9 @@ in
       ];
       folder_naming = "original_no_ext";
       default_download_action = "symlink";
+
+      # Nothing consumes WebDAV; leaving it on exposes an unauthenticated /webdav route.
+      disable_webdav = true;
 
       mount = {
         type = "dfs";
@@ -629,6 +633,7 @@ in
     iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString mediaAgentPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString decypharrPort} -j nixos-fw-accept
   '';
 
   homelab.endpoints.caddy = {
