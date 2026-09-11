@@ -26,6 +26,13 @@ jobs:
           nix shell nixpkgs#gitleaks --command \
             gitleaks detect --source . --redact --no-banner
 
+      # cache-nix-action's save step hardcodes chown -R runner:runner on the Nix DB; this image has no such user.
+      - name: Create runner user
+        if: always()
+        run: |
+          sudo groupadd -f runner
+          id -u runner &>/dev/null || sudo useradd -M -g runner runner
+
       - name: Save Nix cache
         if: always()
         uses: https://github.com/nix-community/cache-nix-action/save@v7

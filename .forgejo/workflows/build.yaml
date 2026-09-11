@@ -33,6 +33,13 @@ jobs:
         run: |
           nix develop --command just ci attic-push ${{ steps.affected.outputs.hosts }}
 
+      # cache-nix-action's save step hardcodes chown -R runner:runner on the Nix DB; this image has no such user.
+      - name: Create runner user
+        if: always()
+        run: |
+          sudo groupadd -f runner
+          id -u runner &>/dev/null || sudo useradd -M -g runner runner
+
       - name: Save Nix cache
         if: always()
         uses: https://github.com/nix-community/cache-nix-action/save@v7

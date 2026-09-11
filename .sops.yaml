@@ -19,6 +19,8 @@ keys:
 
   - &minz-attic-0 age194zmkreav6zqskzz90vzjzugmyfsp5vtlhfm4dcqktd4zyfxap9qfjgnkf
 
+  - &minz-runner-0 age1t4sezkewmf7vxt2yv2jssdsmqkmrku78atm2cvp86pd0qg9964dshl83g4
+
   - &minz-desktop age134j43aaffphkr7x6ndx8hzwngp8p6m2kdyjk0vjphjw2l973fswqhvl5l5
 
 creation_rules:
@@ -80,6 +82,12 @@ creation_rules:
     key_groups:
       - age:
           - *minz-attic-0
+          - *minz-desktop
+
+  - path_regex: secrets/minz-runner-0\.yaml$
+    key_groups:
+      - age:
+          - *minz-runner-0
           - *minz-desktop
 
   - path_regex: secrets/tofu\.env$
