@@ -26,12 +26,13 @@ jobs:
           nix shell nixpkgs#gitleaks --command \
             gitleaks detect --source . --redact --no-banner
 
-      # cache-nix-action's save step hardcodes chown -R runner:runner on the Nix DB; this image has no such user.
-      - name: Create runner user
+      # cache-nix-action's save step needs a "runner" user and sqlite3, neither present on this image.
+      - name: Prepare cache-nix-action prerequisites
         if: always()
         run: |
           sudo groupadd -f runner
           id -u runner &>/dev/null || sudo useradd -M -g runner runner
+          sudo apt-get update && sudo apt-get install -y sqlite3
 
       - name: Save Nix cache
         if: always()

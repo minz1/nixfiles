@@ -7,9 +7,11 @@
 }:
 
 let
-  forgejo = (import ../../common/topology.nix).nodes."minz-vultr-nix-0";
+  topology = import ../../common/topology.nix;
+  forgejo = topology.nodes."minz-vultr-nix-0";
   forgejoAddr = forgejo.networks.mgmt.ip;
   forgejoPort = 3000;
+  runnerAddr = topology.nodes."${hostName}".networks.incus_bridge.ip;
 in
 {
   networking.hostName = hostName;
@@ -39,7 +41,7 @@ in
         };
         cache = {
           enabled = true;
-          host = forgejoAddr;
+          host = runnerAddr;
         };
         container = {
           docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";

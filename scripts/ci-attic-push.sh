@@ -36,4 +36,10 @@ for host in "${hosts[@]}"; do
 done
 
 # --ignore-upstream-cache-filter: Attic skips storing paths it thinks are on cache.nixos.org — fatal, guests can't reach it.
-nix build --no-link --print-out-paths "${attrs[@]}" | attic push homelab --stdin --ignore-upstream-cache-filter
+nix shell nixpkgs#attic-client --command bash -c '
+    nix build \
+      --extra-substituters https://minz-attic-0.internal/homelab \
+      --extra-trusted-public-keys "homelab:/832u4B/jZREiimqBzchHGyXQZaUVKoG4TlO/nUJh10=" \
+      --no-link --print-out-paths "$@" \
+    | attic push homelab --stdin --ignore-upstream-cache-filter
+' bash "${attrs[@]}"
