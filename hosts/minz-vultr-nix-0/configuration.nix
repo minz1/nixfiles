@@ -1,15 +1,13 @@
 {
   hostName,
   config,
-  lib,
   pkgs,
+  node,
+  mkHardened,
   ...
 }:
 
 let
-  mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
-  topology = import ../../common/topology.nix;
-  node = topology.nodes."${hostName}";
   wgAddr = node.networks.mgmt.ip;
   forgejoPort = 3000;
   fwPorts = [

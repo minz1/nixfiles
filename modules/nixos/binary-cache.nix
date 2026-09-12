@@ -2,11 +2,11 @@
   lib,
   hostName,
   hostEndpoints,
+  topology,
   ...
 }:
 
 let
-  topology = import ../../common/topology.nix;
   attic = (hostEndpoints."minz-attic-0" or { }).attic or null;
   isGuest = (topology.nodes.${hostName}.provisioner or "") == "incus";
   atticUrl = "https://minz-attic-0.internal/homelab";

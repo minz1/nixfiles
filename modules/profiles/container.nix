@@ -1,11 +1,11 @@
 {
   lib,
   modulesPath,
+  topology,
   ...
 }:
 
 let
-  topology = import ../../common/topology.nix;
   incusHostNode = lib.findFirst (
     n: (n.provisioner or "") == "incus-host"
   ) (throw "No incus-host node in topology") (lib.attrValues topology.nodes);

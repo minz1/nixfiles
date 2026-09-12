@@ -2,12 +2,12 @@
   config,
   lib,
   hostEndpoints,
+  node,
+  mkHardened,
   ...
 }:
 
 let
-  mkHardened = import ../lib/hardening.nix { inherit lib; };
-  topology = import ../../common/topology.nix;
   lokiEndpoint = (hostEndpoints."minz-obs-0" or { })."loki" or null;
   lokiUrl =
     if lokiEndpoint != null then
@@ -16,10 +16,7 @@ let
       null;
   enableAlloy = lokiUrl != null;
 
-  # topology-driven: avoids self-inspection cycles in NixOS config
-  thisNode = topology.nodes.${config.networking.hostName} or null;
-  hasInternalNetwork =
-    thisNode != null && ((thisNode.networks ? incus_bridge) || (thisNode.networks ? mgmt));
+  hasInternalNetwork = (node.networks ? incus_bridge) || (node.networks ? mgmt);
   certName = "${config.networking.hostName}.internal";
   enableClientCert = enableAlloy && hasInternalNetwork;
   certDir = "/var/lib/acme/${certName}";

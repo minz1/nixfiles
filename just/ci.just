@@ -11,3 +11,7 @@ attic-push *hosts:
 # Scan the given hosts' closures with vulnix, KEV-gated. Defaults to every deployed host.
 vulnix *hosts:
     ${ROOT_DIR}/scripts/ci-vulnix.sh {{ hosts }}
+
+# Bump flake.lock, build every deployed host's closure, and push to Attic. Leaves flake.lock updated for the workflow to upload as an artifact.
+flake-update:
+    ${ROOT_DIR}/scripts/ci-flake-update.sh

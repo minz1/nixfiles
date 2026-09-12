@@ -16,14 +16,14 @@ fi
 
 path=$(nix build --no-link --print-out-paths "${ROOT_DIR}#nixosConfigurations.${host}.config.system.build.toplevel")
 
-local_json=$(nix path-info --json -r "$path")
+local_json=$(nix path-info --json --json-format 1 -r "$path")
 
 mismatches=()
 checked=0
 while IFS= read -r p; do
     local_hash=$(echo "$local_json" | jq -r --arg p "$p" '.[$p].narHash')
 
-    remote_json=$(nix path-info --store "$attic_url" --json "$p" 2>/dev/null) || continue
+    remote_json=$(nix path-info --store "$attic_url" --json --json-format 1 "$p" 2>/dev/null) || continue
     remote_hash=$(echo "$remote_json" | jq -r --arg p "$p" '.[$p].narHash // empty')
     [ -z "$remote_hash" ] && continue
 

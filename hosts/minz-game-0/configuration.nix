@@ -3,12 +3,12 @@
   config,
   pkgs,
   hostEndpoints,
+  node,
   ...
 }:
 
 let
-  topology = import ../../common/topology.nix;
-  gameIp = topology.nodes.${hostName}.networks.incus_bridge.ip;
+  gameIp = node.networks.incus_bridge.ip;
 
   gamePort = 25565;
   rconPort = 25575;

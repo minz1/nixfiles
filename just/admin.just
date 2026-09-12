@@ -92,11 +92,11 @@ reboot-all:
 update:
     #!/usr/bin/env bash
     set -euo pipefail
-    nix flake update
+    nix flake update --flake "${ROOT_DIR}"
     echo "==> Building all host closures..."
     attrs=()
     for host in $(just deploy list); do
-      attrs+=(".#nixosConfigurations.${host}.config.system.build.toplevel")
+      attrs+=("${ROOT_DIR}#nixosConfigurations.${host}.config.system.build.toplevel")
     done
     nix build --no-link "${attrs[@]}"
     echo "All host closures built. Review flake.lock and commit."
@@ -106,8 +106,8 @@ check:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "==> nix flake check"
-    nix flake check
-    echo "==> nix fmt --check"
-    nix fmt -- --check "${ROOT_DIR}"
+    nix flake check "${ROOT_DIR}"
+    echo "==> nix fmt --fail-on-change"
+    nix fmt -- --fail-on-change "${ROOT_DIR}"
     echo "==> shellcheck scripts/*.sh"
     (cd "${ROOT_DIR}/scripts" && shellcheck -x ./*.sh)

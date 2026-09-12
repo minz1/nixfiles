@@ -1,7 +1,11 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  topology,
+  ...
+}:
 
 let
-  topology = import ../../common/topology.nix;
   sshKeys = import ../../common/ssh-keys.nix;
   me = topology.nodes.${config.networking.hostName} or { };
   myNetworks = builtins.attrNames (me.networks or { });

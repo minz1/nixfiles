@@ -1,0 +1,26 @@
+# Forgejo only schedules workflows from the default branch.
+on:
+  schedule:
+    - cron: "0 5 1 * *"
+  workflow_dispatch:
+
+jobs:
+  flake-update:
+    runs-on: nixos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
+
+      - name: Update flake.lock and push closures to Attic
+        run: |
+          nix develop --no-update-lock-file --command just ci flake-update
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flake.lock
+          path: flake.lock

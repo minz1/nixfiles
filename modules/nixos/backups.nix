@@ -2,18 +2,17 @@
   lib,
   config,
   hostName,
+  topology,
+  mkHardened,
   ...
 }:
 
 let
   cfg = config.homelab.backups;
-  topology = import ../../common/topology.nix;
 
   # shared restic repository host for the fleet; rclone mirrors it to B2 separately
   rustfsAddr = topology.nodes."minz-vultr-nix-0".networks.mgmt.ip;
   rustfsPort = 9000;
-
-  mkHardened = import ../lib/hardening.nix { inherit lib; };
 in
 {
   options.homelab.backups.targets = lib.mkOption {

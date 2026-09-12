@@ -135,8 +135,11 @@
         ];
       };
 
+      mkHardened = import ./modules/lib/hardening.nix { lib = nixpkgs.lib; };
+
       bootstrapImage = nixpkgs.lib.nixosSystem {
         inherit system;
+        specialArgs = { inherit topology; };
         modules = [
           ./modules/profiles/bootstrap.nix
         ];
@@ -144,6 +147,7 @@
 
       bootstrapContainerImage = nixpkgs.lib.nixosSystem {
         inherit system;
+        specialArgs = { inherit topology; };
         modules = [
           ./modules/profiles/bootstrap-container.nix
         ];
@@ -191,7 +195,14 @@
           inherit system;
           specialArgs = {
             hostName = name;
-            inherit lanzaboote authentik-nix hostEndpoints;
+            inherit
+              lanzaboote
+              authentik-nix
+              hostEndpoints
+              topology
+              node
+              mkHardened
+              ;
           };
           modules = [
             sops-nix.nixosModules.sops
@@ -219,7 +230,7 @@
       hostEndpoints = nixpkgs.lib.mapAttrs (_: nixos: nixos.config.homelab.endpoints) nixosConfigurations;
     in
     {
-      inherit nixosConfigurations hostEndpoints;
+      inherit nixosConfigurations;
 
       topology.${system} = import nix-topology {
         inherit pkgs;
@@ -256,7 +267,7 @@
         ];
       };
 
-      formatter.${system} = pkgs.nixfmt;
+      formatter.${system} = pkgs.nixfmt-tree;
 
       packages.${system} = {
         inherit (pkgs) adguard-exporter;

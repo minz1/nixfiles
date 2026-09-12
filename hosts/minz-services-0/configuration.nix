@@ -2,12 +2,12 @@
   hostName,
   hostEndpoints,
   config,
+  topology,
+  node,
   ...
 }:
 
 let
-  topology = import ../../common/topology.nix;
-  node = topology.nodes."${hostName}";
   servicesIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 

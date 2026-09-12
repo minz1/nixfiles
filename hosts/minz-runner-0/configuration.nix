@@ -3,11 +3,11 @@
   config,
   lib,
   pkgs,
+  topology,
   ...
 }:
 
 let
-  topology = import ../../common/topology.nix;
   forgejo = topology.nodes."minz-vultr-nix-0";
   forgejoAddr = forgejo.networks.mgmt.ip;
   forgejoPort = 3000;

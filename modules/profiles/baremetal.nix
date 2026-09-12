@@ -1,8 +1,6 @@
-{ lib, hostName, ... }:
+{ lib, node, ... }:
 
 let
-  topology = import ../../common/topology.nix;
-  node = topology.nodes.${hostName} or (throw "No topology entry for ${hostName}");
   disk = node.storage.disk;
   nixSize = node.storage.nix_size or "30G";
 in

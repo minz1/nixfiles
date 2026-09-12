@@ -1,12 +1,11 @@
 {
   hostName,
   config,
+  node,
   ...
 }:
 
 let
-  topology = import ../../common/topology.nix;
-  node = topology.nodes."${hostName}";
   atticIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
   caddyHttpsPort = 443;

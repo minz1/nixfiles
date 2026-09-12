@@ -4,14 +4,14 @@
   pkgs,
   lib,
   hostEndpoints,
+  topology,
+  node,
+  mkHardened,
   ...
 }:
 
 let
-  topology = import ../../common/topology.nix;
-  node = topology.nodes."${hostName}";
   wgAddr = node.networks.mgmt.ip;
-  mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
 
   authentik = hostEndpoints.minz-authentik-0.authentik;
   grafana = hostEndpoints.minz-obs-0.grafana;

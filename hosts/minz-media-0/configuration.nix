@@ -3,13 +3,13 @@
   config,
   lib,
   pkgs,
+  topology,
+  node,
+  mkHardened,
   ...
 }:
 
 let
-  mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
-  topology = import ../../common/topology.nix;
-  node = topology.nodes."${hostName}";
   mediaIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 

@@ -4,13 +4,12 @@
   pkgs,
   lib,
   authentik-nix,
+  node,
+  mkHardened,
   ...
 }:
 
 let
-  mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
-  topology = import ../../common/topology.nix;
-  node = topology.nodes."${hostName}";
   authentikIp = node.networks.incus_bridge.ip;
   acmeHttpPort = 80;
 

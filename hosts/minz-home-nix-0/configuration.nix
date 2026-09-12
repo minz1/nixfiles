@@ -3,12 +3,12 @@
   pkgs,
   lib,
   hostName,
+  topology,
+  node,
   ...
 }:
 
 let
-  topology = import ../../common/topology.nix;
-  node = topology.nodes."${hostName}";
   incusNetwork = topology.networks.incus_bridge;
   incusNodeNetwork = node.networks.incus_bridge;
   wgAddr = node.networks.mgmt.ip;
