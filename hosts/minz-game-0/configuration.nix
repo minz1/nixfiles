@@ -141,6 +141,8 @@ in
       RCON_PASSWORD=${config.sops.placeholder.rcon_password}
       AUTHENTIK_URL=https://${authentikIp}:${toString authentikPort}
       AUTHENTIK_TOKEN=${config.sops.placeholder.minecraft_authentik_token}
+      AUTHENTIK_CLIENT_CERT=/var/lib/acme/${hostName}.internal/cert.pem
+      AUTHENTIK_CLIENT_KEY=/var/lib/acme/${hostName}.internal/key.pem
       WHITELIST_FILE=/persist/atm10/whitelist.json
     '';
     mode = "0400";
@@ -195,11 +197,16 @@ in
 
   systemd.services.minecraft-whitelist-sync = {
     description = "Sync Authentik minecraft users to MC whitelist";
-    after = [ "network.target" ];
+    after = [
+      "network.target"
+      "acme-${hostName}.internal.service"
+    ];
+    wants = [ "acme-${hostName}.internal.service" ];
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${whitelistSyncScript}";
       EnvironmentFile = config.sops.templates.mc-sync-env.path;
+      SupplementaryGroups = [ "caddy" ];
     };
     restartTriggers = [
       config.sops.templates.mc-sync-env.content

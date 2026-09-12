@@ -24,6 +24,8 @@ RCON_PASS = "" if offline else os.environ["RCON_PASSWORD"]
 
 AUTH_URL   = "" if USERS_FILE else os.environ["AUTHENTIK_URL"].rstrip("/")
 AUTH_TOKEN = "" if USERS_FILE else os.environ["AUTHENTIK_TOKEN"]
+AUTH_CERT  = "" if USERS_FILE else os.environ["AUTHENTIK_CLIENT_CERT"]
+AUTH_KEY   = "" if USERS_FILE else os.environ["AUTHENTIK_CLIENT_KEY"]
 
 
 def _send(sock: socket.socket, req_id: int, ptype: int, body: str) -> None:
@@ -57,6 +59,7 @@ if USERS_FILE:
     desired: dict[str, str] = {e["minecraft_uuid"]: e["minecraft_username"] for e in entries}
 else:
     ctx = ssl.create_default_context()
+    ctx.load_cert_chain(AUTH_CERT, AUTH_KEY)
     desired = {}
     page = 1
     while True:

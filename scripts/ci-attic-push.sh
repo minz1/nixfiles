@@ -38,6 +38,7 @@ done
 # --ignore-upstream-cache-filter: Attic skips storing paths it thinks are on cache.nixos.org — fatal, guests can't reach it.
 nix shell nixpkgs#attic-client --command bash -c '
     nix build \
+      --no-update-lock-file \
       --extra-substituters https://minz-attic-0.internal/homelab \
       --extra-trusted-public-keys "homelab:/832u4B/jZREiimqBzchHGyXQZaUVKoG4TlO/nUJh10=" \
       --no-link --print-out-paths "$@" \

@@ -98,17 +98,56 @@ in
             authentik = {
               listen = [ ":${toString authentikHttpsPort}" ];
               automatic_https.disable = true;
+              strict_sni_host = false;
               tls_connection_policies = [
-                { certificate_selection.any_tag = [ "authentik" ]; }
+                {
+                  certificate_selection.any_tag = [ "authentik" ];
+                  client_authentication = {
+                    trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];
+                    mode = "require_and_verify";
+                  };
+                }
               ];
               routes = [
                 {
+                  match = [
+                    {
+                      not = [
+                        {
+                          expression = ''{http.request.tls.client.subject} == "CN=minz-vultr-nix-1.internal" || {http.request.tls.client.subject} == "CN=minz-obs-0.internal" || {http.request.tls.client.subject} == "CN=minz-game-0.internal"'';
+                        }
+                      ];
+                    }
+                  ];
+                  handle = [
+                    {
+                      handler = "static_response";
+                      status_code = 403;
+                    }
+                  ];
+                }
+                {
+                  # preserve X-Forwarded-Host from edge Caddy when present; overwriting it
+                  # breaks outpost proxy provider matching. Only applies when the caller
+                  # actually set one — see below for direct/server-to-server callers.
+                  match = [ { header.X-Forwarded-Host = [ "*" ]; } ];
                   handle = [
                     {
                       handler = "reverse_proxy";
                       upstreams = [ { dial = "localhost:${toString authentikPort}"; } ];
-                      # preserve X-Forwarded-Host from edge Caddy; overwriting breaks outpost proxy provider matching
                       headers.request.set."X-Forwarded-Host" = [ "{http.request.header.X-Forwarded-Host}" ];
+                    }
+                  ];
+                }
+                {
+                  # direct/server-to-server callers (Grafana's OIDC token exchange, mTLS
+                  # clients) send no X-Forwarded-Host at all; don't force it to empty
+                  # here — Caddy's own reverse_proxy default (the real incoming Host)
+                  # is correct, and forcing empty makes Authentik 404 the request.
+                  handle = [
+                    {
+                      handler = "reverse_proxy";
+                      upstreams = [ { dial = "localhost:${toString authentikPort}"; } ];
                     }
                   ];
                 }
@@ -150,6 +189,11 @@ in
     ldapTlsPort
     acmeHttpPort
   ];
+
+  # authentik's own cert-discovery watcher (unrelated to our step-ca certs) defaults to
+  # /certs, a Docker-image convention; missing here, it throws a "critical"-level
+  # FileNotFoundError in authentik-worker on every boot. Create the empty dir so it starts.
+  systemd.tmpfiles.rules = [ "d /certs 0755 root root -" ];
 
   systemd.services.authentik.serviceConfig = mkHardened {
     privateUsers = false;

@@ -40,6 +40,10 @@ for ((i = 0; i < total; i++)); do
     phase_failed=()
     deployed_hosts=()
     for host in "${phase_hosts[@]}"; do
+        if [ "${SKIP_ATTIC_VERIFY:-0}" != "1" ] && ! "${ROOT_DIR}/scripts/verify-attic-closure.sh" "$host"; then
+            phase_failed+=("$host (attic verify failed)")
+            continue
+        fi
         if "${ROOT_DIR}/scripts/deploy-retry.sh" "$host"; then
             deployed_hosts+=("$host")
         else

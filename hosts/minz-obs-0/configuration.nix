@@ -18,6 +18,7 @@ let
   lokiPort = 3100;
   lokiHttpsPort = 3101;
   grafanaPort = 3000;
+  grafanaHttpsPort = 3443;
   blackboxPort = 9115;
   adguardExporterPort = 9618;
   certDir = "/var/lib/acme/minz-obs-0.internal";
@@ -280,9 +281,52 @@ in
           {
             certificate = "/var/lib/acme/minz-obs-0.internal/cert.pem";
             key = "/var/lib/acme/minz-obs-0.internal/key.pem";
-            tags = [ "loki" ];
+            tags = [
+              "loki"
+              "grafana"
+            ];
           }
         ];
+        http.servers.grafana = {
+          listen = [ ":${toString grafanaHttpsPort}" ];
+          automatic_https.disable = true;
+          strict_sni_host = false;
+          tls_connection_policies = [
+            {
+              certificate_selection.any_tag = [ "grafana" ];
+              client_authentication = {
+                trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];
+                mode = "require_and_verify";
+              };
+            }
+          ];
+          routes = [
+            {
+              match = [
+                {
+                  not = [
+                    { expression = ''{http.request.tls.client.subject} == "CN=minz-vultr-nix-1.internal"''; }
+                  ];
+                }
+              ];
+              handle = [
+                {
+                  handler = "static_response";
+                  status_code = 403;
+                }
+              ];
+            }
+            {
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString grafanaPort}"; } ];
+                  headers.request.set."Host" = [ "{http.request.host}" ];
+                }
+              ];
+            }
+          ];
+        };
         http.servers.loki = {
           listen = [ ":${toString lokiHttpsPort}" ];
           automatic_https.disable = true;
@@ -322,11 +366,9 @@ in
     enable = true;
     settings = {
       server = {
-        http_addr = "0.0.0.0";
+        http_addr = "127.0.0.1";
         http_port = grafanaPort;
-        protocol = "https";
-        cert_file = "/var/lib/acme/minz-obs-0.internal/cert.pem";
-        cert_key = "/var/lib/acme/minz-obs-0.internal/key.pem";
+        protocol = "http";
         domain = "grafana.minz1.com";
         root_url = "https://grafana.minz1.com/";
       };
@@ -356,6 +398,9 @@ in
         api_url = "https://minz-authentik-0.internal:${toString authentikHttpsPort}/application/o/userinfo/";
         role_attribute_path = "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'";
         allow_sign_up = true;
+        tls_client_cert = "${certDir}/cert.pem";
+        tls_client_key = "${certDir}/key.pem";
+        tls_client_ca = "/etc/ssl/internal-ca.crt";
       };
       "auth" = {
         disable_login_form = true;
@@ -747,7 +792,7 @@ in
 
   networking.firewall.allowedTCPPorts = [
     lokiHttpsPort
-    grafanaPort
+    grafanaHttpsPort
     acmeHttpPort
   ];
 
@@ -814,7 +859,7 @@ in
     };
     grafana = {
       ip = obsIp;
-      port = grafanaPort;
+      port = grafanaHttpsPort;
       tls = true;
     };
   };

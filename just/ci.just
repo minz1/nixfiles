@@ -7,3 +7,7 @@ affected-hosts before after="HEAD":
 # Build and push the given hosts' closures to the Attic cache.
 attic-push *hosts:
     ${ROOT_DIR}/scripts/ci-attic-push.sh {{ hosts }}
+
+# Scan the given hosts' closures with vulnix, KEV-gated. Defaults to every deployed host.
+vulnix *hosts:
+    ${ROOT_DIR}/scripts/ci-vulnix.sh {{ hosts }}

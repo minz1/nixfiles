@@ -250,6 +250,8 @@
           opentofu
           awscli2
           nix-update
+          jq
+          curl
           deployPkgs.deploy-rs.deploy-rs
         ];
       };

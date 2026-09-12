@@ -50,7 +50,7 @@ check_obs0_functional() {
     local out
     out=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" bash -s <<'REMOTE'
 set -uo pipefail
-grafana_code=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 https://127.0.0.1:3000/api/health 2>/dev/null)
+grafana_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://127.0.0.1:3000/api/health 2>/dev/null)
 loki_result=$(curl -s --max-time 5 --get "http://127.0.0.1:3100/loki/api/v1/query" \
   --data-urlencode 'query=sum(count_over_time({job="systemd-journal"}[10m]))' 2>/dev/null \
   | grep -oE '"result":\[[^]]*\]')

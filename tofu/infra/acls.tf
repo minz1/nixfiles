@@ -192,7 +192,15 @@ resource "incus_network_acl" "obs" {
       action           = "allow"
       destination_port = "3000"
       protocol         = "tcp"
-      description      = "Grafana (proxied by edge Caddy)"
+      description      = "Grafana (proxied by edge Caddy) — transitional, drop once 3443 is verified"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      source           = local.edge_subnet
+      destination_port = "3443"
+      protocol         = "tcp"
+      description      = "Grafana HTTPS+mTLS (proxied by edge Caddy)"
       state            = "enabled"
     },
     {

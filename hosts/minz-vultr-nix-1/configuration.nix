@@ -11,6 +11,7 @@ let
   topology = import ../../common/topology.nix;
   node = topology.nodes."${hostName}";
   wgAddr = node.networks.mgmt.ip;
+  mkHardened = import ../../modules/lib/hardening.nix { inherit lib; };
 
   authentik = hostEndpoints.minz-authentik-0.authentik;
   grafana = hostEndpoints.minz-obs-0.grafana;
@@ -39,11 +40,22 @@ let
     velocityPort = toString velocityPort;
   };
 
+  # transport block presenting this host's own internal cert as a client cert; needed for
+  # every callee that now requires mTLS (Authentik, Grafana behind obs-0's Caddy).
+  clientAuthTransport = ''
+    transport http {
+      tls
+      tls_client_auth /var/lib/acme/${hostName}.internal/cert.pem /var/lib/acme/${hostName}.internal/key.pem
+      tls_trusted_ca_certs /etc/ssl/internal-ca.crt
+    }
+  '';
+
   mkProxyVhost =
     {
       endpoint,
       headers ? "import security_headers",
       extra ? null,
+      clientAuth ? false,
     }:
     {
       extraConfig = ''
@@ -51,6 +63,7 @@ let
         crowdsec
         reverse_proxy https://${endpoint.ip}:${toString endpoint.port} {
           header_up Host {http.request.host}${lib.optionalString (extra != null) "\n  ${extra}"}
+          ${lib.optionalString clientAuth clientAuthTransport}
         }
       '';
     };
@@ -196,14 +209,21 @@ in
         forward_auth https://${authentik.ip}:${toString authentik.port} {
           uri /outpost.goauthentik.io/auth/caddy
           copy_headers X-authentik-username X-authentik-groups X-authentik-email X-authentik-name X-authentik-uid
+          ${clientAuthTransport}
         }
       }
     '';
 
     virtualHosts = {
-      "auth.minz1.com" = mkProxyVhost { endpoint = authentik; };
+      "auth.minz1.com" = mkProxyVhost {
+        endpoint = authentik;
+        clientAuth = true;
+      };
 
-      "grafana.minz1.com" = mkProxyVhost { endpoint = grafana; };
+      "grafana.minz1.com" = mkProxyVhost {
+        endpoint = grafana;
+        clientAuth = true;
+      };
 
       # X-Frame-Options omitted: Jellyfin uses iframes for some player views.
       "jellyfin.minz1.com" = mkProxyVhost {
@@ -233,7 +253,9 @@ in
           crowdsec
 
           handle /outpost.goauthentik.io/* {
-            reverse_proxy https://${authentik.ip}:${toString authentik.port}
+            reverse_proxy https://${authentik.ip}:${toString authentik.port} {
+              ${clientAuthTransport}
+            }
           }
 
           handle /media* {
@@ -255,7 +277,9 @@ in
           crowdsec
 
           handle /outpost.goauthentik.io/* {
-            reverse_proxy https://${authentik.ip}:${toString authentik.port}
+            reverse_proxy https://${authentik.ip}:${toString authentik.port} {
+              ${clientAuthTransport}
+            }
           }
 
           ${lib.concatMapStrings (app: ''
@@ -301,20 +325,26 @@ in
     ];
     wants = [ "wireguard-wg1.service" ];
     wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      DynamicUser = true;
-      StateDirectory = "velocity";
-      WorkingDirectory = "/var/lib/velocity";
-      ExecStartPre = [
-        # No +: runs as DynamicUser so velocity.toml is owned by that UID and Velocity can write back for config migrations.
-        "${pkgs.coreutils}/bin/install -m 644 ${velocityToml} /var/lib/velocity/velocity.toml"
-        # + required: forwarding.secret is a sops path readable only by root.
-        "+${pkgs.coreutils}/bin/install -m 644 ${config.sops.secrets.minecraft_velocity_forwarding_secret.path} /var/lib/velocity/forwarding.secret"
-      ];
-      ExecStart = "${pkgs.velocity}/bin/velocity -Dvelocity.max-known-packs=1024 -Dvelocity.max-plugin-message-payload-size=16777216";
-      Restart = "on-failure";
-      RestartSec = "5s";
-    };
+    serviceConfig =
+      mkHardened {
+        capabilityBoundingSet = [ "CAP_DAC_OVERRIDE" ];
+        ambientCapabilities = [ "CAP_DAC_OVERRIDE" ];
+        privateUsers = false;
+      }
+      // {
+        DynamicUser = true;
+        StateDirectory = "velocity";
+        WorkingDirectory = "/var/lib/velocity";
+        ExecStartPre = [
+          # No +: runs as DynamicUser so velocity.toml is owned by that UID and Velocity can write back for config migrations.
+          "${pkgs.coreutils}/bin/install -m 644 ${velocityToml} /var/lib/velocity/velocity.toml"
+          # + required: forwarding.secret is a sops path readable only by root.
+          "+${pkgs.coreutils}/bin/install -m 644 ${config.sops.secrets.minecraft_velocity_forwarding_secret.path} /var/lib/velocity/forwarding.secret"
+        ];
+        ExecStart = "${pkgs.velocity}/bin/velocity -Dvelocity.max-known-packs=1024 -Dvelocity.max-plugin-message-payload-size=16777216";
+        Restart = "on-failure";
+        RestartSec = "5s";
+      };
   };
 
   networking.firewall.allowedTCPPorts = [ velocityPort ];

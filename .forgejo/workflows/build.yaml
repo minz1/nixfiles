@@ -16,13 +16,18 @@ jobs:
 
       - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
 
+      - name: Verify flake.lock is current
+        run: |
+          nix flake lock --no-update-lock-file
+          git diff --exit-code flake.lock
+
       - name: Detect affected hosts
         id: affected
         run: |
-          hosts=$(nix develop --command just ci affected-hosts "${{ github.event.before }}" "${{ github.sha }}")
+          hosts=$(nix develop --no-update-lock-file --command just ci affected-hosts "${{ github.event.before }}" "${{ github.sha }}")
           echo "hosts=$hosts" >> "$GITHUB_OUTPUT"
 
       - name: Build and push to Attic
         if: steps.affected.outputs.hosts != ''
         run: |
-          nix develop --command just ci attic-push ${{ steps.affected.outputs.hosts }}
+          nix develop --no-update-lock-file --command just ci attic-push ${{ steps.affected.outputs.hosts }}
