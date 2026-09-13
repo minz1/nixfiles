@@ -28,7 +28,10 @@ in
     settings = {
       listen = "127.0.0.1:${toString atticPort}";
       api-endpoint = "https://${hostName}.internal/";
-      allowed-hosts = [ "${hostName}.internal" ];
+      allowed-hosts = [
+        "${hostName}.internal"
+        atticIp
+      ];
       garbage-collection = {
         interval = "12 hours";
         default-retention-period = "30 days";
@@ -60,7 +63,12 @@ in
           routes = [
             {
               match = [
-                { host = [ "${hostName}.internal" ]; }
+                {
+                  host = [
+                    "${hostName}.internal"
+                    atticIp
+                  ];
+                }
               ];
               handle = [
                 {

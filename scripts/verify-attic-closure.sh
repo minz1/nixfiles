@@ -2,7 +2,12 @@
 set -euo pipefail
 
 host="${1:?usage: verify-attic-closure.sh <host>}"
-attic_url="https://minz-attic-0.internal/homelab"
+
+# IP, not the .internal DNS name — Caddy's route match and atticd's allowed-hosts both
+# accept it (hosts/minz-attic-0/configuration.nix), so this needs no DNS resolution on
+# whatever machine runs it, unlike fleet NixOS hosts which get the name via extraHosts.
+attic_ip=$(nix eval --raw "${ROOT_DIR}#deploy.nodes.minz-attic-0.hostname")
+attic_url="https://${attic_ip}/homelab"
 
 if nix config show substituters | grep -qF "minz-attic-0.internal"; then
     echo "refusing to run: local substituters already include the Attic cache — this check is circular" >&2
