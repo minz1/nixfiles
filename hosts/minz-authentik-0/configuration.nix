@@ -5,6 +5,7 @@
   lib,
   authentik-nix,
   node,
+  topology,
   mkHardened,
   ...
 }:
@@ -100,6 +101,11 @@ in
               strict_sni_host = false;
               tls_connection_policies = [
                 {
+                  # mgmt subnet: no client cert, Tofu's authentik provider can't present one
+                  match.remote_ip.ranges = [ topology.networks.mgmt.subnet ];
+                  certificate_selection.any_tag = [ "authentik" ];
+                }
+                {
                   certificate_selection.any_tag = [ "authentik" ];
                   client_authentication = {
                     trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];
@@ -114,6 +120,9 @@ in
                       not = [
                         {
                           expression = ''{http.request.tls.client.subject} == "CN=minz-vultr-nix-1.internal" || {http.request.tls.client.subject} == "CN=minz-obs-0.internal" || {http.request.tls.client.subject} == "CN=minz-game-0.internal"'';
+                        }
+                        {
+                          remote_ip.ranges = [ topology.networks.mgmt.subnet ];
                         }
                       ];
                     }

@@ -17,3 +17,9 @@ variable "seerr_discord_webhook" {
 }
 
 variable "jellyfin_api_key" { sensitive = true }
+
+variable "minecraft_webhook_token" {
+  description = "Bearer token whitelist-sync-go requires on POST /whitelist/notify. Set via TF_VAR_minecraft_webhook_token in secrets/tofu.env."
+  type        = string
+  sensitive   = true
+}

@@ -4,6 +4,7 @@
   pkgs,
   hostEndpoints,
   node,
+  mkHardened,
   ...
 }:
 
@@ -17,9 +18,10 @@ let
   authentikIp = hostEndpoints.minz-authentik-0.authentik.ip;
   authentikPort = hostEndpoints.minz-authentik-0.authentik.port;
 
-  whitelistSyncScript = pkgs.writeShellScript "minecraft-whitelist-sync" ''
-    exec ${pkgs.python3}/bin/python3 ${./whitelist-sync.py} "$@"
-  '';
+  whitelistSyncPort = 8765;
+
+  # subuid-mapped host UID of the JVM's container-internal UID 1000
+  minecraftJvmUid = 100000 + 1000 - 1;
 
   forwardproxyVersion = "v0.0.0-20260321230143-0aab84dad4fc";
 
@@ -51,7 +53,10 @@ in
   networking.hostName = hostName;
   system.stateVersion = "25.11";
 
-  networking.firewall.allowedTCPPorts = [ gamePort ];
+  networking.firewall.allowedTCPPorts = [
+    gamePort
+    443
+  ];
 
   networking.nftables.enable = true;
 
@@ -73,32 +78,73 @@ in
     };
     settings = {
       logging.logs.default.level = "INFO";
-      apps.http.servers.forward_proxy = {
-        listen = [ "${gameIp}:${toString proxyPort}" ];
-        automatic_https.disable = true;
-        logs = { };
-        routes = [
+      apps = {
+        tls.certificates.load_files = [
           {
-            handle = [
-              {
-                handler = "forward_proxy";
-                hide_ip = true;
-                hide_via = true;
-                allowed_ports = [ 443 ];
-                acl = [
-                  {
-                    subjects = proxyAllowedHosts;
-                    allow = true;
-                  }
-                  {
-                    subjects = [ "all" ];
-                    allow = false;
-                  }
-                ];
-              }
-            ];
+            certificate = "/var/lib/acme/${hostName}.internal/cert.pem";
+            key = "/var/lib/acme/${hostName}.internal/key.pem";
+            tags = [ "game" ];
           }
         ];
+        http.servers.forward_proxy = {
+          listen = [ "${gameIp}:${toString proxyPort}" ];
+          automatic_https.disable = true;
+          logs = { };
+          routes = [
+            {
+              handle = [
+                {
+                  handler = "forward_proxy";
+                  hide_ip = true;
+                  hide_via = true;
+                  allowed_ports = [ 443 ];
+                  acl = [
+                    {
+                      subjects = proxyAllowedHosts;
+                      allow = true;
+                    }
+                    {
+                      subjects = [ "all" ];
+                      allow = false;
+                    }
+                  ];
+                }
+              ];
+            }
+          ];
+        };
+        http.servers.webhook = {
+          listen = [ "${gameIp}:443" ];
+          automatic_https.disable = true;
+          strict_sni_host = false;
+          tls_connection_policies = [ { certificate_selection.any_tag = [ "game" ]; } ];
+          routes = [
+            {
+              match = [
+                {
+                  not = [
+                    { remote_ip.ranges = [ "${authentikIp}/32" ]; }
+                  ];
+                }
+              ];
+              handle = [
+                {
+                  handler = "static_response";
+                  status_code = 403;
+                }
+              ];
+            }
+            {
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString whitelistSyncPort}"; } ];
+                  headers.request.set."Host" = [ "{http.request.host}" ];
+                }
+              ];
+            }
+          ];
+        };
       };
     };
   };
@@ -113,6 +159,7 @@ in
   sops.secrets.curseforge_api_key = { };
   sops.secrets.velocity_forwarding_secret = { };
   sops.secrets.minecraft_authentik_token = { };
+  sops.secrets.minecraft_webhook_token = { };
 
   sops.templates.mc-env = {
     content = ''
@@ -134,7 +181,7 @@ in
     mode = "0400";
   };
 
-  sops.templates.mc-sync-env = {
+  sops.templates.whitelist-sync-env = {
     content = ''
       RCON_HOST=127.0.0.1
       RCON_PORT=${toString rconPort}
@@ -144,7 +191,9 @@ in
       AUTHENTIK_CLIENT_CERT=/var/lib/acme/${hostName}.internal/cert.pem
       AUTHENTIK_CLIENT_KEY=/var/lib/acme/${hostName}.internal/key.pem
       WHITELIST_FILE=/persist/atm10/whitelist.json
+      WEBHOOK_TOKEN=${config.sops.placeholder.minecraft_webhook_token}
     '';
+    owner = "oci";
     mode = "0400";
   };
 
@@ -195,35 +244,31 @@ in
     };
   };
 
-  systemd.services.minecraft-whitelist-sync = {
-    description = "Sync Authentik minecraft users to MC whitelist";
-    after = [
-      "network.target"
-      "acme-${hostName}.internal.service"
-    ];
-    wants = [ "acme-${hostName}.internal.service" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${whitelistSyncScript}";
-      EnvironmentFile = config.sops.templates.mc-sync-env.path;
+  services.minecraft-whitelist-sync = {
+    enable = true;
+    listenAddr = "127.0.0.1:${toString whitelistSyncPort}";
+    environmentFile = config.sops.templates.whitelist-sync-env.path;
+    extraServiceConfig = mkHardened { privateUsers = false; } // {
+      User = "oci";
+      Group = "oci";
       SupplementaryGroups = [ "caddy" ];
     };
-    restartTriggers = [
-      config.sops.templates.mc-sync-env.content
-    ];
   };
 
-  systemd.timers.minecraft-whitelist-sync = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnBootSec = "2m";
-      OnUnitActiveSec = "60s";
-    };
+  systemd.services.minecraft-whitelist-sync = {
+    after = [ "acme-${hostName}.internal.service" ];
+    wants = [ "acme-${hostName}.internal.service" ];
+    restartTriggers = [ config.sops.templates.whitelist-sync-env.content ];
   };
+
+  security.acme.certs."${hostName}.internal".reloadServices = [ "minecraft-whitelist-sync.service" ];
 
   systemd.tmpfiles.rules = [
-    # oci (uid 902) owns the data root; container init (UID 0 inside = oci on host) sets up subdirs, then drops to UID 1000 for the Minecraft process.
+    # ACLs, not chown: itzg's entrypoint reclaims /data's ownership on every container start
     "d /persist/atm10 0750 oci oci -"
+    "a+ /persist/atm10 - - - - user:oci:rwx,user:${toString minecraftJvmUid}:rx,mask::rwx,default:user:oci:rw-,default:mask::rw-"
+    "z /persist/atm10/whitelist.json 0600 root root -"
+    "a+ /persist/atm10/whitelist.json - - - - user:oci:rw-,user:${toString minecraftJvmUid}:r--,mask::rw-"
   ];
 
   # Excludes are re-buildable/redundant (mods+libraries: CurseForge; simplebackups: the mod's own duplicate backup).

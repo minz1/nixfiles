@@ -29,6 +29,7 @@
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
     decypharr.url = "github:minz1/decypharr/minz";
     mediafixer.url = "github:minz1/media-fixer";
+    whitelist-sync.url = "github:minz1/minecraft-whitelist-sync";
     nix-topology = {
       url = "github:oddlama/nix-topology";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -49,6 +50,7 @@
       quadlet-nix,
       decypharr,
       mediafixer,
+      whitelist-sync,
       nix-topology,
     }:
     let
@@ -210,9 +212,12 @@
             decypharr.nixosModules.default
             mediafixer.nixosModules.media-fixer
             mediafixer.nixosModules.media-agent
+            whitelist-sync.nixosModules.default
             {
               services.media-fixer.package = mediafixer.packages.${system}.media-fixer;
               services.media-agent.package = mediafixer.packages.${system}.media-agent;
+              services.minecraft-whitelist-sync.package =
+                whitelist-sync.packages.${system}.minecraft-whitelist-sync;
             }
             nix-topology.nixosModules.default
             ./modules/nixos/base.nix

@@ -195,13 +195,19 @@ in
 
   # rclone (not restic copy, which would need every host's repo password); no hard-delete.
   systemd.services.b2-mirror = {
-    description = "Mirror RustFS backups bucket to Backblaze B2";
+    description = "Mirror RustFS backups + Tofu state buckets to Backblaze B2";
     after = [ "rustfs.service" ];
     path = [ pkgs.rclone ];
     serviceConfig = mkHardened { };
     environment.RCLONE_CONFIG = config.sops.templates.rclone-conf.path;
+    # each sync attempted independently — one failing (e.g. the known B2 storage-cap issue,
+    # see docs/ops.md) must not silently prevent the other from running, but the service
+    # still exits non-zero overall so a real failure keeps surfacing.
     script = ''
-      rclone sync rustfs:backups b2:minz-homelab-backups --checkers 8 --transfers 4
+      status=0
+      rclone sync rustfs:backups b2:minz-homelab-backups --checkers 8 --transfers 4 || status=1
+      rclone sync rustfs:tofu-state b2:minz-homelab-backups/tofu-state --checkers 8 --transfers 4 || status=1
+      exit "$status"
     '';
   };
 

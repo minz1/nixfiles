@@ -17,6 +17,7 @@ locals {
   incus_bridge_subnet = "10.10.0.0/24"
   mgmt_subnet         = "10.8.0.0/24"
   edge_subnet         = "10.9.0.0/24"
+  authentik_ip        = "10.10.0.3"
 
   # Shared ingress rules: SSH, ACME HTTP-01, node_exporter. Source empty = any.
   common_ingress = [
@@ -274,6 +275,14 @@ resource "incus_network_acl" "game" {
       destination_port = "25575"
       protocol         = "tcp"
       description      = "RCON admin access from mgmt WireGuard"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      source           = local.authentik_ip
+      destination_port = "443"
+      protocol         = "tcp"
+      description      = "whitelist-sync webhook from Authentik"
       state            = "enabled"
     },
   ])

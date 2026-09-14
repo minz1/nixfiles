@@ -78,6 +78,8 @@ resource "authentik_user" "minecraft_sync" {
   name     = "Minecraft Whitelist Sync"
   type     = "service_account"
   roles    = [authentik_rbac_role.minecraft_sync.id]
+  # destination_group needs at least one member for the event_rule's webhook to fire
+  groups = [authentik_group.minecraft_whitelist_notify.id]
 }
 
 resource "authentik_token" "minecraft_sync" {
@@ -92,4 +94,49 @@ resource "authentik_token" "minecraft_sync" {
 output "minecraft_sync_token" {
   value     = authentik_token.minecraft_sync.key
   sensitive = true
+}
+
+# ── Whitelist-sync webhook: notify game-0 on any user change ────────────────
+
+resource "authentik_certificate_key_pair" "internal_ca" {
+  name             = "homelab-internal-ca"
+  certificate_data = file("${path.module}/../../hosts/minz-pki-0/root_ca.crt")
+}
+
+resource "authentik_property_mapping_notification" "minecraft_whitelist_headers" {
+  name       = "minecraft-whitelist-webhook-headers"
+  expression = "return {\"Authorization\": \"Bearer ${var.minecraft_webhook_token}\"}"
+}
+
+resource "authentik_event_transport" "minecraft_whitelist" {
+  name                    = "minecraft-whitelist-webhook"
+  mode                    = "webhook"
+  webhook_url             = "https://minz-game-0.internal/whitelist/notify"
+  webhook_ca              = authentik_certificate_key_pair.internal_ca.id
+  webhook_mapping_headers = authentik_property_mapping_notification.minecraft_whitelist_headers.id
+  send_once               = true
+}
+
+resource "authentik_group" "minecraft_whitelist_notify" {
+  name = "minecraft-whitelist-notify"
+}
+
+# authentik_policy_event_matcher 500s server-side on any real use (authentik 2026.5.6 bug); expression policy instead
+resource "authentik_policy_expression" "minecraft_user_changed" {
+  name              = "minecraft-whitelist-user-changed"
+  execution_logging = false
+  expression        = file("${path.module}/policies/minecraft-user-changed.py")
+}
+
+resource "authentik_event_rule" "minecraft_whitelist" {
+  name              = "minecraft-whitelist-sync"
+  transports        = [authentik_event_transport.minecraft_whitelist.id]
+  severity          = "notice"
+  destination_group = authentik_group.minecraft_whitelist_notify.id
+}
+
+resource "authentik_policy_binding" "minecraft_whitelist_matcher" {
+  policy = authentik_policy_expression.minecraft_user_changed.id
+  target = authentik_event_rule.minecraft_whitelist.id
+  order  = 0
 }
