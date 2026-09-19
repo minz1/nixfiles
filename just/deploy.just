@@ -13,14 +13,6 @@ list:
 _phases:
     @nix eval --raw ${ROOT_DIR}#deployPhases --apply 'phases: builtins.concatStringsSep "\n" (map (hosts: builtins.concatStringsSep " " hosts) phases)'
 
-[private]
-_deploy-retry host attempts="3":
-    ${ROOT_DIR}/scripts/deploy-retry.sh "{{ host }}" "{{ attempts }}"
-
-[private]
-_wait-healthy host timeout="120":
-    ${ROOT_DIR}/scripts/deploy-wait-healthy.sh "{{ host }}" "{{ timeout }}"
-
 # Deploy nodes in dependency order
 phased *hosts:
     ${ROOT_DIR}/scripts/deploy-phased.sh {{ hosts }}

@@ -17,7 +17,6 @@ let
   grafana = hostEndpoints.minz-obs-0.grafana;
   media = hostEndpoints.minz-media-0.caddy;
   servicesCaddy = hostEndpoints.minz-services-0.caddy;
-  mediaFixer = hostEndpoints.minz-services-0.mediafixer;
 
   fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
   arrApps = [
@@ -74,7 +73,6 @@ in
   # deprioritize wg0 to ensure edge traffic is isolated
   networking.wireguard.interfaces.wg0.metric = 100;
 
-  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   systemd.network.networks."20-enp1s0" = {
@@ -104,7 +102,6 @@ in
   sops.templates.crowdsec-caddy-env = {
     content = "CROWDSEC_API_KEY=${config.sops.placeholder.crowdsec_caddy_api_key}";
     owner = "caddy";
-    mode = "0400";
   };
 
   services.crowdsec = {
@@ -260,8 +257,9 @@ in
 
           handle /media* {
             import forward_auth_authentik
-            reverse_proxy http://${mediaFixer.ip}:${toString mediaFixer.port} {
+            reverse_proxy https://${servicesCaddy.ip}:${toString servicesCaddy.port} {
               header_up Host {http.request.host}
+              ${clientAuthTransport}
             }
           }
 
@@ -350,12 +348,6 @@ in
   networking.firewall.allowedTCPPorts = [ velocityPort ];
 
   environment.persistence."/persist".directories = [
-    {
-      directory = "/var/lib/caddy";
-      user = "caddy";
-      group = "caddy";
-      mode = "0700";
-    }
     # CrowdSec uses DynamicUser; real state is at /var/lib/private/crowdsec.
     {
       directory = "/var/lib/private/crowdsec";

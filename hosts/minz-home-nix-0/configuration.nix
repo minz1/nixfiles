@@ -13,9 +13,7 @@ let
   incusNodeNetwork = node.networks.incus_bridge;
   wgAddr = node.networks.mgmt.ip;
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
-  incusClientCert = pkgs.writeText "incus-client.crt" (
-    builtins.readFile ../../secrets/incus-client.crt
-  );
+  incusClientCert = ../../secrets/incus-client.crt;
 
   # fed by stunnel client mode on the router
   routerSyslogPort = 1514; # unprivileged; DynamicUser Alloy lacks CAP_NET_BIND_SERVICE
@@ -28,7 +26,6 @@ in
     ../../modules/nixos/secureboot.nix
   ];
 
-  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   # Bare-metal EFI — canTouchEfiVariables is required for lanzaboote key enrollment.
@@ -110,16 +107,15 @@ in
     ];
   };
 
-  programs.neovim.defaultEditor = true;
+  programs.neovim = {
+    defaultEditor = true;
+    viAlias = true;
+    vimAlias = true;
+  };
   environment.systemPackages = with pkgs; [
     opentofu
     sops
   ];
-
-  environment.shellAliases = {
-    vi = "nvim";
-    vim = "nvim";
-  };
 
   # Real mount, not impermanence — Incus VM volumes survive reboots here.
   disko.devices.disk.incus = {
@@ -208,9 +204,6 @@ in
     };
   };
 
-  # No Caddy on this host, but group is needed for ACME cert readability by Alloy.
-  users.groups.caddy = { };
-
   # NTP server for incus-bridge VMs; incusbr0 is trusted so no firewall rule needed.
   services.chrony = {
     enable = true;
@@ -223,7 +216,7 @@ in
   '';
 
   # syslog_format = rfc3164 is a best guess for the real logread output — no parse errors seen, but confirm live in Grafana Explore.
-  homelab.observability.extraAlloyConfig = ''
+  environment.etc."alloy/router.alloy".text = ''
     loki.source.syslog "router" {
       listener {
         address       = "0.0.0.0:${toString routerSyslogPort}"
@@ -248,28 +241,33 @@ in
     ip saddr ${routerIp} tcp dport ${toString routerSyslogPort} accept
   '';
 
-  # Alloy's syslog listener loads cert_file/key_file once at startup and never re-reads them (Go TLS caching); acme's reloadServices would only SIGHUP it, which isn't reliable here, so this path unit forces a full restart whenever cert.pem's content changes.
-  systemd.paths.alloy-cert-renewed = {
-    wantedBy = [ "multi-user.target" ];
-    pathConfig.PathChanged = "${certDir}/cert.pem";
-  };
-  systemd.services.alloy-cert-renewed = {
-    serviceConfig.Type = "oneshot";
-    script = "systemctl restart alloy.service";
-    path = [ pkgs.systemd ];
-  };
+  # Alloy's syslog listener loads cert_file/key_file once at startup and never re-reads them (Go TLS caching);
+  # acme's reloadServices would only SIGHUP it, which isn't reliable here, so force a full restart on renewal.
+  security.acme.certs."${hostName}.internal".postRun = "systemctl restart alloy.service";
 
   systemd.services.incus-add-tofu-cert = {
     description = "Add tofu-automation client certificate to Incus trust store";
     after = [ "incus-preseed.service" ];
     wantedBy = [ "incus.service" ];
     partOf = [ "incus.service" ];
-    path = [ pkgs.incus ];
+    path = [
+      pkgs.incus
+      pkgs.openssl
+    ];
+    # fingerprint-aware so rotating secrets/incus-client.* is just a deploy: stale tofu-automation entries are removed
+    restartTriggers = [ incusClientCert ];
     script = ''
-      if incus config trust list | grep -q "tofu-automation"; then
-        exit 0
-      fi
-      incus config trust add-certificate ${incusClientCert} --name=tofu-automation --type=client
+      fp=$(openssl x509 -in ${incusClientCert} -noout -fingerprint -sha256 | cut -d= -f2 | tr -d : | tr '[:upper:]' '[:lower:]')
+      present=false
+      while IFS=, read -r name short; do
+        [ "$name" = "tofu-automation" ] || continue
+        if [ "$short" = "''${fp:0:12}" ]; then
+          present=true
+        else
+          incus config trust remove "$short"
+        fi
+      done < <(incus config trust list -f csv | cut -d, -f1,4)
+      "$present" || incus config trust add-certificate ${incusClientCert} --name=tofu-automation --type=client
     '';
     serviceConfig = {
       Type = "oneshot";

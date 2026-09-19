@@ -37,7 +37,7 @@ provider "aws" {
   skip_metadata_api_check     = true
   s3_use_path_style           = true
 
-  # Endpoint sourced from topology.nix: nodes.minz-vultr-nix-0.{networks.mgmt.ip, services.rustfs.ports[0]}
+  # RustFS on vultr-nix-0 (mgmt IP, RUSTFS_ADDRESS port in hosts/minz-vultr-nix-0)
   endpoints {
     s3 = "http://10.8.0.1:9000"
   }
@@ -47,13 +47,13 @@ provider "incus" {
   generate_client_certificates = false
   accept_remote_certificate    = true
 
-  # Address/port sourced from topology.nix: nodes.minz-home-nix-0.{networks.mgmt.ip, services.incus.port}
+  # Incus API on home-nix-0 (mgmt IP, core.https_address port in hosts/minz-home-nix-0)
   remote {
     name    = "minz-home-nix-0"
     address = "https://10.8.0.5:8443"
   }
 
-  # Address/port sourced from topology.nix: nodes.minz-vultr-nix-0.{networks.mgmt.ip, services.rustfs.ports[0]}
+  # RustFS on vultr-nix-0 (mgmt IP, RUSTFS_ADDRESS port in hosts/minz-vultr-nix-0)
   remote {
     name     = "nixos-bootstrap-registry"
     address  = "http://10.8.0.1:9000/incus-images"

@@ -1,5 +1,4 @@
 {
-  hostName,
   config,
   pkgs,
   lib,
@@ -12,7 +11,6 @@
 
 let
   authentikIp = node.networks.incus_bridge.ip;
-  acmeHttpPort = 80;
 
   authentikPort = 9000;
   authentikHttpsPort = 9443;
@@ -27,11 +25,10 @@ in
     authentik-nix.nixosModules.default
   ];
 
-  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
-  sops.secrets.authentik_env.mode = "0400";
-  sops.secrets.authentik_ldap_token.mode = "0400";
+  sops.secrets.authentik_env = { };
+  sops.secrets.authentik_ldap_token = { };
 
   sops.templates.authentik-ldap-env = {
     content = ''
@@ -40,7 +37,6 @@ in
       AUTHENTIK_TOKEN=${config.sops.placeholder.authentik_ldap_token}
       AUTHENTIK_LISTEN__LDAPS=127.0.0.1:${toString ldapOutpostTlsPort}
     '';
-    mode = "0400";
   };
 
   services.authentik = {
@@ -99,6 +95,11 @@ in
               listen = [ ":${toString authentikHttpsPort}" ];
               automatic_https.disable = true;
               strict_sni_host = false;
+              # the edge Caddy sets X-Forwarded-For from the real peer; without this every public client is the edge's IP
+              trusted_proxies = {
+                source = "static";
+                ranges = [ "${topology.nodes."minz-vultr-nix-1".networks.edge.ip}/32" ];
+              };
               tls_connection_policies = [
                 {
                   # mgmt subnet: no client cert, Tofu's authentik provider can't present one
@@ -195,7 +196,6 @@ in
   networking.firewall.allowedTCPPorts = [
     authentikHttpsPort
     ldapTlsPort
-    acmeHttpPort
   ];
 
   # authentik's own cert-discovery watcher (unrelated to our step-ca certs) defaults to
@@ -224,7 +224,6 @@ in
   homelab.endpoints.authentik = {
     ip = authentikIp;
     port = authentikHttpsPort;
-    tls = true;
   };
 
   # setpriv privilege drop for pg_dumpall; see docs/main-plan.md's S6 section for why.
@@ -262,12 +261,6 @@ in
       user = "postgres";
       group = "postgres";
       mode = "0750";
-    }
-    {
-      directory = "/var/lib/caddy";
-      user = "caddy";
-      group = "caddy";
-      mode = "0700";
     }
   ];
 }

@@ -18,13 +18,6 @@ in
       type = types.int;
       description = "UID for the rootless podman service account.";
     };
-
-    group = mkOption {
-      type = types.str;
-      description = "Primary group for the rootless podman service account.";
-      default = cfg.user;
-      defaultText = literalExpression "config.services.rootless-podman.user";
-    };
   };
 
   config = mkIf cfg.enable {
@@ -32,7 +25,8 @@ in
 
     users.users.${cfg.user} = {
       isSystemUser = true;
-      inherit (cfg) uid group;
+      inherit (cfg) uid;
+      group = cfg.user;
       home = "/var/lib/${cfg.user}";
       createHome = true;
       linger = true;
@@ -49,15 +43,14 @@ in
         }
       ];
     };
-    users.groups.${cfg.group} = { };
+    users.groups.${cfg.user} = { };
 
+    # no autoPrune: it prunes root's store, which a rootless-only host never uses. The podman module
+    # still emits podman-prune.timer with no OnCalendar, which systemd rejects on switch — drop the unit.
     virtualisation.podman = {
       enable = true;
       defaultNetwork.settings.dns_enabled = true;
-      autoPrune = {
-        enable = true;
-        dates = "weekly";
-      };
     };
+    systemd.timers.podman-prune.enable = false;
   };
 }

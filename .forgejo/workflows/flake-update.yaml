@@ -10,17 +10,21 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: https://github.com/DeterminateSystems/nix-installer-action@v22
+      - uses: https://github.com/DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
 
-      - name: Update flake.lock and push closures to Attic
+      - name: Update flake.lock and build closures
         run: |
           nix develop --no-update-lock-file --command just ci flake-update
 
-      - uses: actions/upload-artifact@v4
+      - name: Push closures to Attic
+        env:
+          ATTIC_PUSH_TOKEN: ${{ secrets.ATTIC_PUSH_TOKEN }}
+        run: |
+          nix develop --no-update-lock-file --command just ci attic-push
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: flake.lock
           path: flake.lock

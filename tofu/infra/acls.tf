@@ -1,9 +1,4 @@
-# Import existing bridge to set ACL default actions; computed keys are left untouched.
-import {
-  to = incus_network.incusbr0
-  id = "incusbr0"
-}
-
+# Existing bridge (imported once); only the ACL default actions are managed here.
 resource "incus_network" "incusbr0" {
   name = "incusbr0"
   config = {
@@ -59,8 +54,14 @@ locals {
     },
   ]
 
-  # Shared egress rules: each guest's own outbound MLDv2 report hits its egress list, not ingress.
+  # Shared egress rules: bridge-internal traffic, plus each guest's own outbound MLDv2 report (which hits its egress list, not ingress).
   common_egress = [
+    {
+      action      = "allow"
+      destination = local.incus_bridge_subnet
+      description = "Bridge-internal traffic"
+      state       = "enabled"
+    },
     {
       action      = "reject"
       protocol    = "icmp6"
@@ -81,8 +82,67 @@ locals {
   }
 
   container_acl_map = {
-    # minz-media-0: no ACL — broad internet egress required (debrid, indexers)
+    "minz-media-0" = incus_network_acl.media.name
   }
+
+  services_ip = "10.10.0.6"
+
+  # IPv4 minus private/reserved ranges (0/8, 10/8, 100.64/10, 127/8, 169.254/16, 172.16/12,
+  # 192.168/16, 224/4, 240/4). Incus evaluates reject before allow, so "internet but not internal"
+  # has to be an allow-list. Generated with Python's ipaddress.address_exclude.
+  public_ipv4 = [
+    "1.0.0.0/8",
+    "2.0.0.0/7",
+    "4.0.0.0/6",
+    "8.0.0.0/7",
+    "11.0.0.0/8",
+    "12.0.0.0/6",
+    "16.0.0.0/4",
+    "32.0.0.0/3",
+    "64.0.0.0/3",
+    "96.0.0.0/6",
+    "100.0.0.0/10",
+    "100.128.0.0/9",
+    "101.0.0.0/8",
+    "102.0.0.0/7",
+    "104.0.0.0/5",
+    "112.0.0.0/5",
+    "120.0.0.0/6",
+    "124.0.0.0/7",
+    "126.0.0.0/8",
+    "128.0.0.0/3",
+    "160.0.0.0/5",
+    "168.0.0.0/8",
+    "169.0.0.0/9",
+    "169.128.0.0/10",
+    "169.192.0.0/11",
+    "169.224.0.0/12",
+    "169.240.0.0/13",
+    "169.248.0.0/14",
+    "169.252.0.0/15",
+    "169.255.0.0/16",
+    "170.0.0.0/7",
+    "172.0.0.0/12",
+    "172.32.0.0/11",
+    "172.64.0.0/10",
+    "172.128.0.0/9",
+    "173.0.0.0/8",
+    "174.0.0.0/7",
+    "176.0.0.0/4",
+    "192.0.0.0/9",
+    "192.128.0.0/11",
+    "192.160.0.0/13",
+    "192.169.0.0/16",
+    "192.170.0.0/15",
+    "192.172.0.0/14",
+    "192.176.0.0/12",
+    "192.192.0.0/10",
+    "193.0.0.0/8",
+    "194.0.0.0/7",
+    "196.0.0.0/6",
+    "200.0.0.0/5",
+    "208.0.0.0/4",
+  ]
 }
 
 # pki-0: bridge egress + HTTP-01 validation to WG hosts on port 80.
@@ -101,12 +161,6 @@ resource "incus_network_acl" "pki" {
   ])
 
   egress = concat(local.common_egress, [
-    {
-      action      = "allow"
-      destination = local.incus_bridge_subnet
-      description = "Bridge-internal traffic"
-      state       = "enabled"
-    },
     {
       action           = "allow"
       destination      = local.mgmt_subnet
@@ -139,31 +193,9 @@ resource "incus_network_acl" "services" {
       description      = "Caddy HTTPS"
       state            = "enabled"
     },
-    {
-      action           = "allow"
-      source           = local.mgmt_subnet
-      destination_port = "8081"
-      protocol         = "tcp"
-      description      = "media-fixer dashboard from WireGuard mgmt"
-      state            = "enabled"
-    },
-    {
-      action           = "allow"
-      source           = local.edge_subnet
-      destination_port = "8081"
-      protocol         = "tcp"
-      description      = "media-fixer dashboard from WireGuard edge (admin.minz1.com via vultr-nix-1)"
-      state            = "enabled"
-    },
   ])
 
   egress = concat(local.common_egress, [
-    {
-      action      = "allow"
-      destination = local.incus_bridge_subnet
-      description = "Bridge-internal traffic"
-      state       = "enabled"
-    },
     {
       action           = "allow"
       destination      = "0.0.0.0/0"
@@ -191,13 +223,6 @@ resource "incus_network_acl" "obs" {
   ingress = concat(local.common_ingress, [
     {
       action           = "allow"
-      destination_port = "3000"
-      protocol         = "tcp"
-      description      = "Grafana (proxied by edge Caddy) — transitional, drop once 3443 is verified"
-      state            = "enabled"
-    },
-    {
-      action           = "allow"
       source           = local.edge_subnet
       destination_port = "3443"
       protocol         = "tcp"
@@ -214,12 +239,6 @@ resource "incus_network_acl" "obs" {
   ])
 
   egress = concat(local.common_egress, [
-    {
-      action      = "allow"
-      destination = local.incus_bridge_subnet
-      description = "Bridge-internal traffic"
-      state       = "enabled"
-    },
     {
       action           = "allow"
       destination      = local.mgmt_subnet
@@ -289,12 +308,6 @@ resource "incus_network_acl" "game" {
 
   egress = concat(local.common_egress, [
     {
-      action      = "allow"
-      destination = local.incus_bridge_subnet
-      description = "Bridge-internal traffic"
-      state       = "enabled"
-    },
-    {
       action           = "allow"
       protocol         = "tcp"
       destination_port = "443"
@@ -328,12 +341,6 @@ resource "incus_network_acl" "runner" {
   ingress = local.common_ingress
 
   egress = concat(local.common_egress, [
-    {
-      action      = "allow"
-      destination = local.incus_bridge_subnet
-      description = "Bridge-internal traffic (Attic push, step-ca ACME, Loki push)"
-      state       = "enabled"
-    },
     {
       action           = "allow"
       destination      = local.mgmt_subnet
@@ -377,12 +384,6 @@ resource "incus_network_acl" "attic" {
   ])
 
   egress = concat(local.common_egress, [
-    {
-      action      = "allow"
-      destination = local.incus_bridge_subnet
-      description = "Bridge-internal traffic (step-ca ACME, Loki push)"
-      state       = "enabled"
-    },
   ])
 }
 
@@ -410,12 +411,6 @@ resource "incus_network_acl" "authentik" {
 
   egress = concat(local.common_egress, [
     {
-      action      = "allow"
-      destination = local.incus_bridge_subnet
-      description = "Bridge-internal traffic"
-      state       = "enabled"
-    },
-    {
       action           = "allow"
       destination      = "0.0.0.0/0,::/0"
       destination_port = "443"
@@ -438,6 +433,54 @@ resource "incus_network_acl" "authentik" {
       protocol         = "tcp"
       description      = "S6: restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
+    },
+  ])
+}
+
+# media-0: broad internet egress (debrid, indexers, metadata) but no reach into the fleet beyond
+# the bridge and RustFS; app ports only from media-fixer on services-0, everything else via Caddy.
+resource "incus_network_acl" "media" {
+  name        = "media"
+  description = "minz-media-0: internet egress + Caddy ingress; app ports from services-0 only"
+
+  ingress = concat(local.common_ingress, [
+    {
+      action           = "allow"
+      destination_port = "443"
+      protocol         = "tcp"
+      description      = "Caddy HTTPS"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      source           = local.services_ip
+      destination_port = "7878,8096,8282,8989,9191"
+      protocol         = "tcp"
+      description      = "media-fixer on services-0: radarr, jellyfin, decypharr, sonarr, media-agent"
+      state            = "enabled"
+    },
+  ])
+
+  egress = concat(local.common_egress, [
+    {
+      action           = "allow"
+      destination      = local.mgmt_subnet
+      destination_port = "9000"
+      protocol         = "tcp"
+      description      = "restic backups to RustFS on vultr-nix-0"
+      state            = "enabled"
+    },
+    {
+      action      = "allow"
+      destination = join(",", local.public_ipv4)
+      description = "Public IPv4 internet"
+      state       = "enabled"
+    },
+    {
+      action      = "allow"
+      destination = "2000::/3"
+      description = "Public IPv6 internet"
+      state       = "enabled"
     },
   ])
 }

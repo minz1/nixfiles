@@ -23,7 +23,19 @@ path=$(nix build --no-link --print-out-paths "${ROOT_DIR}#nixosConfigurations.${
 
 local_json=$(nix path-info --json --json-format 1 -r "$path")
 
+# Reviewed, pinned exceptions for builds that aren't bit-reproducible across machines
+# (Rust codegen, bundled JS): "<store path> <Attic narHash>" per line. Pinning the hash means
+# Attic serving different bytes for the same path later still fails.
+allowlist="${ROOT_DIR}/scripts/attic-unreproducible.txt"
+declare -A allowed=()
+if [ -f "$allowlist" ]; then
+    while read -r ap ah _; do
+        [ -n "$ap" ] && [ "${ap:0:1}" != "#" ] && allowed["$ap"]="$ah"
+    done < "$allowlist"
+fi
+
 mismatches=()
+allowlisted=0
 checked=0
 while IFS= read -r p; do
     local_hash=$(echo "$local_json" | jq -r --arg p "$p" '.[$p].narHash')
@@ -34,7 +46,11 @@ while IFS= read -r p; do
 
     checked=$((checked + 1))
     if [ "$local_hash" != "$remote_hash" ]; then
-        mismatches+=("$p (local=$local_hash remote=$remote_hash)")
+        if [ "${allowed[$p]:-}" = "$remote_hash" ]; then
+            allowlisted=$((allowlisted + 1))
+        else
+            mismatches+=("$p (local=$local_hash remote=$remote_hash)")
+        fi
     fi
 done < <(echo "$local_json" | jq -r 'keys[]')
 
@@ -51,4 +67,4 @@ if [ "$checked" -eq 0 ]; then
     exit 1
 fi
 
-echo "verify-attic-closure: $host OK ($checked of $total closure paths cross-checked against Attic)"
+echo "verify-attic-closure: $host OK ($checked of $total closure paths cross-checked against Attic, $allowlisted allowlisted)"

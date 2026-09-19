@@ -2,11 +2,8 @@
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 COMMAND="$1"
-INCUS_REMOTE=$(nix eval --raw --impure \
-  --expr "let t = import ${ROOT_DIR}/common/topology.nix; in
-          builtins.head (builtins.filter
-            (name: (t.nodes.\${name}.provisioner or \"\") == \"incus-host\")
-            (builtins.attrNames t.nodes))")
+# must match the remote name in tofu/infra/providers.tf
+INCUS_REMOTE=minz-home-nix-0
 CONF=$(mktemp -d "$(find_ram_dir)/incus-tofu.XXXXXX")
 trap 'rm -rf $CONF' EXIT
 cp "${ROOT_DIR}/secrets/incus-client.crt" "$CONF/client.crt"

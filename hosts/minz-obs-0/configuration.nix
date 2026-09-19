@@ -1,5 +1,4 @@
 {
-  hostName,
   config,
   lib,
   pkgs,
@@ -11,7 +10,6 @@
 
 let
   obsIp = node.networks.incus_bridge.ip;
-  acmeHttpPort = 80;
 
   victoriaPort = 9090;
   lokiPort = 3100;
@@ -60,7 +58,6 @@ in
     ./grafana.nix
   ];
 
-  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   services.victoriametrics = {
@@ -155,7 +152,11 @@ in
         }
       ];
       # 90d minimum — breaches are typically discovered weeks after the fact
-      limits_config.retention_period = "90d";
+      limits_config = {
+        retention_period = "90d";
+        # retention still runs via the compactor; this only closes the delete API
+        deletion_mode = "disabled";
+      };
       compactor = {
         working_directory = "/var/lib/loki/compactor";
         retention_enabled = true;
@@ -222,13 +223,15 @@ in
         http.servers.loki = {
           listen = [ ":${toString lokiHttpsPort}" ];
           automatic_https.disable = true;
-          # strict_sni_host=false: Loki accessed via IP with no SNI; mTLS provides auth
+          # strict_sni_host=false: Loki accessed via IP with no SNI; mTLS provides auth.
+          # No fallback policy: a client outside these ranges or without a fleet cert fails the handshake.
           strict_sni_host = false;
           tls_connection_policies = [
             {
               match.remote_ip.ranges = [
                 topology.networks.incus_bridge.subnet
                 topology.networks.mgmt.subnet
+                topology.networks.edge.subnet
               ];
               certificate_selection.any_tag = [ "loki" ];
               client_authentication = {
@@ -236,7 +239,6 @@ in
                 mode = "require_and_verify";
               };
             }
-            { certificate_selection.any_tag = [ "loki" ]; }
           ];
           routes = [
             {
@@ -266,7 +268,6 @@ in
   networking.firewall.allowedTCPPorts = [
     lokiHttpsPort
     grafanaHttpsPort
-    acmeHttpPort
   ];
 
   systemd.services.loki.serviceConfig = mkHardened {
@@ -320,12 +321,10 @@ in
     loki = {
       ip = obsIp;
       port = lokiHttpsPort;
-      tls = true;
     };
     grafana = {
       ip = obsIp;
       port = grafanaHttpsPort;
-      tls = true;
     };
   };
 
@@ -344,12 +343,6 @@ in
       directory = "/var/lib/grafana";
       user = "grafana";
       group = "grafana";
-      mode = "0700";
-    }
-    {
-      directory = "/var/lib/caddy";
-      user = "caddy";
-      group = "caddy";
       mode = "0700";
     }
   ];

@@ -83,3 +83,34 @@ resource "authentik_flow_stage_binding" "recovery_login" {
   stage  = authentik_stage_user_login.recovery.id
   order  = 40
 }
+
+# Recovery-flow MFA: without this, control of an admin's mailbox alone yields a logged-in
+# admin session. deny (not configure) so a mailbox holder can't self-enrol a device here.
+resource "authentik_stage_authenticator_validate" "recovery_mfa" {
+  name                  = "recovery-mfa"
+  not_configured_action = "deny"
+  device_classes        = ["totp", "webauthn", "static"]
+}
+
+resource "authentik_policy_expression" "recovery_mfa_required" {
+  name              = "recovery-mfa-required"
+  execution_logging = false
+  expression        = <<-EOT
+    user = request.context.get("pending_user")
+    return bool(user and user.pk and user.is_superuser)
+  EOT
+}
+
+resource "authentik_flow_stage_binding" "recovery_mfa" {
+  target               = authentik_flow.recovery.uuid
+  stage                = authentik_stage_authenticator_validate.recovery_mfa.id
+  order                = 15
+  evaluate_on_plan     = false
+  re_evaluate_policies = true
+}
+
+resource "authentik_policy_binding" "recovery_mfa" {
+  policy = authentik_policy_expression.recovery_mfa_required.id
+  target = authentik_flow_stage_binding.recovery_mfa.id
+  order  = 0
+}

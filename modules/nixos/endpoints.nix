@@ -14,11 +14,6 @@
             type = lib.types.port;
             description = "TCP port.";
           };
-          tls = lib.mkOption {
-            type = lib.types.bool;
-            default = false;
-            description = "Whether the endpoint speaks TLS.";
-          };
         };
       }
     );

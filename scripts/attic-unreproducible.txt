@@ -1,0 +1,13 @@
+# See scripts/verify-attic-closure.sh. Add only after reviewing why the path differs.
+# 2026-09-19: CI builds unsandboxed, so outputs embed /nix/var/nix/builds/nix-<pid>-<rand> instead of /build.
+# Honest sandboxed builds on two machines agreed with each other; Attic's copies checked as below.
+# authentik-rust/web: rebuilt on runner-0 with sandbox-build-dir set to CI's dir, bit-identical to Attic.
+/nix/store/j97x5x060h3kzbzsrjf36ppi27i73881-authentik-rust-2026.8.1 sha256-1mggmIBnirFyrb+10tThNBGi24kX917cBwvMlYsKats=
+/nix/store/4f4b2wsygk2ikxrwlv8nwrvsbky6p2gr-authentik-web-2026.8.1 sha256-B8CaJc3nPXPWeB4MePaDeahd79PyXBBOXfzJbvgHy2A=
+# python wheels: every installed file identical, only dist-info/RECORD (pre-strip .so hashes) differs.
+/nix/store/9iiz26rk373ijwx9p1x4sfqiylzi6hxs-lxml-6.1.1 sha256-2mPi8MS75Z2E+W9WZhXWNFd/YKXZ60bOyv/HKzJfMP4=
+/nix/store/l7xp1vf8nhyw6bp90qbqzims8gcc4xhc-psycopg-c-3.3.4 sha256-DJvxoWxSpqNtWZ4+Nb9G4vdnFwO+3+Tw65aXaQnsbsM=
+/nix/store/mp3s02wxb85abczwshni000z8gginbxp-xmlsec-1.3.17 sha256-3CdfqgWVb99oOBVgy5Qr+eb8aTwpz9V2zH3VtC94AB4=
+/nix/store/wr75wyy8ia29nvnh9zq2kbxg0fyd1li3-gssapi-1.11.1 sha256-WD2nDH37z+2a2nyVbdgU3pwCG43hl710dc+hkQ5v3tk=
+# lanzaboote stub: code/data identical, only PE timestamp/checksum/debug-GUID (lld hash of build incl. path) differ.
+/nix/store/ps221w3wz5phy3mczwxg3ys2nksymw2l-lanzaboote-stub-1.1.0 sha256-tTeyKPRZfxHo3g4sUjaFoaRw7L7lbX2YJPASKzn2hAk=

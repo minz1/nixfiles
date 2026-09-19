@@ -1,46 +1,21 @@
 #!/usr/bin/env bash
-# Builds + pushes closures to Attic. Assumes root in the job container (writes /etc/hosts, CA bundle).
+# Pushes the paths ci-build.sh recorded. Runs as its own CI step so no build process shares an environment with the token.
 set -euo pipefail
 
-hosts=("$@")
-if [ "${#hosts[@]}" -eq 0 ]; then
-    echo "No affected hosts; nothing to build or push."
-    exit 0
-fi
-
-attic_ip=$(TOPO="${ROOT_DIR}/common/topology.nix" nix eval --raw --impure --expr '
-  let t = import (builtins.getEnv "TOPO");
-  in t.nodes."minz-attic-0".networks.incus_bridge.ip')
-
-if ! grep -q ' minz-attic-0.internal$' /etc/hosts; then
-    echo "${attic_ip} minz-attic-0.internal" >> /etc/hosts
-fi
-
-cp "${ROOT_DIR}/hosts/minz-pki-0/root_ca.crt" /usr/local/share/ca-certificates/minz-pki-0-root.crt
-update-ca-certificates
+: "${ATTIC_PUSH_TOKEN:?ATTIC_PUSH_TOKEN not set}"
+paths_file="${RUNNER_TEMP:-/tmp}/attic-paths.txt"
 
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/attic"
 mkdir -p "$config_dir"
-cat > "${config_dir}/config.toml" <<EOF
+umask 077
+printf '%s' "$ATTIC_PUSH_TOKEN" > "${config_dir}/token"
+cat > "${config_dir}/config.toml" <<CONF
 default-server = "homelab"
 
 [servers.homelab]
 endpoint = "https://minz-attic-0.internal/"
-token-file = "/run/secrets/attic_push_token"
-EOF
-chmod 600 "${config_dir}/config.toml"
-
-attrs=()
-for host in "${hosts[@]}"; do
-    attrs+=(".#nixosConfigurations.${host}.config.system.build.toplevel")
-done
+token-file = "${config_dir}/token"
+CONF
 
 # --ignore-upstream-cache-filter: Attic skips storing paths it thinks are on cache.nixos.org — fatal, guests can't reach it.
-nix shell nixpkgs#attic-client --command bash -c '
-    nix build \
-      --no-update-lock-file \
-      --extra-substituters https://minz-attic-0.internal/homelab \
-      --extra-trusted-public-keys "homelab:/832u4B/jZREiimqBzchHGyXQZaUVKoG4TlO/nUJh10=" \
-      --no-link --print-out-paths "$@" \
-    | attic push homelab --stdin --ignore-upstream-cache-filter
-' bash "${attrs[@]}"
+nix shell nixpkgs#attic-client --command attic push homelab --stdin --ignore-upstream-cache-filter < "$paths_file"

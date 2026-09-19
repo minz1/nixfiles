@@ -8,9 +8,3 @@ variable "group_id" {
   type        = string
   default     = null
 }
-
-variable "join_require_invitation" {
-  description = "Whether the join flow (existing users joining the group) requires an invitation link. Set false for public/open access apps."
-  type        = bool
-  default     = true
-}

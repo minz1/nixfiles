@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Reboot order: standalone hosts first, then the Incus host last — its reboot cascades all 6 guest VMs/containers automatically via boot.autostart=last-state.
+# Reboot order: standalone hosts first, then the Incus host last — its reboot cascades all 8 guest VMs/containers automatically via boot.autostart=last-state.
 standalone=(minz-vultr-nix-0 minz-vultr-nix-1)
 incus_host=minz-home-nix-0
-incus_guests=(minz-obs-0 minz-authentik-0 minz-pki-0 minz-game-0 minz-services-0 minz-media-0)
+incus_guests=(minz-obs-0 minz-authentik-0 minz-pki-0 minz-game-0 minz-services-0 minz-media-0 minz-attic-0 minz-runner-0)
 
 reboot_and_wait() {
     local host="$1" target deadline

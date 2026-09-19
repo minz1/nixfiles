@@ -65,30 +65,21 @@
 
       nixosNodes = nixpkgs.lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
 
-      configurableNodes = nixpkgs.lib.filterAttrs (
-        _: node: if (node.provisioner or "") == "incus" then node.deployed or false else true
-      ) nixosNodes;
+      configurableNodes =
+        let
+          isDeployed = _: node: (node.provisioner or "") != "incus" || (node.deployed or false);
+          skipped = nixpkgs.lib.filterAttrs (n: v: !isDeployed n v) nixosNodes;
+        in
+        nixpkgs.lib.warnIf (skipped != { })
+          "nixfiles: skipping undeployed VMs: ${builtins.concatStringsSep ", " (builtins.attrNames skipped)}"
+          (nixpkgs.lib.filterAttrs isDeployed nixosNodes);
 
       # incus nodes: bridge IP because the WG tunnel doesn't route to VMs from the runner
       deployHostname =
         _: node:
         if node.provisioner or "" == "incus" then node.networks.incus_bridge.ip else node.networks.mgmt.ip;
 
-      deployableNodes =
-        let
-          filterDeployed =
-            _: node: if (node.provisioner or "") == "incus" then (node.deployed or false) else true;
-          filtered = nixpkgs.lib.filterAttrs filterDeployed nixosNodes;
-          skipped = nixpkgs.lib.filterAttrs (
-            _: node: (node.provisioner or "") == "incus" && !(node.deployed or false)
-          ) nixosNodes;
-        in
-        builtins.trace (
-          if skipped != { } then
-            "nixfiles: skipping undeployed VMs: ${builtins.concatStringsSep ", " (builtins.attrNames skipped)}"
-          else
-            "nixfiles: all nodes deployed"
-        ) filtered;
+      deployableNodes = configurableNodes;
 
       # Dependency-ordered deploy phases, derived from the routing topology
       topologyList = nixpkgs.lib.mapAttrsToList (name: node: node // { inherit name; }) topology.nodes;
@@ -197,6 +188,7 @@
           inherit system;
           specialArgs = {
             hostName = name;
+            incusGatewayIp = topology.nodes.${incusHostName}.networks.incus_bridge.ip;
             inherit
               lanzaboote
               authentik-nix
@@ -214,6 +206,7 @@
             mediafixer.nixosModules.media-agent
             whitelist-sync.nixosModules.default
             {
+              networking.hostName = name;
               services.media-fixer.package = mediafixer.packages.${system}.media-fixer;
               services.media-agent.package = mediafixer.packages.${system}.media-agent;
               services.minecraft-whitelist-sync.package =
@@ -276,7 +269,6 @@
 
       packages.${system} = {
         inherit (pkgs) adguard-exporter;
-        decypharr = decypharr.packages.${system}.default;
         deploy-rs = deployPkgs.deploy-rs.deploy-rs;
         nixos-anywhere = nixos-anywhere.packages.${system}.nixos-anywhere;
         incus-bootstrap-image = pkgs.runCommand "nixos-bootstrap-incus" { } ''

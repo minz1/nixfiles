@@ -1,58 +1,20 @@
 {
-  lib,
-  stdenvNoCC,
+  writeShellApplication,
   procps,
   coreutils,
-  ffmpeg,
   findutils,
-  gawk,
-  gnugrep,
+  ffmpeg,
   util-linux,
-  gnused,
-  # tunables — overridden by the NixOS module
-  intervalSec ? 30,
-  minAgeSec ? 60,
-  minPokeIntervalSec ? 300,
-  pokeTimeoutSec ? 15,
-  maxStuckPerFile ? 3,
 }:
 
-let
-  runtimePkgs = [
-    procps # pgrep, ps
-    coreutils # cat, sleep, date, stat, mkdir, rm, echo, timeout
-    findutils # find
-    gawk # awk
+writeShellApplication {
+  name = "ffprobe-monitor";
+  runtimeInputs = [
+    procps # ps
+    coreutils # date, md5sum, cut, cat, timeout, sleep
+    findutils
     ffmpeg # ffprobe
-    gnugrep # grep
-    util-linux # logger, renice
-    gnused # sed
+    util-linux # logger
   ];
-in
-stdenvNoCC.mkDerivation {
-  pname = "ffprobe-monitor";
-  version = "1.0.2";
-
-  src = ./ffprobe-monitor.sh;
-  dontUnpack = true;
-
-  binPath = lib.makeBinPath runtimePkgs;
-  inherit (stdenvNoCC) shell;
-  inherit
-    intervalSec
-    minAgeSec
-    minPokeIntervalSec
-    pokeTimeoutSec
-    maxStuckPerFile
-    ;
-
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p $out/bin
-    substituteAll $src $out/bin/ffprobe-monitor
-    chmod +x $out/bin/ffprobe-monitor
-
-    runHook postInstall
-  '';
+  text = builtins.readFile ./ffprobe-monitor.sh;
 }

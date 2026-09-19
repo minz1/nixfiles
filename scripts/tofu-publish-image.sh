@@ -4,19 +4,19 @@ set -euo pipefail
 
 cd "${ROOT_DIR}"
 
-# --- VM image hashes ---
-vm_meta_sha256=$(sha256sum result/metadata.tar.xz | awk '{print $1}')
-vm_meta_size=$(wc -c < result/metadata.tar.xz | awk '{print $1}')
-vm_disk_sha256=$(sha256sum result/nixos.qcow2 | awk '{print $1}')
-vm_disk_size=$(wc -c < result/nixos.qcow2 | awk '{print $1}')
-vm_combined_sha256=$(cat result/metadata.tar.xz result/nixos.qcow2 | sha256sum | awk '{print $1}')
+sha() { sha256sum "$1" | cut -d' ' -f1; }
 
-# --- Container image hashes ---
-ct_meta_sha256=$(sha256sum result-container/metadata.tar.xz | awk '{print $1}')
-ct_meta_size=$(wc -c < result-container/metadata.tar.xz | awk '{print $1}')
-ct_rootfs_sha256=$(sha256sum result-container/rootfs.tar.xz | awk '{print $1}')
-ct_rootfs_size=$(wc -c < result-container/rootfs.tar.xz | awk '{print $1}')
-ct_combined_sha256=$(cat result-container/metadata.tar.xz result-container/rootfs.tar.xz | sha256sum | awk '{print $1}')
+vm_meta_sha256=$(sha result/metadata.tar.xz)
+vm_meta_size=$(stat -Lc %s result/metadata.tar.xz)
+vm_disk_sha256=$(sha result/nixos.qcow2)
+vm_disk_size=$(stat -Lc %s result/nixos.qcow2)
+vm_combined_sha256=$(cat result/metadata.tar.xz result/nixos.qcow2 | sha256sum | cut -d' ' -f1)
+
+ct_meta_sha256=$(sha result-container/metadata.tar.xz)
+ct_meta_size=$(stat -Lc %s result-container/metadata.tar.xz)
+ct_rootfs_sha256=$(sha result-container/rootfs.tar.xz)
+ct_rootfs_size=$(stat -Lc %s result-container/rootfs.tar.xz)
+ct_combined_sha256=$(cat result-container/metadata.tar.xz result-container/rootfs.tar.xz | sha256sum | cut -d' ' -f1)
 
 # Version key must start with YYYYMMDD — ToAPI() silently skips keys that don't parse as a date.
 version=$(date -u +%Y%m%d%H%M)
@@ -56,7 +56,7 @@ cat > "$tmpdir/streams/v1/images.json" <<ENDJSON
             },
             "disk-kvm.img": {
               "ftype": "disk-kvm.img",
-              "path": "images/${vm_meta_sha256}.qcow2",
+              "path": "images/${vm_disk_sha256}.qcow2",
               "sha256": "${vm_disk_sha256}",
               "size": ${vm_disk_size}
             }
@@ -105,12 +105,12 @@ else
 fi
 
 # Upload VM image artifacts (skip if already present)
-if ! _aws s3api head-object --bucket incus-images --key "images/${vm_meta_sha256}.qcow2" 2>/dev/null; then
+if ! _aws s3api head-object --bucket incus-images --key "images/${vm_disk_sha256}.qcow2" 2>/dev/null; then
   _aws s3 cp result/metadata.tar.xz "s3://incus-images/images/${vm_meta_sha256}.incus.tar.xz"
-  _aws s3 cp result/nixos.qcow2     "s3://incus-images/images/${vm_meta_sha256}.qcow2"
-  echo "Uploaded VM image ${version} (${vm_meta_sha256})"
+  _aws s3 cp result/nixos.qcow2     "s3://incus-images/images/${vm_disk_sha256}.qcow2"
+  echo "Uploaded VM image ${version} (${vm_disk_sha256})"
 else
-  echo "VM image ${vm_meta_sha256} already in registry, skipping upload."
+  echo "VM image ${vm_disk_sha256} already in registry, skipping upload."
 fi
 
 # Upload container image artifacts (skip if already present)

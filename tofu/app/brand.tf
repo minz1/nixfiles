@@ -1,6 +1,6 @@
 resource "authentik_brand" "default" {
-  domain        = "authentik-default"
-  default       = true
+  domain         = "authentik-default"
+  default        = true
   branding_title = "authentik"
 
   branding_logo    = "/static/dist/assets/icons/icon_left_brand.svg"

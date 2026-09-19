@@ -11,12 +11,10 @@ check_host() {
     out=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" bash -s -- "$restart_threshold" <<'REMOTE'
 set -uo pipefail
 restart_threshold="$1"
-echo "--- failed units ---"
-systemctl --failed --no-legend --plain
-echo "--- high-restart units (>${restart_threshold} restarts) ---"
+systemctl --failed --no-legend --plain | sed 's/^/  failed: /'
 for u in $(systemctl list-units --type=service --no-legend --plain --state=running,activating 2>/dev/null | awk '{print $1}'); do
   n=$(systemctl show "$u" -p NRestarts --value 2>/dev/null || echo 0)
-  [ "$n" -gt "$restart_threshold" ] && echo "$u: $n restarts"
+  [ "$n" -gt "$restart_threshold" ] && echo "  crash-looping: $u: $n restarts"
 done
 true
 REMOTE
@@ -25,21 +23,13 @@ REMOTE
         return 1
     }
 
-    local failed_units high_restart_units
-    failed_units=$(echo "$out" | sed -n '/--- failed units ---/,/--- high-restart/p' | sed '1d;$d')
-    high_restart_units=$(echo "$out" | sed -n '/--- high-restart/,$p' | sed '1d')
-
-    if [ -z "$failed_units" ] && [ -z "$high_restart_units" ]; then
+    if [ -z "$out" ]; then
         echo "==> ${host}: OK"
         return 0
     fi
 
     echo "==> ${host}: UNHEALTHY"
-    # sed prefixes every line of a multi-line value; bash's ${var//search/replace} has no line-anchor equivalent.
-    # shellcheck disable=SC2001
-    [ -n "$failed_units" ] && echo "$failed_units" | sed 's/^/  failed: /'
-    # shellcheck disable=SC2001
-    [ -n "$high_restart_units" ] && echo "$high_restart_units" | sed 's/^/  crash-looping: /'
+    echo "$out"
     return 1
 }
 
@@ -55,7 +45,7 @@ loki_result=$(curl -s --max-time 5 --get "http://127.0.0.1:3100/loki/api/v1/quer
   --data-urlencode 'query=sum(count_over_time({job="systemd-journal"}[10m]))' 2>/dev/null \
   | grep -oE '"result":\[[^]]*\]')
 vm_up=$(curl -s --max-time 5 "http://127.0.0.1:9090/api/v1/query?query=up" 2>/dev/null \
-  | grep -oc '"value":\[[0-9.]*,"0"\]' || true)
+  | grep -o '"value":\[[0-9.]*,"0"\]' | wc -l)
 echo "grafana_code=${grafana_code:-none}"
 if [ "$loki_result" = '"result":[]' ] || [ -z "$loki_result" ]; then
   echo "loki_recent=empty"
@@ -70,6 +60,7 @@ REMOTE
     local rc=0
     echo "$out" | grep -q "grafana_code=200" || { echo "  Grafana not returning 200"; rc=1; }
     echo "$out" | grep -q "loki_recent=empty" && { echo "  Loki has no ingestion in the last 10m"; rc=1; }
+    echo "$out" | grep -q "vm_targets_down=0" || { echo "  VictoriaMetrics has scrape targets down"; rc=1; }
     return $rc
 }
 

@@ -50,7 +50,6 @@ in
     ../../modules/nixos/rootless-podman.nix
   ];
 
-  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   networking.firewall.allowedTCPPorts = [
@@ -167,7 +166,6 @@ in
       CF_API_KEY=${config.sops.placeholder.curseforge_api_key}
     '';
     owner = "oci";
-    mode = "0400";
   };
 
   sops.templates.mc-proxyforge-config = {
@@ -178,7 +176,6 @@ in
       mode = "MODERN"
       secret = "${config.sops.placeholder.velocity_forwarding_secret}"
     '';
-    mode = "0400";
   };
 
   sops.templates.whitelist-sync-env = {
@@ -194,7 +191,6 @@ in
       WEBHOOK_TOKEN=${config.sops.placeholder.minecraft_webhook_token}
     '';
     owner = "oci";
-    mode = "0400";
   };
 
   virtualisation.quadlet.containers.atm10 = {
@@ -267,8 +263,9 @@ in
     # ACLs, not chown: itzg's entrypoint reclaims /data's ownership on every container start
     "d /persist/atm10 0750 oci oci -"
     "a+ /persist/atm10 - - - - user:oci:rwx,user:${toString minecraftJvmUid}:rx,mask::rwx,default:user:oci:rw-,default:mask::rw-"
-    "z /persist/atm10/whitelist.json 0600 root root -"
-    "a+ /persist/atm10/whitelist.json - - - - user:oci:rw-,user:${toString minecraftJvmUid}:r--,mask::rw-"
+    # owned by the writer (oci): a root-owned file under an oci-owned dir is an "unsafe path transition" tmpfiles refuses
+    "f /persist/atm10/whitelist.json 0640 oci oci - []"
+    "a+ /persist/atm10/whitelist.json - - - - user:${toString minecraftJvmUid}:r--"
   ];
 
   # Excludes are re-buildable/redundant (mods+libraries: CurseForge; simplebackups: the mod's own duplicate backup).
@@ -281,6 +278,17 @@ in
       "/persist/atm10/libraries-integratedscripting"
       "/persist/atm10/kubejs"
     ];
+    # Pause autosave and flush so restic reads a consistent world; a stopped server isn't writing, so
+    # an unreachable RCON just means back up as-is. Cleanup runs even if the backup fails.
+    prepareCommand = ''
+      MCRCON_PASS=$(cat ${config.sops.secrets.rcon_password.path}) \
+        ${pkgs.mcrcon}/bin/mcrcon -H 127.0.0.1 -P ${toString rconPort} "save-off" "save-all flush" \
+        || echo "RCON unreachable; backing up without pausing saves"
+    '';
+    cleanupCommand = ''
+      MCRCON_PASS=$(cat ${config.sops.secrets.rcon_password.path}) \
+        ${pkgs.mcrcon}/bin/mcrcon -H 127.0.0.1 -P ${toString rconPort} "save-on" || true
+    '';
     timerConfig = {
       OnCalendar = "*-*-* 01:30:00";
       RandomizedDelaySec = "30m";
@@ -294,12 +302,6 @@ in
       directory = "/var/lib/oci";
       user = "oci";
       group = "oci";
-      mode = "0700";
-    }
-    {
-      directory = "/var/lib/caddy";
-      user = "caddy";
-      group = "caddy";
       mode = "0700";
     }
   ];

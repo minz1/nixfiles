@@ -51,7 +51,7 @@ resource "authentik_flow_stage_binding" "minecraft_write" {
 resource "authentik_policy_expression" "minecraft_uuid_lookup" {
   name              = "minecraft-uuid-lookup"
   execution_logging = true
-  expression = file("${path.module}/policies/minecraft-uuid-lookup.py")
+  expression        = file("${path.module}/policies/minecraft-uuid-lookup.py")
 }
 
 # Application entry so the flow appears in the user panel.
@@ -101,6 +101,11 @@ output "minecraft_sync_token" {
 resource "authentik_certificate_key_pair" "internal_ca" {
   name             = "homelab-internal-ca"
   certificate_data = file("${path.module}/../../hosts/minz-pki-0/root_ca.crt")
+
+  # cert-only: authentik never holds the CA key, so the provider's key_data read-back is noise
+  lifecycle {
+    ignore_changes = [key_data]
+  }
 }
 
 resource "authentik_property_mapping_notification" "minecraft_whitelist_headers" {

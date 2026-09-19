@@ -51,12 +51,25 @@ in
     extraDomainNames = allHostIps;
   };
 
+  # Upstream's 24h RandomizedDelaySec+FixedRandomDelay pushes the real renewal period to 6-24h
+  # per host, against step-ca's 24h certs. Keep the jitter small and retry failed orders.
+  systemd.timers."acme-renew-${config.networking.hostName}.internal".timerConfig = {
+    RandomizedDelaySec = lib.mkForce "30m";
+    FixedRandomDelay = lib.mkForce false;
+    AccuracySec = lib.mkForce "1m";
+  };
+  systemd.services."acme-order-renew-${config.networking.hostName}.internal".serviceConfig.Restart =
+    "on-failure";
+
   # reloadServices only reloads Caddy after a renewal — it doesn't order startup, so a full
   # reboot can race Caddy's first read of cert.pem against the cert's first-ever issuance.
   systemd.services.caddy = lib.mkIf config.services.caddy.enable {
     after = [ "acme-${config.networking.hostName}.internal.service" ];
     wants = [ "acme-${config.networking.hostName}.internal.service" ];
   };
+
+  # The internal cert above is group caddy; hosts without Caddy still need the group so Alloy/node_exporter can read it.
+  users.groups.caddy = { };
 
   # NixOS ACME module doesn't auto-open the listenHTTP port; add it here.
   networking.firewall.allowedTCPPorts = [ 80 ];
@@ -75,7 +88,7 @@ in
   users.users.minz1 = {
     isNormalUser = true;
     extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = sshKeys.minz1 ++ (sshKeys.deploy or [ ]);
+    openssh.authorizedKeys.keys = sshKeys.minz1;
   };
 
   nix.settings.trusted-users = [ "minz1" ];

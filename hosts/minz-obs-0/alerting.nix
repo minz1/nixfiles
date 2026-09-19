@@ -1,38 +1,31 @@
 { ... }:
 
 let
-  # alert rule helpers: query -> threshold expression -> condition = expr's refId (Grafana's current UI-exported shape)
-  mkThresholdRule =
+  # alert rule shape: query A -> threshold expression C -> condition = C (Grafana's current UI-exported shape)
+  mkRule =
     {
       uid,
       title,
-      expr,
-      evaluatorType,
-      evaluatorParams,
       for ? "5m",
       summary,
-      instant ? true,
+      noDataState ? "OK",
+      query,
+      evaluatorType,
+      evaluatorParams,
     }:
     {
-      inherit uid title for;
+      inherit
+        uid
+        title
+        for
+        noDataState
+        ;
       condition = "C";
-      noDataState = "OK";
       execErrState = "Error";
       annotations.summary = summary;
       labels.severity = "warning";
       data = [
-        {
-          refId = "A";
-          datasourceUid = "victoriametrics";
-          relativeTimeRange = {
-            from = 600;
-            to = 0;
-          };
-          model = {
-            inherit expr instant;
-            refId = "A";
-          };
-        }
+        (query // { refId = "A"; })
         {
           refId = "C";
           datasourceUid = "__expr__";
@@ -53,33 +46,45 @@ let
       ];
     };
 
+  mkThresholdRule =
+    { expr, ... }@args:
+    mkRule (
+      removeAttrs args [ "expr" ]
+      // {
+        query = {
+          datasourceUid = "victoriametrics";
+          relativeTimeRange = {
+            from = 600;
+            to = 0;
+          };
+          model = {
+            inherit expr;
+            instant = true;
+            refId = "A";
+          };
+        };
+      }
+    );
+
   # NB: `logql` must wrap its count_over_time(...) in `sum by (...) (...)` — Loki shards high-volume streams internally (__stream_shard__), so an unaggregated query returns one series per shard per host, and per-shard churn defeats repeat_interval.
   mkLogCountRule =
     {
-      uid,
-      title,
       logql,
       threshold,
-      for ? "5m",
-      summary,
       evaluatorType ? "gt",
-      noDataState ? "OK",
       from ? 600,
-    }:
-    {
-      inherit
-        uid
-        title
-        for
-        noDataState
-        ;
-      condition = "C";
-      execErrState = "Error";
-      annotations.summary = summary;
-      labels.severity = "warning";
-      data = [
-        {
-          refId = "A";
+      ...
+    }@args:
+    mkRule (
+      removeAttrs args [
+        "logql"
+        "threshold"
+        "from"
+      ]
+      // {
+        inherit evaluatorType;
+        evaluatorParams = [ threshold ];
+        query = {
           datasourceUid = "loki";
           relativeTimeRange = {
             inherit from;
@@ -90,26 +95,9 @@ let
             queryType = "instant";
             refId = "A";
           };
-        }
-        {
-          refId = "C";
-          datasourceUid = "__expr__";
-          model = {
-            type = "threshold";
-            expression = "A";
-            conditions = [
-              {
-                evaluator = {
-                  type = evaluatorType;
-                  params = [ threshold ];
-                };
-              }
-            ];
-            refId = "C";
-          };
-        }
-      ];
-    };
+        };
+      }
+    );
 in
 {
   services.grafana.provision = {

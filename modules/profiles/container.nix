@@ -1,16 +1,9 @@
 {
   lib,
   modulesPath,
-  topology,
+  incusGatewayIp,
   ...
 }:
-
-let
-  incusHostNode = lib.findFirst (
-    n: (n.provisioner or "") == "incus-host"
-  ) (throw "No incus-host node in topology") (lib.attrValues topology.nodes);
-  gatewayIp = incusHostNode.networks.incus_bridge.ip;
-in
 
 {
   imports = [
@@ -34,8 +27,6 @@ in
       port = 22;
     }
   ];
-  networking.firewall.allowedTCPPorts = [ 22 ];
-
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
   # Impermanence UID/GID warning is a false positive for Incus-managed container roots.
@@ -47,5 +38,5 @@ in
   # Disable wait-online to prevent 2-minute boot hangs.
   systemd.services.systemd-networkd-wait-online.enable = lib.mkForce false;
 
-  services.timesyncd.servers = [ gatewayIp ];
+  services.timesyncd.servers = [ incusGatewayIp ];
 }

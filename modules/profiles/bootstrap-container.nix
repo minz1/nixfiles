@@ -23,8 +23,6 @@
       port = 22;
     }
   ];
-  networking.firewall.allowedTCPPorts = [ 22 ];
-
   system.stateVersion = "25.11";
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 

@@ -1,5 +1,4 @@
 {
-  hostName,
   config,
   pkgs,
   node,
@@ -10,17 +9,12 @@
 let
   wgAddr = node.networks.mgmt.ip;
   forgejoPort = 3000;
-  fwPorts = [
-    9000
-    9001
-  ];
 in
 {
   imports = [
     ./hardware-configuration.nix
   ];
 
-  networking.hostName = hostName;
   system.stateVersion = "23.11";
 
   systemd.network.networks."20-enp1s0" = {
@@ -43,21 +37,18 @@ in
     '';
     owner = config.services.rustfs.user;
     group = config.services.rustfs.group;
-    mode = "0400";
   };
 
   sops.secrets.rustfs-access-key = {
-    mode = "0400";
     restartUnits = [ "rustfs.service" ];
   };
   sops.secrets.rustfs-secret-key = {
-    mode = "0400";
     restartUnits = [ "rustfs.service" ];
   };
 
   # rclone-conf, not the `rcloneConfig` option — that renders world-readable in the store.
-  sops.secrets.b2-key-id.mode = "0400";
-  sops.secrets.b2-application-key.mode = "0400";
+  sops.secrets.b2-key-id = { };
+  sops.secrets.b2-application-key = { };
 
   sops.templates.rclone-conf = {
     content = ''
@@ -75,7 +66,6 @@ in
       account = ${config.sops.placeholder.b2-key-id}
       key = ${config.sops.placeholder.b2-application-key}
     '';
-    mode = "0400";
   };
 
   swapDevices = [
@@ -205,7 +195,7 @@ in
     # still exits non-zero overall so a real failure keeps surfacing.
     script = ''
       status=0
-      rclone sync rustfs:backups b2:minz-homelab-backups --checkers 8 --transfers 4 || status=1
+      rclone sync rustfs:backups b2:minz-homelab-backups --exclude "/tofu-state/**" --checkers 8 --transfers 4 || status=1
       rclone sync rustfs:tofu-state b2:minz-homelab-backups/tofu-state --checkers 8 --transfers 4 || status=1
       exit "$status"
     '';
@@ -219,11 +209,6 @@ in
       Persistent = true;
     };
   };
-
-  networking.firewall.allowedTCPPorts = fwPorts ++ [ 80 ];
-
-  # No Caddy on this host, but group is needed for ACME cert readability by Alloy.
-  users.groups.caddy = { };
 
   environment.systemPackages =
     let

@@ -1,13 +1,8 @@
-#!@shell@ -e
-# shellcheck shell=bash
-
-export PATH="@binPath@:$PATH"
-
-MIN_AGE_SEC="@minAgeSec@"
-POKE_TIMEOUT="@pokeTimeoutSec@"
-MAX_STUCK_PER_FILE="@maxStuckPerFile@"
-INTERVAL_SEC="@intervalSec@"
-MIN_POKE_INTERVAL_SEC="@minPokeIntervalSec@"
+MIN_AGE_SEC=30
+POKE_TIMEOUT=10
+MAX_STUCK_PER_FILE=3
+INTERVAL_SEC=30
+MIN_POKE_INTERVAL_SEC=60
 LOCK_DIR="/tmp/ffprobe-monitor-locks"
 RATE_LIMIT_DIR="/tmp/ffprobe-monitor-poked"
 CACHE_TTL_SEC="3600"
@@ -49,14 +44,10 @@ get_file_id() {
   printf '%s' "$1" | md5sum | cut -d' ' -f1
 }
 
-{
-  renice -n 19 -p $$ 2>/dev/null || true
-  ionice -c 3 -p $$ 2>/dev/null || true
-} >/dev/null 2>&1
-
 logger -t ffprobe-monitor "Starting ffprobe monitor (Safety Valve mode)..."
 
 while true; do
+  unset file_stuck_count file_path_map
   declare -A file_stuck_count
   declare -A file_path_map
 

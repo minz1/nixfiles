@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-mapfile -t phases < <(just deploy _phases)
+phases_out=$(just deploy _phases) || exit 1
+mapfile -t phases <<< "$phases_out"
 total="${#phases[@]}"
 want=("$@")
+for w in "$@"; do
+    grep -qw -- "$w" <<< "$phases_out" || { echo "Unknown host: $w" >&2; exit 1; }
+done
 failed=()
 
 pending_after() {

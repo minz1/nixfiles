@@ -4,14 +4,18 @@
 affected-hosts before after="HEAD":
     ${ROOT_DIR}/scripts/ci-affected-hosts.sh "{{ before }}" "{{ after }}"
 
-# Build and push the given hosts' closures to the Attic cache.
-attic-push *hosts:
-    ${ROOT_DIR}/scripts/ci-attic-push.sh {{ hosts }}
+# Build the given hosts' closures and record their paths for attic-push.
+build *hosts:
+    ${ROOT_DIR}/scripts/ci-build.sh {{ hosts }}
+
+# Push the paths recorded by build (or flake-update) to Attic. Needs ATTIC_PUSH_TOKEN.
+attic-push:
+    ${ROOT_DIR}/scripts/ci-attic-push.sh
 
 # Scan the given hosts' closures with vulnix, KEV-gated. Defaults to every deployed host.
 vulnix *hosts:
     ${ROOT_DIR}/scripts/ci-vulnix.sh {{ hosts }}
 
-# Bump flake.lock, build every deployed host's closure, and push to Attic. Leaves flake.lock updated for the workflow to upload as an artifact.
+# Bump flake.lock and build every deployed host's closure (the workflow pushes separately). Leaves flake.lock updated for the workflow to upload as an artifact.
 flake-update:
     ${ROOT_DIR}/scripts/ci-flake-update.sh

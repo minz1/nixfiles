@@ -1,8 +1,7 @@
 {
-  hostName,
   lib,
   modulesPath,
-  topology,
+  incusGatewayIp,
   node,
   ...
 }:
@@ -10,17 +9,11 @@
 let
   vmIp = node.networks.incus_bridge.ip;
   nixSize = node.incus.nix_size or "60G";
-  incusHostNode = lib.findFirst (
-    n: (n.provisioner or "") == "incus-host"
-  ) (throw "No incus-host node in topology") (lib.attrValues topology.nodes);
-  gatewayIp = incusHostNode.networks.incus_bridge.ip;
 in
 {
   imports = [
     (modulesPath + "/profiles/qemu-guest.nix")
   ];
-
-  networking.hostName = hostName;
 
   networking.useNetworkd = true;
   networking.useDHCP = false;
@@ -28,11 +21,11 @@ in
   systemd.network.networks."10-enp" = {
     matchConfig.Name = "en*";
     address = [ "${vmIp}/24" ];
-    gateway = [ gatewayIp ];
+    gateway = [ incusGatewayIp ];
     linkConfig.RequiredForOnline = "routable";
   };
 
-  services.timesyncd.servers = [ gatewayIp ];
+  services.timesyncd.servers = [ incusGatewayIp ];
 
   services.openssh.listenAddresses = [
     {
@@ -40,8 +33,6 @@ in
       port = 22;
     }
   ];
-
-  networking.firewall.allowedTCPPorts = [ 22 ];
 
   boot.initrd.availableKernelModules = [
     "ata_piix"

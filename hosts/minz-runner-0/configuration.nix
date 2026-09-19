@@ -1,5 +1,4 @@
 {
-  hostName,
   config,
   lib,
   pkgs,
@@ -13,18 +12,11 @@ let
   forgejoPort = 3000;
 in
 {
-  networking.hostName = hostName;
+  imports = [ ../../modules/nixos/rootless-podman.nix ];
+
   system.stateVersion = "25.11";
 
-  # No Caddy on this host, but group is needed for ACME cert readability by Alloy/node_exporter.
-  users.groups.caddy = { };
-
-  sops.secrets.forgejo_runner_token.mode = "0400";
-
-  sops.secrets.attic_push_token = {
-    mode = "0400";
-    owner = "podman-runner";
-  };
+  sops.secrets.forgejo_runner_token = { };
 
   services.forgejo-runner = {
     package = pkgs.forgejo-runner;
@@ -41,10 +33,6 @@ in
         cache.enabled = false;
         container = {
           docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
-          valid_volumes = [ "/run/secrets/**" ];
-          options = lib.concatStringsSep " " [
-            "-v ${config.sops.secrets.attic_push_token.path}:/run/secrets/attic_push_token:ro"
-          ];
         };
       };
       secrets.server.connections.default.token_url = config.sops.secrets.forgejo_runner_token.path;
@@ -94,40 +82,12 @@ in
     };
   };
 
-  users.manageLingering = true;
-
-  users.users.podman-runner = {
-    isSystemUser = true;
-    uid = 800;
-    group = "podman-runner";
-    home = "/var/lib/podman-runner";
-    createHome = true;
-    linger = true;
-    subUidRanges = [
-      {
-        startUid = 100000;
-        count = 65536;
-      }
-    ];
-    subGidRanges = [
-      {
-        startGid = 100000;
-        count = 65536;
-      }
-    ];
-  };
-  users.groups.podman-runner = { };
-
-  virtualisation.podman = {
+  services.rootless-podman = {
     enable = true;
-    dockerCompat = true;
-    dockerSocket.enable = false;
-    defaultNetwork.settings.dns_enabled = true;
-    autoPrune = {
-      enable = true;
-      dates = "weekly";
-    };
+    user = "podman-runner";
+    uid = 800;
   };
+  virtualisation.podman.dockerCompat = true;
 
   environment.persistence."/persist".directories = [
     {

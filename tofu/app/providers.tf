@@ -46,13 +46,13 @@ provider "authentik" {
 }
 
 # API keys from TF_VAR_* in secrets/tofu.env; URLs are topology.nix's minz-media-0 incus_bridge IP + service ports.
-variable "sonarr_api_key"   { sensitive = true }
-variable "radarr_api_key"   { sensitive = true }
+variable "sonarr_api_key" { sensitive = true }
+variable "radarr_api_key" { sensitive = true }
 variable "prowlarr_api_key" { sensitive = true }
-variable "seerr_api_key"    { sensitive = true }
-variable "nzbgeek_api_key"       { sensitive = true }
-variable "torbox_api_key"        { sensitive = true }
-variable "torrentio_debrid_key"  { sensitive = true }
+variable "seerr_api_key" { sensitive = true }
+variable "nzbgeek_api_key" { sensitive = true }
+variable "torbox_api_key" { sensitive = true }
+variable "torrentio_debrid_key" { sensitive = true }
 
 provider "sonarr" {
   url     = "https://10.10.0.7/sonarr"

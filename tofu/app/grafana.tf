@@ -40,6 +40,12 @@ resource "authentik_group" "grafana_admins" {
   name = "grafana-admins"
 }
 
+resource "authentik_policy_binding" "grafana_access" {
+  target = authentik_application.grafana.uuid
+  group  = authentik_group.grafana_admins.id
+  order  = 0
+}
+
 output "grafana_client_secret" {
   value     = authentik_provider_oauth2.grafana.client_secret
   sensitive = true

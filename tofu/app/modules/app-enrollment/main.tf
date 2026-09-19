@@ -69,14 +69,16 @@ resource "authentik_stage_email" "enrollment" {
   template            = "email/account_confirmation.html"
   subject             = "Confirm your account"
   token_expiry        = "minutes=30"
+
+  activate_user_on_success = true
 }
 
 resource "authentik_stage_user_write" "enrollment" {
   name                     = "${var.app_name}-enrollment-write"
-  create_users_as_inactive = false
+  create_users_as_inactive = true
   user_creation_mode       = "always_create"
   user_type                = "internal"
-  create_users_group       = var.group_id != null ? var.group_id : null
+  create_users_group       = var.group_id
 }
 
 resource "authentik_stage_user_login" "enrollment" {
@@ -123,7 +125,7 @@ resource "authentik_flow_stage_binding" "enroll_login" {
 
 resource "authentik_stage_invitation" "join" {
   name                             = "${var.app_name}-join-invitation"
-  continue_flow_without_invitation = !var.join_require_invitation
+  continue_flow_without_invitation = false
 }
 
 resource "authentik_stage_password" "join" {
@@ -141,11 +143,7 @@ resource "authentik_stage_identification" "join" {
 resource "authentik_stage_user_write" "join" {
   name               = "${var.app_name}-join-write"
   user_creation_mode = "never_create"
-  create_users_group = var.group_id != null ? var.group_id : null
-}
-
-resource "authentik_stage_user_login" "join" {
-  name = "${var.app_name}-join-login"
+  create_users_group = var.group_id
 }
 
 resource "authentik_flow" "join" {
@@ -172,10 +170,4 @@ resource "authentik_flow_stage_binding" "join_write" {
   target = authentik_flow.join.uuid
   stage  = authentik_stage_user_write.join.id
   order  = 20
-}
-
-resource "authentik_flow_stage_binding" "join_login" {
-  target = authentik_flow.join.uuid
-  stage  = authentik_stage_user_login.join.id
-  order  = 30
 }

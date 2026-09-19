@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   hostEndpoints,
   mkHardened,
   ...
@@ -17,14 +18,11 @@ in
     enable = true;
     settings = {
       server = {
-        http_addr = "127.0.0.1";
         http_port = grafanaPort;
-        protocol = "http";
         domain = "grafana.minz1.com";
         root_url = "https://grafana.minz1.com/";
       };
       security = {
-        admin_user = "admin";
         # $__file{} is expanded by Grafana's file provider at runtime.
         admin_password = "$__file{${config.sops.secrets.grafana_admin_password.path}}";
         secret_key = "$__file{${config.sops.secrets.grafana_secret_key.path}}";
@@ -99,35 +97,22 @@ in
     };
   };
 
-  sops.secrets.grafana_smtp_password = {
-    mode = "0400";
-    owner = "grafana";
-  };
-
-  # plaintext, sent over HTTP Basic Auth; distinct from ntfy_grafana_password_hash on services-0, same source password
-  sops.secrets.ntfy_grafana_password = {
-    mode = "0400";
-    owner = "grafana";
-  };
+  # ntfy_grafana_password: plaintext, sent over HTTP Basic Auth; distinct from ntfy_grafana_password_hash on services-0, same source password
+  sops.secrets =
+    lib.genAttrs
+      [
+        "grafana_smtp_password"
+        "ntfy_grafana_password"
+        "grafana_admin_password"
+        "grafana_secret_key"
+        "grafana_oauth_client_secret"
+      ]
+      (_: {
+        owner = "grafana";
+      });
 
   sops.templates."grafana-alerting-env" = {
     content = "NTFY_PASSWORD=${config.sops.placeholder.ntfy_grafana_password}";
-    owner = "grafana";
-    mode = "0400";
-  };
-
-  sops.secrets.grafana_admin_password = {
-    mode = "0400";
-    owner = "grafana";
-  };
-
-  sops.secrets.grafana_secret_key = {
-    mode = "0400";
-    owner = "grafana";
-  };
-
-  sops.secrets.grafana_oauth_client_secret = {
-    mode = "0400";
     owner = "grafana";
   };
 

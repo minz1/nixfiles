@@ -15,4 +15,4 @@ if [ "$incus_type" = "container" ]; then
 fi
 
 cd "${ROOT_DIR}"
-"${ROOT_DIR}/scripts/with-incus.sh" "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra destroy -target=${instance_resource}[\"${host}\"] -target=incus_storage_volume.persist[\"${host}\"]'"
+"${ROOT_DIR}/scripts/with-incus.sh" "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra destroy -target=${instance_resource}[\\\"${host}\\\"] -target=incus_storage_volume.persist[\\\"${host}\\\"]'"

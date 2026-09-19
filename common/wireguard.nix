@@ -71,7 +71,7 @@ let
         peers = lib.mapAttrsToList toPeer peers;
       }
       // lib.optionalAttrs isServer {
-        listenPort = currentNetworkConfig.listenPort or networkConfig.listenPort or 51820;
+        inherit (networkConfig) listenPort;
       };
     };
 
@@ -90,9 +90,7 @@ in
   sops.secrets = builtins.listToAttrs (
     lib.mapAttrsToList (networkName: _: {
       name = "wg_private_${networkName}";
-      value = {
-        mode = "0400";
-      };
+      value = { };
     }) wireguardNetworks
   );
 
@@ -103,9 +101,7 @@ in
       let
         currentNetCfg = currentNode.networks.${networkName};
       in
-      lib.optional (currentNetCfg.role == "server") (
-        currentNetCfg.listenPort or networkConfig.listenPort or 51820
-      )
+      lib.optional (currentNetCfg.role == "server") (networkConfig.listenPort)
     ) wireguardNetworks
   );
 

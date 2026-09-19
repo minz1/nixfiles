@@ -1,5 +1,4 @@
 {
-  hostName,
   config,
   pkgs,
   ...
@@ -9,21 +8,16 @@ let
   stepCaPort = 9443;
 in
 {
-  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   environment.etc."step-ca/certs/root_ca.crt".source = ./root_ca.crt;
   environment.etc."step-ca/certs/intermediate_ca.crt".source = ./intermediate_ca.crt;
 
   sops.secrets.step_ca_password = {
-    mode = "0400";
     owner = "step-ca";
   };
 
-  sops.secrets.step_ca_intermediate_key = {
-    path = "/run/secrets/step_ca_intermediate_key";
-    owner = "step-ca";
-  };
+  sops.secrets.step_ca_intermediate_key.owner = "step-ca";
 
   services.step-ca = {
     enable = true;
@@ -32,7 +26,7 @@ in
     settings = (builtins.fromJSON (builtins.readFile ./ca.json)) // {
       root = "/etc/step-ca/certs/root_ca.crt";
       crt = "/etc/step-ca/certs/intermediate_ca.crt";
-      key = "/run/secrets/step_ca_intermediate_key";
+      key = config.sops.secrets.step_ca_intermediate_key.path;
       db = {
         type = "badgerv2";
         dataSource = "/var/lib/step-ca/db";
@@ -41,9 +35,6 @@ in
     };
     intermediatePasswordFile = config.sops.secrets.step_ca_password.path;
   };
-
-  # No Caddy on this host, but group is needed for ACME cert readability by Alloy.
-  users.groups.caddy = { };
 
   networking.firewall.allowedTCPPorts = [ stepCaPort ];
 
@@ -57,6 +48,16 @@ in
       RandomizedDelaySec = "30m";
       Persistent = true;
     };
+  };
+
+  # its own cert comes from its own CA: don't race step-ca at boot
+  systemd.services."acme-minz-pki-0.internal" = {
+    after = [ "step-ca.service" ];
+    wants = [ "step-ca.service" ];
+  };
+  systemd.services."acme-order-renew-minz-pki-0.internal" = {
+    after = [ "step-ca.service" ];
+    wants = [ "step-ca.service" ];
   };
 
   # backupPrepareCommand/backupCleanupCommand need systemctl on PATH — not there by default.

@@ -9,7 +9,6 @@
 
 let
   servicesIp = node.networks.incus_bridge.ip;
-  acmeHttpPort = 80;
 
   caddyHttpsPort = 443;
   mediaFixerPort = 8081;
@@ -19,7 +18,6 @@ let
   loki = hostEndpoints."minz-obs-0".loki;
 in
 {
-  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   # Go caches the TLS cert pool at startup; try-reload-or-restart triggers a full restart for services without ExecReload, which is what we need after cert renewal.
@@ -27,10 +25,10 @@ in
 
   sops.secrets."media-fixer-env" = { };
 
-  # TODO: add Caddy route for the dashboard under admin.minz1.com/media when ready.
   services.media-fixer = {
     enable = true;
-    addr = ":${toString mediaFixerPort}";
+    # loopback only: reachable solely through Caddy's mTLS-gated admin.minz1.com route below
+    addr = "127.0.0.1:${toString mediaFixerPort}";
     baseURL = "/media";
     environmentFile = config.sops.secrets."media-fixer-env".path;
 
@@ -97,10 +95,56 @@ in
         http.servers.services = {
           listen = [ ":${toString caddyHttpsPort}" ];
           automatic_https.disable = true;
+          # the edge dials by IP (no SNI); client auth would otherwise auto-enable strict SNI and 421 every
+          # proxied Host. The admin route authorizes on the client cert CN, not SNI.
+          strict_sni_host = false;
           tls_connection_policies = [
-            { certificate_selection.any_tag = [ "services" ]; }
+            {
+              certificate_selection.any_tag = [ "services" ];
+              # ntfy clients don't present one; the admin route below requires it
+              client_authentication = {
+                trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];
+                mode = "verify_if_given";
+              };
+            }
           ];
           routes = [
+            {
+              # media-fixer has no auth of its own (its approval endpoint gates destructive agent
+              # actions), so only the edge — which enforces Authentik forward_auth — gets through
+              match = [ { host = [ "admin.minz1.com" ]; } ];
+              handle = [
+                {
+                  handler = "subroute";
+                  routes = [
+                    {
+                      match = [
+                        {
+                          not = [
+                            { expression = ''{http.request.tls.client.subject} == "CN=minz-vultr-nix-1.internal"''; }
+                          ];
+                        }
+                      ];
+                      handle = [
+                        {
+                          handler = "static_response";
+                          status_code = 403;
+                        }
+                      ];
+                    }
+                    {
+                      handle = [
+                        {
+                          handler = "reverse_proxy";
+                          upstreams = [ { dial = "127.0.0.1:${toString mediaFixerPort}"; } ];
+                          headers.request.set."Host" = [ "{http.request.host}" ];
+                        }
+                      ];
+                    }
+                  ];
+                }
+              ];
+            }
             {
               # .internal alias lets Grafana publish over the bridge instead of hairpinning through the edge
               match = [
@@ -127,35 +171,16 @@ in
 
   networking.firewall.allowedTCPPorts = [
     caddyHttpsPort
-    acmeHttpPort
   ];
-
-  networking.firewall.extraCommands = ''
-    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString mediaFixerPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.edge.subnet} -p tcp --dport ${toString mediaFixerPort} -j nixos-fw-accept
-  '';
 
   homelab.endpoints.caddy = {
     ip = servicesIp;
     port = caddyHttpsPort;
-    tls = true;
-  };
-
-  homelab.endpoints.mediafixer = {
-    ip = servicesIp;
-    port = mediaFixerPort;
-    tls = false;
   };
 
   systemd.services.media-fixer.serviceConfig.SupplementaryGroups = [ "caddy" ];
 
   environment.persistence."/persist".directories = [
-    {
-      directory = "/var/lib/caddy";
-      user = "caddy";
-      group = "caddy";
-      mode = "0700";
-    }
     {
       directory = "/var/lib/private/media-fixer";
       mode = "0700";

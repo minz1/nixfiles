@@ -3,7 +3,7 @@ data "external" "topology" {
   program = [
     "nix", "eval", "--json", "--impure",
     "--expr",
-    "let nodes = import ../../common/topology.nix; keys = import ../../common/ssh-keys.nix; in { data = builtins.toJSON { inherit (nodes) nodes; sshKeys = keys.minz1; }; }",
+    "let nodes = import ../../common/topology.nix; in { data = builtins.toJSON { inherit (nodes) nodes; }; }",
   ]
 }
 
@@ -11,7 +11,6 @@ locals {
   # Decode the string-encoded JSON back into a Tofu map.
   all_data  = jsondecode(data.external.topology.result.data)
   all_nodes = local.all_data.nodes
-  ssh_keys  = local.all_data.sshKeys
 
   all_vms = {
     for name, node in local.all_nodes : name => node
@@ -27,11 +26,6 @@ locals {
     for name, node in local.all_vms : name => node
     if try(node.os, "") == "nixos" && try(node.incus.incus_type, "virtual-machine") == "container"
   }
-
-  other_vms = {
-    for name, node in local.all_vms : name => node
-    if try(node.os, "") != "nixos"
-  }
 }
 
 # --- NixOS VMs ---
@@ -46,8 +40,8 @@ resource "incus_instance" "vm" {
   depends_on = [incus_image.bootstrap]
 
   config = {
-    "limits.cpu"    = tostring(each.value.incus.cpus)
-    "limits.memory" = each.value.incus.memory
+    "limits.cpu"          = tostring(each.value.incus.cpus)
+    "limits.memory"       = each.value.incus.memory
     "security.secureboot" = true
   }
 
@@ -183,58 +177,13 @@ resource "incus_instance" "container" {
       trigger = "once"
     }
   }
-}
 
-# --- Non-NixOS VMs ---
-
-resource "incus_instance" "other_vm" {
-  for_each = local.other_vms
-
-  name  = each.key
-  image = each.value.incus.image
-  type  = "virtual-machine"
-
-  config = {
-    "limits.cpu"    = tostring(each.value.incus.cpus)
-    "limits.memory" = each.value.incus.memory
-    "security.secureboot" = false
-    # Cloud-Init user data for SSH key injection and static IP.
-    "user.user-data" = templatefile("${path.module}/cloud-init.yaml.tftpl", {
-      hostname     = each.key
-      ssh_keys     = local.ssh_keys
-      ip           = each.value.networks.incus_bridge.ip
-      gateway      = local.gateway_ip
-      prefix       = local.incus_prefix
-    })
-  }
-
-  device {
-    name = "eth0"
-    type = "nic"
-    properties = {
-      network = local.incus_bridge_name
-    }
-  }
-
-  device {
-    name = "root"
-    type = "disk"
-    properties = {
-      path = "/"
-      pool = "default"
-      size = "20GiB"
-    }
+  # a new bootstrap image fingerprint must never force-replace an existing container
+  lifecycle {
+    ignore_changes = [image]
   }
 }
 
 locals {
-  # The Incus gateway is the node with provisioner == "incus-host".
-  host_node = one([
-    for name, node in local.all_nodes : node
-    if try(node.provisioner, "") == "incus-host"
-  ])
-
-  gateway_ip        = local.host_node.networks.incus_bridge.ip
   incus_bridge_name = "incusbr0"
-  incus_prefix      = 24
 }

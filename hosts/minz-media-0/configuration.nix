@@ -1,5 +1,4 @@
 {
-  hostName,
   config,
   lib,
   pkgs,
@@ -11,7 +10,7 @@
 
 let
   mediaIp = node.networks.incus_bridge.ip;
-  acmeHttpPort = 80;
+  mediaBackupUnits = "sonarr.service radarr.service prowlarr.service bazarr.service seerr.service jellyfin.service";
 
   caddyHttpsPort = 443;
   jellyfinPort = 8096;
@@ -25,19 +24,16 @@ let
 in
 {
   imports = [
-    ../../modules/services/jellyfin-init.nix
-    ../../modules/services/ffprobe-monitor.nix
     ../../modules/nixos/rootless-podman.nix
   ];
 
-  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   # lxc-container.nix disables programs.fuse, stripping the setuid fusermount3 wrapper rclone needs for non-root FUSE mounts — re-enable it explicitly.
   programs.fuse.enable = lib.mkForce true;
 
   sops.secrets."media-agent-env" = { };
-  sops.secrets.jellyfin_admin_password.mode = "0400";
+  sops.secrets.jellyfin_admin_password = { };
   sops.secrets.sonarr_api_key = { };
   sops.secrets.radarr_api_key = { };
   sops.secrets.prowlarr_api_key = { };
@@ -56,23 +52,19 @@ in
   sops.templates.sonarr-env = {
     content = "SONARR__AUTH__APIKEY=${config.sops.placeholder.sonarr_api_key}";
     owner = "sonarr";
-    mode = "0400";
   };
   sops.templates.radarr-env = {
     content = "RADARR__AUTH__APIKEY=${config.sops.placeholder.radarr_api_key}";
     owner = "radarr";
-    mode = "0400";
   };
   # root:root 0400: EnvironmentFile is read as root before DynamicUser UID is allocated
   sops.templates.prowlarr-env = {
     content = "PROWLARR__AUTH__APIKEY=${config.sops.placeholder.prowlarr_api_key}";
-    mode = "0400";
   };
   # Quadlet EnvironmentFile read by Podman before exec; owner must match the rootless UID
   sops.templates.zilean-postgres-env = {
     content = "POSTGRES_PASSWORD=${config.sops.placeholder.zilean_db_password}";
     owner = "oci";
-    mode = "0400";
   };
   sops.templates.zilean-app-env = {
     content = ''
@@ -80,7 +72,6 @@ in
       Zilean__Database__ConnectionString=Host=localhost;Database=zilean;Username=zilean;Password=${config.sops.placeholder.zilean_db_password};Include Error Detail=true;Timeout=30;CommandTimeout=3600;
     '';
     owner = "oci";
-    mode = "0400";
   };
   sops.templates.seadexerr-env = {
     content = ''
@@ -88,7 +79,6 @@ in
       RADARR_API_KEY=${config.sops.placeholder.radarr_api_key}
     '';
     owner = "oci";
-    mode = "0400";
   };
   sops.templates.decypharr-env = {
     content = ''
@@ -103,7 +93,6 @@ in
       DECYPHARR_SECRET_KEY=${config.sops.placeholder.decypharr_secret_key}
     '';
     owner = "decypharr";
-    mode = "0400";
   };
 
   sops.templates.decypharr-auth-json = {
@@ -121,7 +110,6 @@ in
       RADARR_API_KEY=${config.sops.placeholder.radarr_api_key}
     '';
     owner = "recyclarr";
-    mode = "0400";
   };
 
   # Arc A310 DRM passthrough via Incus cgroup allowlist; VAAPI device: /dev/dri/renderD129
@@ -132,9 +120,75 @@ in
     vpl-gpu-rt # Required for Intel Arc (DG2) QuickSync support
   ];
 
-  services.jellyfin-init = {
-    enable = true;
-    adminPasswordFile = config.sops.secrets.jellyfin_admin_password.path;
+  # one-time setup wizard completion, so a fresh volume comes up usable without clicking through the UI
+  systemd.services.jellyfin-init = {
+    description = "Jellyfin one-time setup wizard";
+    after = [ "jellyfin.service" ];
+    requires = [ "jellyfin.service" ];
+    wantedBy = [ "multi-user.target" ];
+
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+
+    path = [
+      pkgs.curl
+      pkgs.jq
+      pkgs.coreutils
+    ];
+
+    script = ''
+      url="http://127.0.0.1:8096"
+
+      echo "jellyfin-init: waiting for Jellyfin to be ready..."
+      for i in {1..60}; do
+        if curl -sf "$url/System/Info/Public" > /dev/null 2>&1; then
+          if curl -sf "$url/Startup/User" > /dev/null 2>&1 || [ "$(curl -s -o /dev/null -w "%{http_code}" "$url/Startup/User")" = "401" ]; then
+            echo "jellyfin-init: Jellyfin is ready."
+            break
+          fi
+        fi
+        echo "jellyfin-init: waiting... ($i/60)"
+        sleep 5
+      done
+
+      completed=$(curl -sf "$url/System/Info/Public" | jq -r '.StartupWizardCompleted')
+      if [ "$completed" = "true" ]; then
+        echo "jellyfin-init: wizard already completed, nothing to do."
+        exit 0
+      fi
+
+      password=$(cat "${config.sops.secrets.jellyfin_admin_password.path}")
+
+      echo "jellyfin-init: setting initial configuration..."
+      curl -sf -X POST "$url/Startup/Configuration" \
+        -H "Content-Type: application/json" \
+        -d "$(jq -n \
+              --arg name "${config.networking.hostName}" \
+              '{ServerName: $name, UICulture: "en-US", MetadataCountryCode: "US", PreferredMetadataLanguage: "en"}')"
+
+      echo "jellyfin-init: initializing user creation..."
+      curl -sf -X GET "$url/Startup/User" > /dev/null
+
+      echo "jellyfin-init: creating admin user..."
+      curl -sf -X POST "$url/Startup/User" \
+        -H "Content-Type: application/json" \
+        -d "$(jq -n \
+              --arg name "admin" \
+              --arg pass "$password" \
+              '{Name: $name, Password: $pass, ConfirmPassword: $pass}')"
+
+      echo "jellyfin-init: configuring remote access..."
+      curl -sf -X POST "$url/Startup/RemoteAccess" \
+        -H "Content-Type: application/json" \
+        -d '{"EnableRemoteAccess":true,"EnableAutomaticPortMapping":false}'
+
+      echo "jellyfin-init: completing wizard..."
+      curl -sf -X POST "$url/Startup/Complete"
+
+      echo "jellyfin-init: wizard completed successfully."
+    '';
   };
 
   # jellyfin needs render+video group membership to access /dev/dri/renderD128 in the container.
@@ -376,7 +430,19 @@ in
     };
   };
 
-  services.ffprobe-monitor.enable = true;
+  systemd.services.ffprobe-monitor = {
+    description = "Monitor and poke stuck ffprobe processes";
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      ExecStart = lib.getExe pkgs.ffprobe-monitor;
+      Restart = "always";
+      RestartSec = "10s";
+      # lowest IO / CPU priority so it never interferes with media serving
+      IOSchedulingClass = "idle";
+      CPUSchedulingPolicy = "idle";
+      Nice = 19;
+    };
+  };
 
   services.media-agent = {
     enable = true;
@@ -482,9 +548,6 @@ in
     "d /data/library/movies          0775 radarr media  -"
   ];
 
-  systemd.services.caddy.after = lib.mkAfter [ "acme-minz-media-0.internal.service" ];
-  systemd.services.caddy.wants = [ "acme-minz-media-0.internal.service" ];
-
   services.caddy = {
     enable = true;
     settings = {
@@ -514,74 +577,45 @@ in
               ];
             }
             # Path-specific routes before the seerr catch-all; mediaIp allows direct WireGuard access (e.g. from the Tofu runner at https://10.10.0.7/sonarr).
-            {
-              match = [
+          ]
+          ++
+            map
+              (app: {
+                match = [
+                  {
+                    host = [
+                      "arr.minz1.com"
+                      mediaIp
+                    ];
+                    path = [ "/${app.name}*" ];
+                  }
+                ];
+                handle = [
+                  {
+                    handler = "reverse_proxy";
+                    upstreams = [ { dial = "127.0.0.1:${toString app.port}"; } ];
+                  }
+                ];
+              })
+              [
                 {
-                  host = [
-                    "arr.minz1.com"
-                    mediaIp
-                  ];
-                  path = [ "/sonarr*" ];
+                  name = "sonarr";
+                  port = sonarrPort;
                 }
-              ];
-              handle = [
                 {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "127.0.0.1:${toString sonarrPort}"; } ];
+                  name = "radarr";
+                  port = radarrPort;
                 }
-              ];
-            }
-            {
-              match = [
                 {
-                  host = [
-                    "arr.minz1.com"
-                    mediaIp
-                  ];
-                  path = [ "/radarr*" ];
+                  name = "prowlarr";
+                  port = prowlarrPort;
                 }
-              ];
-              handle = [
                 {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "127.0.0.1:${toString radarrPort}"; } ];
+                  name = "bazarr";
+                  port = bazarrPort;
                 }
-              ];
-            }
-            {
-              match = [
-                {
-                  host = [
-                    "arr.minz1.com"
-                    mediaIp
-                  ];
-                  path = [ "/prowlarr*" ];
-                }
-              ];
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "127.0.0.1:${toString prowlarrPort}"; } ];
-                }
-              ];
-            }
-            {
-              match = [
-                {
-                  host = [
-                    "arr.minz1.com"
-                    mediaIp
-                  ];
-                  path = [ "/bazarr*" ];
-                }
-              ];
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "127.0.0.1:${toString bazarrPort}"; } ];
-                }
-              ];
-            }
+              ]
+          ++ [
             # radarr v2.3.5 strips base path from provider URL, producing bare /api/v3/* requests
             {
               match = [
@@ -621,7 +655,6 @@ in
   };
 
   networking.firewall.allowedTCPPorts = [
-    acmeHttpPort
     caddyHttpsPort
   ];
 
@@ -639,21 +672,26 @@ in
   homelab.endpoints.caddy = {
     ip = mediaIp;
     port = caddyHttpsPort;
-    tls = true;
   };
 
   # Config + operational state only — not the media library itself (lives on NFS/decypharr mounts
   # elsewhere) and not decypharr's disposable cache (docs/ops.md). Deliberately excludes zilean's
-  # postgres: it's a DMM/IMDb scrape cache the service rebuilds on its own, not user data. Plain
-  # file paths, no prepareCommand — nothing here is a live database needing a hot-dump step.
+  # postgres: it's a DMM/IMDb scrape cache the service rebuilds on its own, not user data.
+  # The apps keep live SQLite DBs in WAL mode, so they're stopped for the ~30s snapshot; decypharr
+  # stays up since it backs the streaming mounts, and its small DB is the one hot copy.
+  systemd.services."restic-backups-media-configs".path = [ pkgs.systemd ];
   homelab.backups.targets.media-configs = {
     paths = [
       "/var/lib/sonarr"
       "/var/lib/radarr"
-      "/var/lib/prowlarr"
+      "/var/lib/private/prowlarr"
+      "/var/lib/private/jellyseerr"
+      "/var/lib/bazarr"
       "/var/lib/jellyfin"
       "/var/lib/decypharr/db"
     ];
+    prepareCommand = "systemctl stop ${mediaBackupUnits}";
+    cleanupCommand = "systemctl start ${mediaBackupUnits}";
     timerConfig = {
       OnCalendar = "*-*-* 04:30:00";
       RandomizedDelaySec = "30m";

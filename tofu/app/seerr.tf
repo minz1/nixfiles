@@ -93,6 +93,10 @@ resource "seerr_notification_email" "main" {
     auth_user   = "resend"
     auth_pass   = var.seerr_smtp_password
     sender_name = "Seerr"
+
+    secure            = false
+    ignore_tls        = false
+    allow_self_signed = false
   }
 }
 

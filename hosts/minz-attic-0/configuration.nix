@@ -7,12 +7,10 @@
 
 let
   atticIp = node.networks.incus_bridge.ip;
-  acmeHttpPort = 80;
   caddyHttpsPort = 443;
   atticPort = 8080;
 in
 {
-  networking.hostName = hostName;
   system.stateVersion = "25.11";
 
   sops.secrets.attic_jwt_secret = { };
@@ -86,22 +84,14 @@ in
 
   networking.firewall.allowedTCPPorts = [
     caddyHttpsPort
-    acmeHttpPort
   ];
 
   homelab.endpoints.attic = {
     ip = atticIp;
     port = caddyHttpsPort;
-    tls = true;
   };
 
   environment.persistence."/persist".directories = [
-    {
-      directory = "/var/lib/caddy";
-      user = "caddy";
-      group = "caddy";
-      mode = "0700";
-    }
     {
       directory = "/var/lib/private/atticd";
       mode = "0700";
