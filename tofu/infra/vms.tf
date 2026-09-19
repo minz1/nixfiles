@@ -52,6 +52,9 @@ resource "incus_instance" "vm" {
       {
         network        = local.incus_bridge_name
         "ipv4.address" = each.value.networks.incus_bridge.ip
+        # a guest that can spoof another's MAC/IP can answer its HTTP-01 challenge and mint its cert
+        "security.mac_filtering"  = "true"
+        "security.ipv4_filtering" = "true"
       },
       lookup(local.vm_acl_map, each.key, "") != "" ? {
         "security.acls" = lookup(local.vm_acl_map, each.key, "")
@@ -110,6 +113,9 @@ resource "incus_instance" "container" {
       {
         network        = local.incus_bridge_name
         "ipv4.address" = each.value.networks.incus_bridge.ip
+        # a guest that can spoof another's MAC/IP can answer its HTTP-01 challenge and mint its cert
+        "security.mac_filtering"  = "true"
+        "security.ipv4_filtering" = "true"
       },
       lookup(local.container_acl_map, each.key, "") != "" ? {
         "security.acls" = lookup(local.container_acl_map, each.key, "")

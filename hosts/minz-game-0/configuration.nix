@@ -62,6 +62,9 @@ in
   networking.nftables.tables.container-egress = {
     family = "inet";
     content = ''
+      # Detective, not preventive: policy accept. The discord-integration mod holds a raw WSS
+      # connection to Discord's gateway, which the JVM's HTTP proxy settings don't cover (~70/day,
+      # all Cloudflare 162.159.13x.x). Dropping here would break it; the ACL still bounds the rest.
       chain output {
         type filter hook output priority filter; policy accept;
         meta skuid ${toString config.services.rootless-podman.uid} tcp dport 443 log prefix "oci-egress-bypass " counter

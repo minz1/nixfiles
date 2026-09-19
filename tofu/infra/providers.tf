@@ -45,7 +45,8 @@ provider "aws" {
 
 provider "incus" {
   generate_client_certificates = false
-  accept_remote_certificate    = true
+  # server cert is pinned by scripts/with-incus.sh into $INCUS_CONF/servercerts
+  accept_remote_certificate = false
 
   # Incus API on home-nix-0 (mgmt IP, core.https_address port in hosts/minz-home-nix-0)
   remote {

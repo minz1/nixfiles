@@ -19,3 +19,8 @@ jobs:
         run: |
           nix shell nixpkgs#gitleaks --command \
             gitleaks detect --source . --redact --no-banner
+
+      # gitleaks allowlists secrets/; this makes sure everything in there really is encrypted
+      - name: Verify secrets/ is encrypted
+        run: |
+          nix develop --no-update-lock-file --command just admin check-secrets

@@ -13,6 +13,7 @@ let
   authentikIp = node.networks.incus_bridge.ip;
 
   authentikPort = 9000;
+  desktopIp = topology.nodes."minz-desktop".networks.mgmt.ip;
   authentikHttpsPort = 9443;
   ldapPort = 3389;
   ldapTlsPort = 6636;
@@ -102,8 +103,9 @@ in
               };
               tls_connection_policies = [
                 {
-                  # mgmt subnet: no client cert, Tofu's authentik provider can't present one
-                  match.remote_ip.ranges = [ topology.networks.mgmt.subnet ];
+                  # the desktop only: Tofu's authentik provider can't present a client cert. The rest of
+                  # the mgmt subnet (both Vultr hosts, unmanaged devices) goes through mTLS like everyone else.
+                  match.remote_ip.ranges = [ "${desktopIp}/32" ];
                   certificate_selection.any_tag = [ "authentik" ];
                 }
                 {
@@ -123,7 +125,7 @@ in
                           expression = ''{http.request.tls.client.subject} == "CN=minz-vultr-nix-1.internal" || {http.request.tls.client.subject} == "CN=minz-obs-0.internal" || {http.request.tls.client.subject} == "CN=minz-game-0.internal"'';
                         }
                         {
-                          remote_ip.ranges = [ topology.networks.mgmt.subnet ];
+                          remote_ip.ranges = [ "${desktopIp}/32" ];
                         }
                       ];
                     }

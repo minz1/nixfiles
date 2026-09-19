@@ -101,6 +101,10 @@ update:
     nix build --no-link "${attrs[@]}"
     echo "All host closures built. Review flake.lock and commit."
 
+# Fail if anything tracked under secrets/ isn't sops-encrypted.
+check-secrets:
+    ${ROOT_DIR}/scripts/check-secrets-encrypted.sh
+
 # nix flake check + formatting + shellcheck on all scripts. Read-only; run before committing.
 check:
     #!/usr/bin/env bash
@@ -111,3 +115,5 @@ check:
     nix fmt -- --fail-on-change "${ROOT_DIR}"
     echo "==> shellcheck scripts/*.sh"
     (cd "${ROOT_DIR}/scripts" && shellcheck -x ./*.sh)
+    echo "==> secrets/ encrypted"
+    ${ROOT_DIR}/scripts/check-secrets-encrypted.sh
