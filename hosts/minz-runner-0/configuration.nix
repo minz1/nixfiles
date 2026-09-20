@@ -16,7 +16,9 @@ in
 
   system.stateVersion = "25.11";
 
-  sops.secrets.forgejo_runner_token = { };
+  sops.secrets.forgejo_runner_token.restartUnits = [
+    "forgejo-runner-minz_forgejo.service"
+  ];
 
   services.forgejo-runner = {
     package = pkgs.forgejo-runner;

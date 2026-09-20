@@ -28,10 +28,16 @@ in
 
   system.stateVersion = "25.11";
 
-  sops.secrets.authentik_env = { };
+  sops.secrets.authentik_env.restartUnits = [
+    "authentik.service"
+    "authentik-worker.service"
+  ];
   sops.secrets.authentik_ldap_token = { };
 
   sops.templates.authentik-ldap-env = {
+    restartUnits = [
+      "authentik-ldap.service"
+    ];
     content = ''
       AUTHENTIK_HOST=http://localhost:${toString authentikPort}
       AUTHENTIK_INSECURE=false
@@ -65,10 +71,6 @@ in
     enable = true;
     environmentFile = config.sops.templates.authentik-ldap-env.path;
   };
-
-  systemd.services.authentik-ldap.restartTriggers = [
-    config.sops.templates.authentik-ldap-env.content
-  ];
 
   services.caddy = {
     enable = true;

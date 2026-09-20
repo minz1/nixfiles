@@ -32,7 +32,9 @@ in
   # lxc-container.nix disables programs.fuse, stripping the setuid fusermount3 wrapper rclone needs for non-root FUSE mounts — re-enable it explicitly.
   programs.fuse.enable = lib.mkForce true;
 
-  sops.secrets."media-agent-env" = { };
+  sops.secrets."media-agent-env".restartUnits = [
+    "media-agent.service"
+  ];
   sops.secrets.jellyfin_admin_password = { };
   sops.secrets.sonarr_api_key = { };
   sops.secrets.radarr_api_key = { };
@@ -50,23 +52,38 @@ in
   sops.secrets.zilean_db_password = { };
 
   sops.templates.sonarr-env = {
+    restartUnits = [
+      "sonarr.service"
+    ];
     content = "SONARR__AUTH__APIKEY=${config.sops.placeholder.sonarr_api_key}";
     owner = "sonarr";
   };
   sops.templates.radarr-env = {
+    restartUnits = [
+      "radarr.service"
+    ];
     content = "RADARR__AUTH__APIKEY=${config.sops.placeholder.radarr_api_key}";
     owner = "radarr";
   };
   # root:root 0400: EnvironmentFile is read as root before DynamicUser UID is allocated
   sops.templates.prowlarr-env = {
+    restartUnits = [
+      "prowlarr.service"
+    ];
     content = "PROWLARR__AUTH__APIKEY=${config.sops.placeholder.prowlarr_api_key}";
   };
   # Quadlet EnvironmentFile read by Podman before exec; owner must match the rootless UID
   sops.templates.zilean-postgres-env = {
+    restartUnits = [
+      "zilean-postgres.service"
+    ];
     content = "POSTGRES_PASSWORD=${config.sops.placeholder.zilean_db_password}";
     owner = "oci";
   };
   sops.templates.zilean-app-env = {
+    restartUnits = [
+      "zilean-app.service"
+    ];
     content = ''
       POSTGRES_PASSWORD=${config.sops.placeholder.zilean_db_password}
       Zilean__Database__ConnectionString=Host=localhost;Database=zilean;Username=zilean;Password=${config.sops.placeholder.zilean_db_password};Include Error Detail=true;Timeout=30;CommandTimeout=3600;
@@ -81,6 +98,9 @@ in
     owner = "oci";
   };
   sops.templates.decypharr-env = {
+    restartUnits = [
+      "decypharr.service"
+    ];
     content = ''
       DECYPHARR_DEBRIDS__0__API_KEY=${config.sops.placeholder.decypharr_rd_api_key}
       DECYPHARR_DEBRIDS__0__DOWNLOAD_API_KEYS__0=${config.sops.placeholder.decypharr_rd_download_key}
@@ -96,6 +116,7 @@ in
   };
 
   sops.templates.decypharr-auth-json = {
+    restartUnits = [ "decypharr.service" ];
     content = builtins.toJSON {
       username = config.sops.placeholder.decypharr_username;
       password = config.sops.placeholder.decypharr_password_hash;
@@ -463,10 +484,6 @@ in
     IOWeight = 100;
     OOMScoreAdjust = 500;
   };
-
-  systemd.services.decypharr.restartTriggers = [
-    config.sops.templates.decypharr-auth-json.content
-  ];
 
   virtualisation.quadlet =
     let

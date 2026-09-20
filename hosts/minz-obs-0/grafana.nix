@@ -112,6 +112,9 @@ in
       });
 
   sops.templates."grafana-alerting-env" = {
+    restartUnits = [
+      "grafana.service"
+    ];
     content = "NTFY_PASSWORD=${config.sops.placeholder.ntfy_grafana_password}";
     owner = "grafana";
   };
@@ -122,7 +125,4 @@ in
     EnvironmentFile = config.sops.templates."grafana-alerting-env".path;
   };
   # environmentFile content changes don't restart the service on their own
-  systemd.services.grafana.restartTriggers = [
-    config.sops.templates."grafana-alerting-env".content
-  ];
 }

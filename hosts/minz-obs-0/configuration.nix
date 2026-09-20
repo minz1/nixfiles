@@ -300,7 +300,9 @@ in
   # umask = null: upstream's own module already sets UMask 0077, conflicts if both set it
   systemd.services.prometheus-blackbox-exporter.serviceConfig = mkHardened { umask = null; };
 
-  sops.secrets."adguard_exporter_env" = { };
+  sops.secrets."adguard_exporter_env".restartUnits = [
+    "adguard-exporter.service"
+  ];
 
   systemd.services.adguard-exporter = {
     description = "Prometheus exporter for AdGuard Home";

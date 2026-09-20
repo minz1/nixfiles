@@ -164,6 +164,9 @@ in
   sops.secrets.minecraft_webhook_token = { };
 
   sops.templates.mc-env = {
+    restartUnits = [
+      "atm10.service"
+    ];
     content = ''
       RCON_PASSWORD=${config.sops.placeholder.rcon_password}
       CF_API_KEY=${config.sops.placeholder.curseforge_api_key}
@@ -172,6 +175,9 @@ in
   };
 
   sops.templates.mc-proxyforge-config = {
+    restartUnits = [
+      "atm10.service"
+    ];
     content = ''
       version = 2.0
       [forwarding]
@@ -182,6 +188,9 @@ in
   };
 
   sops.templates.whitelist-sync-env = {
+    restartUnits = [
+      "minecraft-whitelist-sync.service"
+    ];
     content = ''
       RCON_HOST=127.0.0.1
       RCON_PORT=${toString rconPort}
@@ -236,8 +245,6 @@ in
       RestartSec = "30s";
     };
     unitConfig = {
-      "X-Restart-Triggers" =
-        "${config.sops.templates.mc-env.content} ${config.sops.templates.mc-proxyforge-config.content}";
       After = [ "caddy.service" ];
       Wants = [ "caddy.service" ];
     };
@@ -257,7 +264,6 @@ in
   systemd.services.minecraft-whitelist-sync = {
     after = [ "acme-${hostName}.internal.service" ];
     wants = [ "acme-${hostName}.internal.service" ];
-    restartTriggers = [ config.sops.templates.whitelist-sync-env.content ];
   };
 
   security.acme.certs."${hostName}.internal".reloadServices = [ "minecraft-whitelist-sync.service" ];

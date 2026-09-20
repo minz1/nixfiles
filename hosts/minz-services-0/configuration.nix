@@ -23,7 +23,9 @@ in
   # Go caches the TLS cert pool at startup; try-reload-or-restart triggers a full restart for services without ExecReload, which is what we need after cert renewal.
   security.acme.certs."${hostName}.internal".reloadServices = [ "media-fixer.service" ];
 
-  sops.secrets."media-fixer-env" = { };
+  sops.secrets."media-fixer-env".restartUnits = [
+    "media-fixer.service"
+  ];
 
   services.media-fixer = {
     enable = true;
@@ -56,6 +58,9 @@ in
   sops.secrets."ntfy_phone_password_hash" = { };
 
   sops.templates."ntfy-env" = {
+    restartUnits = [
+      "ntfy-sh.service"
+    ];
     content = ''
       NTFY_AUTH_USERS='grafana:${config.sops.placeholder.ntfy_grafana_password_hash}:user,phone:${config.sops.placeholder.ntfy_phone_password_hash}:user'
       NTFY_AUTH_ACCESS='grafana:homelab-alerts:write-only,phone:homelab-alerts:read-only'
@@ -75,11 +80,6 @@ in
     };
     environmentFile = config.sops.templates."ntfy-env".path;
   };
-
-  # environmentFile content changes don't restart the service on their own
-  systemd.services.ntfy-sh.restartTriggers = [
-    config.sops.templates."ntfy-env".content
-  ];
 
   services.caddy = {
     enable = true;

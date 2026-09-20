@@ -100,6 +100,10 @@ in
   sops.secrets.minecraft_velocity_forwarding_secret = { };
 
   sops.templates.crowdsec-caddy-env = {
+    # consumed by caddy's environmentFile (the bouncer plugin), not crowdsec itself
+    restartUnits = [
+      "caddy.service"
+    ];
     content = "CROWDSEC_API_KEY=${config.sops.placeholder.crowdsec_caddy_api_key}";
     owner = "caddy";
   };

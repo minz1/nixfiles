@@ -14,10 +14,16 @@ in
   environment.etc."step-ca/certs/intermediate_ca.crt".source = ./intermediate_ca.crt;
 
   sops.secrets.step_ca_password = {
+    restartUnits = [
+      "step-ca.service"
+    ];
     owner = "step-ca";
   };
 
-  sops.secrets.step_ca_intermediate_key.owner = "step-ca";
+  sops.secrets.step_ca_intermediate_key = {
+    owner = "step-ca";
+    restartUnits = [ "step-ca.service" ];
+  };
 
   services.step-ca = {
     enable = true;

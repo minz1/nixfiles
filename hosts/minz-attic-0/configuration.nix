@@ -13,7 +13,9 @@ in
 {
   system.stateVersion = "25.11";
 
-  sops.secrets.attic_jwt_secret = { };
+  # restartUnits, not restartTriggers: the template's *text* only contains a placeholder, so it
+  # doesn't change when the secret's value is rotated. sops-nix compares decrypted values.
+  sops.secrets.attic_jwt_secret.restartUnits = [ "atticd.service" ];
 
   sops.templates."attic-env".content = ''
     ATTIC_SERVER_TOKEN_RS256_SECRET_BASE64=${config.sops.placeholder.attic_jwt_secret}
@@ -36,10 +38,6 @@ in
       };
     };
   };
-
-  systemd.services.atticd.restartTriggers = [
-    config.sops.templates."attic-env".content
-  ];
 
   services.caddy = {
     enable = true;
