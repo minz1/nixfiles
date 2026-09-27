@@ -31,7 +31,7 @@ resource "sonarr_download_client_qbittorrent" "decypharr" {
   host        = "127.0.0.1"
   port        = 8282
   username    = "http://127.0.0.1:8989/sonarr"
-  password    = var.sonarr_api_key
+  password    = var.decypharr_api_token
   tv_category = "sonarr"
 }
 
@@ -43,7 +43,7 @@ resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
   port        = 8282
   url_base    = "/sabnzbd"
   username    = "http://127.0.0.1:8989/sonarr"
-  password    = var.sonarr_api_key
+  password    = var.decypharr_api_token
   tv_category = "sonarr"
 }
 
@@ -80,7 +80,7 @@ resource "radarr_download_client_qbittorrent" "decypharr" {
   host           = "127.0.0.1"
   port           = 8282
   username       = "http://127.0.0.1:7878/radarr"
-  password       = var.radarr_api_key
+  password       = var.decypharr_api_token
   movie_category = "radarr"
 }
 
@@ -92,7 +92,7 @@ resource "radarr_download_client_sabnzbd" "decypharr_usenet" {
   port           = 8282
   url_base       = "/sabnzbd"
   username       = "http://127.0.0.1:7878/radarr"
-  password       = var.radarr_api_key
+  password       = var.decypharr_api_token
   movie_category = "radarr"
 }
 

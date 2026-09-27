@@ -23,3 +23,9 @@ variable "minecraft_webhook_token" {
   type        = string
   sensitive   = true
 }
+
+variable "decypharr_api_token" {
+  description = "decypharr API token, sent as the qBittorrent/SABnzbd download-client password. Set via TF_VAR_decypharr_api_token in secrets/tofu.env."
+  type        = string
+  sensitive   = true
+}
