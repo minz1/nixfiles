@@ -150,6 +150,7 @@ in
       daemon = {
         type = "zfs_fs";
         mountpoint = "/var/lib/incus";
+        options.canmount = "noauto";
       };
       pool = {
         type = "zfs_fs";
