@@ -62,7 +62,7 @@ in
     environment.etc."alloy/config.alloy" = {
       text = ''
         loki.source.journal "journal" {
-          forward_to    = [loki.write.default.receiver]
+          forward_to    = [loki.process.scrub.receiver]
           relabel_rules = loki.relabel.journal.rules
           labels = {
             job = "systemd-journal",
@@ -91,6 +91,15 @@ in
           rule {
             source_labels = ["__journal_syslog_identifier"]
             target_label  = "syslog_identifier"
+          }
+        }
+
+        loki.process "scrub" {
+          forward_to = [loki.write.default.receiver]
+
+          stage.replace {
+            expression = "(?:ma_username|ma_password|apikey|api_key|passwd)=([^&[:space:]]+)"
+            replace    = "REDACTED"
           }
         }
 

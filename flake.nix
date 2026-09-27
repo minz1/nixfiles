@@ -87,8 +87,10 @@
         (nixpkgs.lib.findFirst (n: n.networks.mgmt.role or "" == "server") null topologyList).name or null;
       incusHostName =
         (nixpkgs.lib.findFirst (n: (n.provisioner or "") == "incus-host") null topologyList).name or null;
+      binaryCacheName =
+        (nixpkgs.lib.findFirst (n: n.binaryCache or false) null topologyList).name or null;
 
-      deployDependency =
+      routingDependency =
         name: node:
         if (node.provisioner or "") == "incus" then
           (if incusHostName != null && incusHostName != name then incusHostName else null)
@@ -96,6 +98,17 @@
           (if mgmtHubName != null && mgmtHubName != name then mgmtHubName else null)
         else
           null;
+
+      dependsOnBinaryCache =
+        name:
+        binaryCacheName != null
+        && name != binaryCacheName
+        && name != incusHostName
+        && name != mgmtHubName;
+
+      deployDependency =
+        name: node:
+        if dependsOnBinaryCache name then binaryCacheName else routingDependency name node;
 
       deployLevel =
         name:

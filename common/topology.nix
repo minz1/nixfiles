@@ -187,6 +187,7 @@
       sshUser = "minz1";
       provisioner = "incus";
       deployed = true;
+      binaryCache = true;
       incus = {
         nix_size = "20G";
         persist_size = "100GiB";
