@@ -19,8 +19,10 @@
       {
         "type": "ACME",
         "name": "acme",
-        "x509Template": {
-          "template": "{\"subject\": {{ toJson .Subject }}, \"sans\": {{ toJson .SANs }}, \"keyUsage\": [\"keyEncipherment\", \"digitalSignature\"], \"extKeyUsage\": [\"serverAuth\", \"clientAuth\"]}"
+        "options": {
+          "x509": {
+            "template": "{\"subject\": {\"commonName\": {{ toJson (default (index .SANs 0).Value .Subject.CommonName) }}}, \"sans\": {{ toJson .SANs }}, \"keyUsage\": [\"keyEncipherment\", \"digitalSignature\"], \"extKeyUsage\": [\"serverAuth\", \"clientAuth\"]}"
+          }
         }
       },
       {

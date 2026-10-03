@@ -679,6 +679,7 @@ in
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString prowlarrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString decypharrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString jellyfinPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
