@@ -239,9 +239,9 @@ in
             (mkLogCountRule {
               uid = "decypharr-fuse-failure";
               title = "Decypharr FUSE mount failure";
-              logql = ''sum by (host) (count_over_time({unit="decypharr.service"} |~ "(?i)fuse.*(fail|error|unmount)" [10m]))'';
+              logql = ''sum by (host) (count_over_time({unit="decypharr.service"} |~ "Failed to start mount manager|FUSE handler panic" [10m])) or sum by (host) (count_over_time({unit=~"(jellyfin|sonarr|radarr).service"} |~ "(?i)transport endpoint is not connected" [10m]))'';
               threshold = 0;
-              summary = "Decypharr FUSE mount error logged on media-0";
+              summary = "Decypharr FUSE mount failed to start, panicked, or left consumers on a dead mount";
             })
             (mkLogCountRule {
               uid = "svc-exec-nonstore";
