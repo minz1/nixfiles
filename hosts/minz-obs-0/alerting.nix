@@ -154,6 +154,10 @@ in
           orgId = 1;
           uid = "auditd-svc-execve";
         }
+        {
+          orgId = 1;
+          uid = "adguard-nxdomain-spike";
+        }
       ];
       groups = [
         {
@@ -181,6 +185,15 @@ in
               summary = "{{ $labels.instance }} /nix usage above 85%";
             })
             (mkThresholdRule {
+              uid = "node-scrape-down";
+              title = "Host metrics unreachable";
+              expr = ''up{job="node"}'';
+              evaluatorType = "lt";
+              evaluatorParams = [ 1 ];
+              for = "10m";
+              summary = "{{ $labels.instance }} node_exporter scrape failing — host down, exporter down, or its TLS cert invalid";
+            })
+            (mkThresholdRule {
               uid = "service-down";
               title = "systemd service failed";
               expr = ''node_systemd_unit_state{state="failed"}'';
@@ -191,9 +204,11 @@ in
             (mkThresholdRule {
               uid = "acme-renewal-failed";
               title = "ACME cert renewal failing";
-              expr = ''node_systemd_unit_state{name=~"acme-.*", state="failed"}'';
+              # activating: Restart=on-failure parks a failing renewal in auto-restart, never "failed"
+              expr = ''node_systemd_unit_state{name=~"acme-.*", state=~"failed|activating"}'';
               evaluatorType = "gt";
               evaluatorParams = [ 0 ];
+              for = "30m";
               summary = "{{ $labels.name }} failed on {{ $labels.instance }} — internal certs are 24h, this needs attention promptly";
             })
             (mkThresholdRule {
@@ -231,14 +246,15 @@ in
             (mkLogCountRule {
               uid = "svc-exec-nonstore";
               title = "Service exec from outside /nix/store";
-              # UID="oci" excluded: game-0's container has its own rootfs, not /nix/store.
+              # UID="oci"/"podman-runner" excluded: game-0's container and CI job containers have their own rootfs.
               logql = ''
                 sum by (host) (
                   count_over_time(
                     {syslog_identifier="audisp-syslog"}
+                      |= "type=SYSCALL"
                       |= "key=\"svc-exec\""
                       !~ "exe=\"/nix/store/"
-                      !~ "UID=\"oci\""
+                      !~ "UID=\"(oci|podman-runner)\""
                       !~ "exe=\"/var/lib/grafana/plugins/"
                     [10m]
                   )
@@ -250,14 +266,17 @@ in
             (mkLogCountRule {
               uid = "svc-exec-shell";
               title = "Shell/interpreter spawned by service user";
-              # comm="sh" + UID="postgres" excluded: pg_dumpall spawns its own shell.
+              # excluded: pg_dumpall's sh, Forgejo's bash git hooks, CI job containers
               logql = ''
                 sum by (host) (
                   count_over_time(
                     {syslog_identifier="audisp-syslog"}
+                      |= "type=SYSCALL"
                       |= "key=\"svc-exec\""
                       |~ "comm=\"(sh|bash|dash|ash|zsh|ksh|python[0-9.]*|perl|ruby|php|node|lua[0-9.]*)\""
                       !~ "comm=\"sh\".*UID=\"postgres\""
+                      !~ "comm=\"bash\".*UID=\"forgejo\""
+                      !~ "UID=\"podman-runner\""
                     [10m]
                   )
                 )
@@ -305,6 +324,7 @@ in
                 sum by (host) (
                   count_over_time(
                     {syslog_identifier="audisp-syslog"}
+                      |= "type=SYSCALL"
                       |~ "key=\"(identity|sshd|sudoers)\""
                       !~ "comm=\"perl\""
                     [10m]
@@ -356,15 +376,6 @@ in
               for = "1h";
               summary = "{{ $labels.name }} on {{ $labels.instance }} hasn't triggered in over 48h";
             })
-            (mkThresholdRule {
-              uid = "adguard-nxdomain-spike";
-              title = "AdGuard NXDOMAIN rate spike";
-              expr = ''sum(rate(adguard_queries_details{reason="NotFilteredNotFound"}[5m]))'';
-              evaluatorType = "gt";
-              evaluatorParams = [ 25 ];
-              for = "15m";
-              summary = "AdGuard NXDOMAIN rate above 25 q/s (6d observed max: ~19 q/s)";
-            })
             (mkLogCountRule {
               uid = "nft-drop-denied";
               title = "Incus ACL denying real traffic";
@@ -374,7 +385,8 @@ in
                     {transport="kernel"}
                       |~ "eth0-(ingress|egress) "
                       != "PROTO=ICMPv6"
-                      != "DST=224.0.0.251"
+                      !~ "DST=(ff[0-9a-f]{2}:|22[4-9]\\.|23[0-9]\\.|255\\.255\\.255\\.255 )"
+                      !~ "RES=0x00 RST URGP="
                     [10m]
                   )
                 )

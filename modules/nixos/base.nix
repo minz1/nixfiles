@@ -1,4 +1,16 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
+
+let
+  # unreleased upstream fix: 4.2.1 splits records that straddle its read buffer into two syslog lines
+  auditWithFgetsFix = pkgs.audit.overrideAttrs (old: {
+    patches = (old.patches or [ ]) ++ [
+      (pkgs.fetchpatch {
+        url = "https://github.com/linux-audit/audit-userspace/commit/ac1cf282fa3a860557a963554498fa544dedaeef.patch";
+        hash = "sha256-Wq4SbZTltS+8FWYX8zrXSpz1znf4ZdVzPKQramX9n2w=";
+      })
+    ];
+  });
+in
 
 {
   imports = [
@@ -79,11 +91,17 @@
 
   # routes audit events into journald -> existing mTLS Loki pipeline, avoids tailing 0700 audit.log
   security.auditd.plugins.syslog.active = lib.mkIf (!config.boot.isContainer) true;
+  security.auditd.package = auditWithFgetsFix;
 
-  # auditd doesn't hot-reload; restart doesn't auto-apply either (RefuseManualStart, needs reboot)
-  systemd.services.auditd.restartTriggers = lib.mkIf (!config.boot.isContainer) [
-    config.environment.etc."audit/plugins.d/syslog.conf".source
-  ];
+  # RefuseManualStop blocks restarts; SIGHUP makes auditd stop and respawn every plugin from config
+  systemd.services.auditd = lib.mkIf (!config.boot.isContainer) {
+    reloadIfChanged = true;
+    restartTriggers = [ config.environment.etc."audit/plugins.d/syslog.conf".source ];
+    serviceConfig.ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+  };
+
+  # systemd's built-in public resolvers; Incus ACLs drop them anyway whenever a link briefly loses its DNS
+  services.resolved.settings.Resolve.FallbackDNS = [ ];
 
   # default 10000/30s; a nixos-rebuild burst can otherwise silently drop audit records
   services.journald.settings.Journal.RateLimitBurst = 50000;
