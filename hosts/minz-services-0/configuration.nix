@@ -41,16 +41,16 @@ in
 
     llm.model = "google/gemini-2.5-flash";
 
-    decypharr.url = "http://${mediaIp}:8282";
-    jellyfin.url = "http://${mediaIp}:8096";
-    sonarr.url = "http://${mediaIp}:8989/sonarr";
-    radarr.url = "http://${mediaIp}:7878/radarr";
+    decypharr.url = "https://${mediaIp}:8443";
+    jellyfin.url = "https://${mediaIp}:8920";
+    sonarr.url = "https://${mediaIp}/sonarr";
+    radarr.url = "https://${mediaIp}/radarr";
     loki = {
       url = "https://${loki.ip}:${toString loki.port}";
       tlsCert = "/var/lib/acme/minz-services-0.internal/cert.pem";
       tlsKey = "/var/lib/acme/minz-services-0.internal/key.pem";
     };
-    mediaAgent.url = "http://${mediaIp}:9191";
+    mediaAgent.url = "https://${mediaIp}:9443";
   };
 
   # bcrypt HASHES (from `ntfy user hash`), not plaintext — obs-0 holds the plaintext counterpart

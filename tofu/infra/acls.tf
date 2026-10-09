@@ -439,10 +439,10 @@ resource "incus_network_acl" "authentik" {
 }
 
 # media-0: broad internet egress (debrid, indexers, metadata) but no reach into the fleet beyond
-# the bridge and RustFS; app ports only from media-fixer on services-0, everything else via Caddy.
+# the bridge and RustFS; all ingress goes through Caddy.
 resource "incus_network_acl" "media" {
   name        = "media"
-  description = "minz-media-0: internet egress + Caddy ingress; app ports from services-0 only"
+  description = "minz-media-0: internet egress + Caddy-only ingress"
 
   ingress = concat(local.common_ingress, [
     {
@@ -455,9 +455,9 @@ resource "incus_network_acl" "media" {
     {
       action           = "allow"
       source           = local.services_ip
-      destination_port = "7878,8096,8282,8989,9191"
+      destination_port = "8443,8920,9443"
       protocol         = "tcp"
-      description      = "media-fixer on services-0: radarr, jellyfin, decypharr, sonarr, media-agent"
+      description      = "media-fixer on services-0 via Caddy: decypharr, jellyfin, media-agent"
       state            = "enabled"
     },
     {

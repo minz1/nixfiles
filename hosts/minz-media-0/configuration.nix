@@ -22,7 +22,10 @@ let
   bazarrPort = 6767;
   decypharrPort = 8282;
   decypharrUiPort = 8443;
+  jellyfinApiPort = 8920;
+  mediaAgentHttpsPort = 9443;
   desktopIp = topology.nodes."minz-desktop".networks.mgmt.ip;
+  servicesIp = topology.nodes."minz-services-0".networks.incus_bridge.ip;
 
   # 4.0.20 fix for Jellyfin 12 auth (legacy token headers now 401); drop once nixpkgs ships >= 4.0.20
   sonarrWithJellyfin12Fix = pkgs.sonarr.overrideAttrs (old: {
@@ -56,6 +59,42 @@ in
 {
   imports = [
     ../../modules/nixos/rootless-podman.nix
+    {
+      services.caddy.settings.apps.http.servers =
+        lib.mapAttrs
+          (_: proxy: {
+            listen = [ ":${toString proxy.port}" ];
+            automatic_https.disable = true;
+            tls_connection_policies = [
+              { certificate_selection.any_tag = [ "media" ]; }
+            ];
+            routes = [
+              {
+                handle = [
+                  {
+                    handler = "reverse_proxy";
+                    upstreams = [ { dial = "127.0.0.1:${toString proxy.upstream}"; } ];
+                    flush_interval = -1;
+                  }
+                ];
+              }
+            ];
+          })
+          {
+            decypharr-ui = {
+              port = decypharrUiPort;
+              upstream = decypharrPort;
+            };
+            jellyfin-api = {
+              port = jellyfinApiPort;
+              upstream = jellyfinPort;
+            };
+            media-agent = {
+              port = mediaAgentHttpsPort;
+              upstream = mediaAgentPort;
+            };
+          };
+    }
   ];
 
   system.stateVersion = "25.11";
@@ -315,6 +354,7 @@ in
     authFile = config.sops.templates.decypharr-auth-json.path;
 
     port = decypharrPort;
+    bindAddress = "127.0.0.1";
     downloadFolder = "/data/downloads";
     maxDownloads = 10;
     removeStalledAfter = "10m";
@@ -500,7 +540,7 @@ in
 
   services.media-agent = {
     enable = true;
-    addr = ":${toString mediaAgentPort}";
+    addr = "127.0.0.1:${toString mediaAgentPort}";
     environmentFile = config.sops.secrets."media-agent-env".path;
     diskMounts = [
       "/mnt/decypharr"
@@ -611,23 +651,6 @@ in
             tags = [ "media" ];
           }
         ];
-        http.servers.decypharr-ui = {
-          listen = [ ":${toString decypharrUiPort}" ];
-          automatic_https.disable = true;
-          tls_connection_policies = [
-            { certificate_selection.any_tag = [ "media" ]; }
-          ];
-          routes = [
-            {
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "127.0.0.1:${toString decypharrPort}"; } ];
-                }
-              ];
-            }
-          ];
-        };
         http.servers.main = {
           listen = [ ":${toString caddyHttpsPort}" ];
           automatic_https.disable = true;
@@ -729,15 +752,9 @@ in
 
   networking.firewall.extraCommands = ''
     iptables -A nixos-fw -s ${desktopIp} -p tcp --dport ${toString decypharrUiPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString prowlarrPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString decypharrPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString jellyfinPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString mediaAgentPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${topology.networks.incus_bridge.subnet} -p tcp --dport ${toString decypharrPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString decypharrUiPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString jellyfinApiPort} -j nixos-fw-accept
+    iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString mediaAgentHttpsPort} -j nixos-fw-accept
   '';
 
   homelab.endpoints.caddy = {
