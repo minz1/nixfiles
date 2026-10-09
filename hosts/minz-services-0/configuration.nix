@@ -27,9 +27,13 @@ in
     "media-fixer.service"
   ];
   sops.secrets.seerr_webhook_secret = { };
+  sops.secrets.seerr_api_key = { };
   sops.templates."media-fixer-seerr-env" = {
     restartUnits = [ "media-fixer.service" ];
-    content = "MEDIA_FIXER_SEERR_WEBHOOK_SECRET=${config.sops.placeholder.seerr_webhook_secret}";
+    content = ''
+      MEDIA_FIXER_SEERR_WEBHOOK_SECRET=${config.sops.placeholder.seerr_webhook_secret}
+      MEDIA_FIXER_SEERR_API_KEY=${config.sops.placeholder.seerr_api_key}
+    '';
   };
 
   services.media-fixer = {
@@ -56,6 +60,7 @@ in
       tlsKey = "/var/lib/acme/minz-services-0.internal/key.pem";
     };
     mediaAgent.url = "https://${mediaIp}:9443";
+    seerr.url = "https://${mediaIp}";
   };
 
   # bcrypt HASHES (from `ntfy user hash`), not plaintext — obs-0 holds the plaintext counterpart
