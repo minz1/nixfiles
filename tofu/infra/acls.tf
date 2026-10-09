@@ -13,6 +13,7 @@ locals {
   mgmt_subnet         = "10.8.0.0/24"
   edge_subnet         = "10.9.0.0/24"
   authentik_ip        = "10.10.0.3"
+  desktop_ip          = "10.8.0.4"
 
   # Shared ingress rules: SSH, ACME HTTP-01, node_exporter. Source empty = any.
   common_ingress = [
@@ -457,6 +458,14 @@ resource "incus_network_acl" "media" {
       destination_port = "7878,8096,8282,8989,9191"
       protocol         = "tcp"
       description      = "media-fixer on services-0: radarr, jellyfin, decypharr, sonarr, media-agent"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      source           = local.desktop_ip
+      destination_port = "8443"
+      protocol         = "tcp"
+      description      = "decypharr UI via Caddy, desktop over WireGuard only"
       state            = "enabled"
     },
   ])

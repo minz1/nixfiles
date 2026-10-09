@@ -21,6 +21,8 @@ let
   prowlarrPort = 9696;
   bazarrPort = 6767;
   decypharrPort = 8282;
+  decypharrUiPort = 8443;
+  desktopIp = topology.nodes."minz-desktop".networks.mgmt.ip;
 
   # 4.0.20 fix for Jellyfin 12 auth (legacy token headers now 401); drop once nixpkgs ships >= 4.0.20
   sonarrWithJellyfin12Fix = pkgs.sonarr.overrideAttrs (old: {
@@ -507,6 +509,8 @@ in
     ];
   };
 
+  systemd.services.decypharr.stopIfChanged = false;
+
   # The cache volume root is root:root after creation; fix ownership before decypharr starts.
   systemd.services.decypharr.serviceConfig = {
     ExecStartPre = lib.mkAfter [
@@ -607,6 +611,23 @@ in
             tags = [ "media" ];
           }
         ];
+        http.servers.decypharr-ui = {
+          listen = [ ":${toString decypharrUiPort}" ];
+          automatic_https.disable = true;
+          tls_connection_policies = [
+            { certificate_selection.any_tag = [ "media" ]; }
+          ];
+          routes = [
+            {
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString decypharrPort}"; } ];
+                }
+              ];
+            }
+          ];
+        };
         http.servers.main = {
           listen = [ ":${toString caddyHttpsPort}" ];
           automatic_https.disable = true;
@@ -707,6 +728,7 @@ in
   ];
 
   networking.firewall.extraCommands = ''
+    iptables -A nixos-fw -s ${desktopIp} -p tcp --dport ${toString decypharrUiPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString sonarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString radarrPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${topology.networks.mgmt.subnet} -p tcp --dport ${toString prowlarrPort} -j nixos-fw-accept
