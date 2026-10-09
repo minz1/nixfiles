@@ -314,6 +314,8 @@ in
       # Nothing consumes WebDAV; leaving it on exposes an unauthenticated /webdav route.
       disable_webdav = true;
 
+      hearsay.participate = false;
+
       mount = {
         type = "dfs";
         mount_path = "/mnt/decypharr";
