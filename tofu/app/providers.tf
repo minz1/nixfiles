@@ -18,6 +18,10 @@ terraform {
       source  = "devopsarr/prowlarr"
       version = "~> 3.2"
     }
+    sops = {
+      source  = "carlpett/sops"
+      version = ">= 0.7"
+    }
     seerr = {
       source = "josh-archer/seerr"
       # Exact pin: any other version (0.19.5-1.1.0-rc.2, tested) fails "unknown issuer" on `tofu init -upgrade` (broken/rotated upstream signing key); 0.19.3 only works via .terraform.lock.hcl trust-on-first-use. Revisit once upstream re-signs.
@@ -45,31 +49,26 @@ provider "authentik" {
   url = "https://10.10.0.3:9443"
 }
 
-# API keys from TF_VAR_* in secrets/tofu.env; URLs are topology.nix's minz-media-0 incus_bridge IP + service ports.
-variable "sonarr_api_key" { sensitive = true }
-variable "radarr_api_key" { sensitive = true }
-variable "prowlarr_api_key" { sensitive = true }
-variable "seerr_api_key" { sensitive = true }
 variable "nzbgeek_api_key" { sensitive = true }
 variable "torbox_api_key" { sensitive = true }
 variable "torrentio_debrid_key" { sensitive = true }
 
 provider "sonarr" {
   url     = "https://10.10.0.7/sonarr"
-  api_key = var.sonarr_api_key
+  api_key = data.sops_file.arr.data["sonarr_api_key"]
 }
 
 provider "radarr" {
   url     = "https://10.10.0.7/radarr"
-  api_key = var.radarr_api_key
+  api_key = data.sops_file.arr.data["radarr_api_key"]
 }
 
 provider "prowlarr" {
   url     = "https://10.10.0.7/prowlarr"
-  api_key = var.prowlarr_api_key
+  api_key = data.sops_file.arr.data["prowlarr_api_key"]
 }
 
 provider "seerr" {
   url     = "https://10.10.0.7"
-  api_key = var.seerr_api_key
+  api_key = data.sops_file.seerr.data["seerr_api_key"]
 }

@@ -110,7 +110,7 @@ resource "authentik_certificate_key_pair" "internal_ca" {
 
 resource "authentik_property_mapping_notification" "minecraft_whitelist_headers" {
   name       = "minecraft-whitelist-webhook-headers"
-  expression = "return {\"Authorization\": \"Bearer ${var.minecraft_webhook_token}\"}"
+  expression = "return {\"Authorization\": \"Bearer ${data.sops_file.minecraft.data["minecraft_webhook_token"]}\"}"
 }
 
 resource "authentik_event_transport" "minecraft_whitelist" {

@@ -17,21 +17,3 @@ variable "seerr_discord_webhook" {
 }
 
 variable "jellyfin_api_key" { sensitive = true }
-
-variable "minecraft_webhook_token" {
-  description = "Bearer token whitelist-sync-go requires on POST /whitelist/notify. Set via TF_VAR_minecraft_webhook_token in secrets/tofu.env."
-  type        = string
-  sensitive   = true
-}
-
-variable "decypharr_api_token" {
-  description = "decypharr API token, sent as the qBittorrent/SABnzbd download-client password. Set via TF_VAR_decypharr_api_token in secrets/tofu.env."
-  type        = string
-  sensitive   = true
-}
-
-variable "seerr_webhook_secret" {
-  description = "Bearer secret media-fixer requires on /ingest/seerr. Set via TF_VAR_seerr_webhook_secret in secrets/tofu.env; services-0 holds the same value."
-  type        = string
-  sensitive   = true
-}
