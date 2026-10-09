@@ -21,6 +21,35 @@ let
   prowlarrPort = 9696;
   bazarrPort = 6767;
   decypharrPort = 8282;
+
+  # 4.0.20 fix for Jellyfin 12 auth (legacy token headers now 401); drop once nixpkgs ships >= 4.0.20
+  sonarrWithJellyfin12Fix = pkgs.sonarr.overrideAttrs (old: {
+    patches =
+      (old.patches or [ ])
+      ++
+        map
+          (
+            c:
+            pkgs.fetchpatch {
+              inherit (c) hash;
+              url = "https://github.com/Sonarr/Sonarr/commit/${c.rev}.patch";
+            }
+          )
+          [
+            {
+              rev = "c5d68bd9788af24afd9ffd9344eea77c22245bc4";
+              hash = "sha256-msu5FTONj7dCbv6ip3PXqss34z6ZM3KgtUzZXmkZabc=";
+            }
+            {
+              rev = "be1dc0374a0ce6ea23ba88cd7fb57675d5b9ea1e";
+              hash = "sha256-JIZk1NEBhHs0hWQTqFx+evOFyziW5mwMIGPfkzT2y5w=";
+            }
+            {
+              rev = "1a6064167622534de270b55ea46ac3112d948ef3";
+              hash = "sha256-qW86999mI4VqRN/lGxe9ixQXfl/iZJv4TYsDEhhjfRM=";
+            }
+          ];
+  });
 in
 {
   imports = [
@@ -236,6 +265,7 @@ in
 
   services.sonarr = {
     enable = true;
+    package = sonarrWithJellyfin12Fix;
     settings.server.urlBase = "/sonarr";
     environmentFiles = [ config.sops.templates.sonarr-env.path ];
   };
