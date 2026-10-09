@@ -299,7 +299,6 @@ in
       processingTimeout = "10m";
       availabilitySamplePercent = 10;
       importAvailabilitySamplePercent = 20;
-      maxConcurrentNZB = 2;
     };
 
     environmentFiles = [ config.sops.templates.decypharr-env.path ];
