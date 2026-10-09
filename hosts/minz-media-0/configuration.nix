@@ -106,9 +106,9 @@ in
     "media-agent.service"
   ];
   sops.secrets.jellyfin_admin_password = { };
-  sops.secrets.sonarr_api_key = { };
-  sops.secrets.radarr_api_key = { };
-  sops.secrets.prowlarr_api_key = { };
+  sops.secrets.sonarr_api_key.sopsFile = ../../secrets/shared/arr.yaml;
+  sops.secrets.radarr_api_key.sopsFile = ../../secrets/shared/arr.yaml;
+  sops.secrets.prowlarr_api_key.sopsFile = ../../secrets/shared/arr.yaml;
   sops.secrets.decypharr_rd_api_key = { };
   sops.secrets.decypharr_rd_download_key = { };
   sops.secrets.decypharr_torbox_api_key = { };
@@ -117,7 +117,7 @@ in
   sops.secrets.decypharr_usenet_password = { };
   sops.secrets.decypharr_username = { };
   sops.secrets.decypharr_password_hash = { };
-  sops.secrets.decypharr_api_token = { };
+  sops.secrets.decypharr_api_token.sopsFile = ../../secrets/shared/decypharr.yaml;
   sops.secrets.decypharr_secret_key = { };
   sops.secrets.zilean_db_password = { };
 

@@ -64,8 +64,8 @@ in
 
   config = lib.mkIf (cfg.targets != { }) {
     sops.secrets."restic-password" = { };
-    sops.secrets."restic-s3-access-key" = { };
-    sops.secrets."restic-s3-secret-key" = { };
+    sops.secrets."restic-s3-access-key".sopsFile = ../../secrets/shared/restic.yaml;
+    sops.secrets."restic-s3-secret-key".sopsFile = ../../secrets/shared/restic.yaml;
 
     sops.templates."restic-s3-env" = {
       content = ''

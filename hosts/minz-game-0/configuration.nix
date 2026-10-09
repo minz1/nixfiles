@@ -161,7 +161,7 @@ in
   sops.secrets.curseforge_api_key = { };
   sops.secrets.velocity_forwarding_secret = { };
   sops.secrets.minecraft_authentik_token = { };
-  sops.secrets.minecraft_webhook_token = { };
+  sops.secrets.minecraft_webhook_token.sopsFile = ../../secrets/shared/minecraft.yaml;
 
   sops.templates.mc-env = {
     restartUnits = [
