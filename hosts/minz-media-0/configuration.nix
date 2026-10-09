@@ -308,12 +308,14 @@ in
     enable = true;
     package = sonarrWithJellyfin12Fix;
     settings.server.urlBase = "/sonarr";
+    settings.server.allowedHosts = "arr.minz1.com,${mediaIp}";
     environmentFiles = [ config.sops.templates.sonarr-env.path ];
   };
 
   services.radarr = {
     enable = true;
     settings.server.urlBase = "/radarr";
+    settings.server.allowedHosts = "arr.minz1.com,${mediaIp}";
     environmentFiles = [ config.sops.templates.radarr-env.path ];
   };
 
@@ -337,7 +339,10 @@ in
 
   services.bazarr.enable = true;
 
-  systemd.services.bazarr.serviceConfig = mkHardened { };
+  systemd.services.bazarr = {
+    environment.TZ = "UTC";
+    serviceConfig = mkHardened { };
+  };
 
   services.recyclarr.enable = true;
 
@@ -521,20 +526,6 @@ in
         recheck_interval = "168h";
         auto_repair = true;
       };
-    };
-  };
-
-  systemd.services.ffprobe-monitor = {
-    description = "Monitor and poke stuck ffprobe processes";
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      ExecStart = lib.getExe pkgs.ffprobe-monitor;
-      Restart = "always";
-      RestartSec = "10s";
-      # lowest IO / CPU priority so it never interferes with media serving
-      IOSchedulingClass = "idle";
-      CPUSchedulingPolicy = "idle";
-      Nice = 19;
     };
   };
 
