@@ -40,6 +40,15 @@ printf 'TF_VAR_k2=x\n' | sops encrypt --filename-override src.env --input-type d
 mv enc.tmp src.env
 [ "$("$scripts/secrets-same.sh" src.env:TF_VAR_k2 src.yaml:k2)" = match ] || fail "dotenv value not compared"
 
+jq -n '{e: ""}' | sops encrypt --filename-override src.yaml --input-type json --output-type yaml /dev/stdin > enc.tmp
+mv enc.tmp shared/empty.yaml
+set +e
+out="$("$scripts/secrets-same.sh" shared/empty.yaml:e src.yaml:nope 2>/dev/null)"
+rc=$?
+set -e
+[ "$rc" -ne 0 ] || fail "undecryptable reference exited 0"
+[ "$out" != match ] || fail "undecryptable reference reported match"
+
 set +e
 out="$("$scripts/secrets-same.sh" src.yaml:k2 src.yaml:k3)"
 rc=$?

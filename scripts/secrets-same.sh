@@ -14,7 +14,8 @@ first="$(digest "$1")"
 shift
 status=0
 for ref in "$@"; do
-    if [ "$(digest "$ref")" != "$first" ]; then
+    d="$(digest "$ref")"
+    if [ "$d" != "$first" ]; then
         echo "MISMATCH $ref"
         status=1
     fi
