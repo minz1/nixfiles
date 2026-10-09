@@ -346,11 +346,11 @@
         "nixpkgs": "nixpkgs_4"
       },
       "locked": {
-        "lastModified": 1791558372,
-        "narHash": "sha256-XGKTYquwOKb7ZI3WD/APxAp/4DHVu/w36CRsu/6C4f4=",
+        "lastModified": 1791559090,
+        "narHash": "sha256-2dm82RrV3cAiolm0SiZfRkrQAjAmMmX7ooyTUoNd/o8=",
         "owner": "minz1",
         "repo": "media-fixer",
-        "rev": "4ee3a3cdd2c11349919d41a29ee659176b8bb34e",
+        "rev": "9b8f8192fc0764172b72920d4aba42eb276b1a74",
         "type": "github"
       },
       "original": {

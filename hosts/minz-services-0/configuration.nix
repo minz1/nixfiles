@@ -26,6 +26,11 @@ in
   sops.secrets."media-fixer-env".restartUnits = [
     "media-fixer.service"
   ];
+  sops.secrets.seerr_webhook_secret = { };
+  sops.templates."media-fixer-seerr-env" = {
+    restartUnits = [ "media-fixer.service" ];
+    content = "MEDIA_FIXER_SEERR_WEBHOOK_SECRET=${config.sops.placeholder.seerr_webhook_secret}";
+  };
 
   services.media-fixer = {
     enable = true;
@@ -146,6 +151,22 @@ in
               ];
             }
             {
+              match = [
+                {
+                  host = [ "minz-services-0.internal" ];
+                  path = [ "/ingest/seerr" ];
+                  remote_ip.ranges = [ "${mediaIp}/32" ];
+                }
+              ];
+              handle = [
+                {
+                  handler = "reverse_proxy";
+                  upstreams = [ { dial = "127.0.0.1:${toString mediaFixerPort}"; } ];
+                  headers.request.set."Host" = [ "{http.request.host}" ];
+                }
+              ];
+            }
+            {
               # .internal alias lets Grafana publish over the bridge instead of hairpinning through the edge
               match = [
                 {
@@ -179,6 +200,9 @@ in
   };
 
   systemd.services.media-fixer.serviceConfig.SupplementaryGroups = [ "caddy" ];
+  systemd.services.media-fixer.serviceConfig.EnvironmentFile = [
+    config.sops.templates."media-fixer-seerr-env".path
+  ];
 
   environment.persistence."/persist".directories = [
     {

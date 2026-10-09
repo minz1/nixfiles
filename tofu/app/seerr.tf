@@ -114,3 +114,28 @@ resource "seerr_notification_discord" "main" {
     enable_mentions = false
   }
 }
+
+resource "seerr_notification_webhook" "media_fixer" {
+  enabled      = true
+  embed_poster = false
+  notification_types = [
+    "ISSUE_CREATED",
+    "ISSUE_REOPENED",
+  ]
+  webhook = {
+    webhook_url = "https://minz-services-0.internal/ingest/seerr"
+    auth_header = "Bearer ${var.seerr_webhook_secret}"
+    json_payload = jsonencode({
+      notification_type     = "{{notification_type}}"
+      subject               = "{{subject}}"
+      message               = "{{message}}"
+      issue_id              = "{{issue_id}}"
+      issue_type            = "{{issue_type}}"
+      issue_status          = "{{issue_status}}"
+      media_type            = "{{media_type}}"
+      media_tmdbid          = "{{media_tmdbid}}"
+      media_jellyfinMediaId = "{{media_jellyfinMediaId}}"
+      reported_by           = "{{reportedBy_username}}"
+    })
+  }
+}

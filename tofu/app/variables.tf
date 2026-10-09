@@ -29,3 +29,9 @@ variable "decypharr_api_token" {
   type        = string
   sensitive   = true
 }
+
+variable "seerr_webhook_secret" {
+  description = "Bearer secret media-fixer requires on /ingest/seerr. Set via TF_VAR_seerr_webhook_secret in secrets/tofu.env; services-0 holds the same value."
+  type        = string
+  sensitive   = true
+}
