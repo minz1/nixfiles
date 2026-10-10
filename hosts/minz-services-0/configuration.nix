@@ -27,7 +27,7 @@ in
     "media-fixer.service"
   ];
   sops.secrets.seerr_webhook_secret.sopsFile = ../../secrets/shared/seerr.yaml;
-  sops.secrets.seerr_api_key.sopsFile = ../../secrets/shared/seerr.yaml;
+  sops.secrets.seerr_api_key.sopsFile = ../../secrets/shared/seerr-api.yaml;
   sops.templates."media-fixer-seerr-env" = {
     restartUnits = [ "media-fixer.service" ];
     content = ''

@@ -65,10 +65,10 @@ provider "radarr" {
 
 provider "prowlarr" {
   url     = "https://10.10.0.7/prowlarr"
-  api_key = data.sops_file.arr.data["prowlarr_api_key"]
+  api_key = ephemeral.sops_file.prowlarr.data["prowlarr_api_key"]
 }
 
 provider "seerr" {
   url     = "https://10.10.0.7"
-  api_key = data.sops_file.seerr.data["seerr_api_key"]
+  api_key = ephemeral.sops_file.seerr_api.data["seerr_api_key"]
 }

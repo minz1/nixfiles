@@ -13,3 +13,11 @@ data "sops_file" "decypharr" {
 data "sops_file" "minecraft" {
   source_file = "${path.root}/../../secrets/shared/minecraft.yaml"
 }
+
+ephemeral "sops_file" "prowlarr" {
+  source_file = "${path.root}/../../secrets/shared/prowlarr.yaml"
+}
+
+ephemeral "sops_file" "seerr_api" {
+  source_file = "${path.root}/../../secrets/shared/seerr-api.yaml"
+}
