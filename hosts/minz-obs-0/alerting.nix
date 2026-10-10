@@ -185,6 +185,15 @@ in
               summary = "{{ $labels.instance }} /nix usage above 85%";
             })
             (mkThresholdRule {
+              uid = "disk-root";
+              title = "Disk usage / high";
+              expr = ''100 - (node_filesystem_avail_bytes{mountpoint="/", fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/", fstype!="tmpfs"} * 100)'';
+              evaluatorType = "gt";
+              evaluatorParams = [ 85 ];
+              for = "10m";
+              summary = "{{ $labels.instance }} / usage above 85%";
+            })
+            (mkThresholdRule {
               uid = "node-scrape-down";
               title = "Host metrics unreachable";
               expr = ''up{job="node"}'';
