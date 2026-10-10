@@ -687,6 +687,7 @@ in
           containerConfig = {
             image = "ghcr.io/ryder-c/seadexerr:v3.1.0@sha256:a033cf28d5dd288d4d2dfc7d54cb2f8efd590ccb56d03c9ca6e9842d750c19b4";
             publishPorts = [ "127.0.0.1:6868:2071" ];
+            volumes = [ "${pkgs.writeText "seadexerr-scoring.toml" "dual_audio = 150\n"}:/data/scoring.toml:ro" ];
             environments = {
               SONARR_BASE_URL = "http://host.containers.internal:${toString sonarrPort}/sonarr/";
               RADARR_BASE_URL = "http://host.containers.internal:${toString radarrPort}/radarr/";
