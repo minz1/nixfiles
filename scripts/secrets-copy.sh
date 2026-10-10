@@ -9,6 +9,8 @@ fi
 dest="$1"
 src="$2"
 shift 2
+tmp=""
+trap 'rm -f "$tmp"' EXIT
 
 for key in "$@"; do
     if [ -f "$dest" ]; then

@@ -36,6 +36,12 @@ sops decrypt --extract '["k1"]' shared/t.yaml | cmp -s - <(printf 'a"b\nc\n') ||
 
 [ "$("$scripts/secrets-same.sh" src.yaml:k1 shared/t.yaml:k1)" = match ] || fail "same values not reported as match"
 
+mkdir norule
+if "$scripts/secrets-copy.sh" norule/x.yaml src.yaml k1 >/dev/null 2>&1; then
+    fail "copy to a path with no creation rule succeeded"
+fi
+[ -z "$(ls -A norule)" ] || fail "failed copy left files behind: $(ls -A norule)"
+
 printf 'TF_VAR_k2=x\n' | sops encrypt --filename-override src.env --input-type dotenv --output-type dotenv /dev/stdin > enc.tmp
 mv enc.tmp src.env
 [ "$("$scripts/secrets-same.sh" src.env:TF_VAR_k2 src.yaml:k2)" = match ] || fail "dotenv value not compared"

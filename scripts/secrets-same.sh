@@ -21,7 +21,5 @@ for ref in "$@"; do
     fi
 done
 
-if [ "$status" -eq 0 ]; then
-    echo match
-fi
+[ "$status" -ne 0 ] || echo match
 exit "$status"
