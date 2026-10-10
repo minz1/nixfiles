@@ -288,7 +288,33 @@ in
     "video"
   ];
 
-  services.jellyfin.enable = true;
+  services.jellyfin = {
+    enable = true;
+    hardwareAcceleration = {
+      enable = true;
+      type = "qsv";
+      device = "/dev/dri/renderD129";
+    };
+    forceEncodingConfig = true;
+    transcoding = {
+      enableHardwareEncoding = true;
+      throttleTranscoding = true;
+      enableToneMapping = true;
+      hardwareDecodingCodecs = {
+        h264 = true;
+        hevc = true;
+        hevc10bit = true;
+        vp9 = true;
+        av1 = true;
+        mpeg2 = true;
+        vc1 = true;
+      };
+      hardwareEncodingCodecs = {
+        hevc = true;
+        av1 = true;
+      };
+    };
+  };
 
   services.seerr.enable = true;
   systemd.services.seerr.environment.NODE_EXTRA_CA_CERTS = "/etc/ssl/certs/ca-bundle.crt";
