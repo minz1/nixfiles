@@ -31,9 +31,42 @@ locals {
       priority     = 5
       flaresolverr = false
       fields = [
-        { name = "baseUrl", text_value = "https://feed.animetosho.org" },
-        { name = "apiPath", text_value = "/api" },
+        { name = "baseUrl", text_value = "https://animetosho.org" },
+        { name = "apiPath", text_value = "/feed/api" },
       ]
+    }
+    animetosho_usenet = {
+      name         = "AnimeTosho (Usenet)"
+      priority     = 5
+      flaresolverr = false
+      fields = [
+        { name = "baseUrl", text_value = "https://animetosho.org" },
+        { name = "apiPath", text_value = "/feed/api" },
+      ]
+    }
+    subsplease = {
+      name         = "SubsPlease"
+      priority     = 5
+      flaresolverr = false
+      fields       = []
+    }
+    knaben = {
+      name         = "Knaben"
+      priority     = 25
+      flaresolverr = false
+      fields       = []
+    }
+    tpb = {
+      name         = "The Pirate Bay"
+      priority     = 25
+      flaresolverr = false
+      fields       = [{ name = "definitionFile", text_value = "thepiratebay" }]
+    }
+    uindex = {
+      name         = "Uindex"
+      priority     = 25
+      flaresolverr = true
+      fields       = [{ name = "definitionFile", text_value = "uindex" }]
     }
   }
 }
@@ -51,6 +84,7 @@ resource "prowlarr_indexer" "public" {
   implementation  = data.prowlarr_indexer_schema.public[each.key].implementation
   config_contract = data.prowlarr_indexer_schema.public[each.key].config_contract
   protocol        = data.prowlarr_indexer_schema.public[each.key].protocol
+  redirect        = data.prowlarr_indexer_schema.public[each.key].protocol == "usenet"
   app_profile_id  = 1
   priority        = each.value.priority
   tags            = each.value.flaresolverr ? [prowlarr_tag.flaresolverr.id] : null
@@ -61,25 +95,6 @@ resource "prowlarr_indexer" "public" {
   }
 }
 
-
-resource "prowlarr_indexer" "torbox" {
-  enable          = false
-  name            = "TorBox"
-  implementation  = "Cardigann"
-  config_contract = "CardigannSettings"
-  protocol        = "torrent"
-  app_profile_id  = 1
-  priority        = 1
-
-  fields = [
-    { name = "definitionFile", text_value = "torbox-torrents" },
-    { name = "apikey", sensitive_value = var.torbox_api_key },
-  ]
-
-  lifecycle {
-    ignore_changes = [fields]
-  }
-}
 
 resource "prowlarr_indexer" "torrentio" {
   enable          = true
@@ -101,9 +116,8 @@ resource "prowlarr_indexer" "torrentio" {
   }
 }
 
-# SeaDex best-release anime Torznab on media-0:6868; disabled until anime exists in Sonarr library.
 resource "prowlarr_indexer" "seadexerr" {
-  enable          = false
+  enable          = true
   name            = "Seadexerr"
   implementation  = "Torznab"
   config_contract = "TorznabSettings"
@@ -118,8 +132,47 @@ resource "prowlarr_indexer" "seadexerr" {
   ]
 
   lifecycle {
-    # fields/enable: user-managed; enable via Prowlarr UI once anime library is populated.
-    ignore_changes = [fields, enable]
+    ignore_changes = [fields]
+  }
+}
+
+resource "prowlarr_indexer" "zilean" {
+  enable          = true
+  name            = "Zilean"
+  implementation  = "Torznab"
+  config_contract = "TorznabSettings"
+  protocol        = "torrent"
+  app_profile_id  = 1
+  priority        = 25
+
+  fields = [
+    { name = "baseUrl", text_value = "http://127.0.0.1:8181/torznab" },
+    { name = "apiPath", text_value = "/api" },
+    { name = "apiKey", text_value = "" },
+  ]
+
+  lifecycle {
+    ignore_changes = [fields]
+  }
+}
+
+resource "prowlarr_indexer" "comet" {
+  enable          = true
+  name            = "Comet"
+  implementation  = "Torznab"
+  config_contract = "TorznabSettings"
+  protocol        = "torrent"
+  app_profile_id  = 1
+  priority        = 25
+
+  fields = [
+    { name = "baseUrl", text_value = "http://127.0.0.1:8000/torznab" },
+    { name = "apiPath", text_value = "/api" },
+    { name = "apiKey", text_value = "" },
+  ]
+
+  lifecycle {
+    ignore_changes = [fields]
   }
 }
 

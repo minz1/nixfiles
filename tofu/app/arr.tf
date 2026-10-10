@@ -107,20 +107,11 @@ resource "prowlarr_indexer_proxy_flaresolverr" "flaresolverr" {
   tags            = [prowlarr_tag.flaresolverr.id]
 }
 
-# Seadex: marks Freeleech25 releases; set score +5000 manually in Sonarr quality profiles.
-resource "sonarr_custom_format" "seadex" {
-  include_custom_format_when_renaming = false
-  name                                = "Seadex"
-
-  specifications = [
-    {
-      name           = "Freeleech25"
-      implementation = "IndexerFlagSpecification"
-      negate         = false
-      required       = false
-      value          = "8"
-    }
-  ]
+removed {
+  from = sonarr_custom_format.seadex
+  lifecycle {
+    destroy = false
+  }
 }
 
 resource "prowlarr_application_sonarr" "sonarr" {

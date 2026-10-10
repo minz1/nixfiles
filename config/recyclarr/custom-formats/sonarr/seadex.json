@@ -1,0 +1,16 @@
+{
+  "trash_id": "minz-seadex",
+  "name": "Seadex",
+  "includeCustomFormatWhenRenaming": false,
+  "specifications": [
+    {
+      "name": "Freeleech25",
+      "implementation": "IndexerFlagSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": 8
+      }
+    }
+  ]
+}

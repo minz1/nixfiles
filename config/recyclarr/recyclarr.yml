@@ -15,8 +15,12 @@ sonarr:
       - trash_id: 20e0fc959f1f1704bed501f23bdae76f  # [Anime] Remux-1080p
         reset_unmatched_scores:
           enabled: true
-          except:
-            - Seadex
+    custom_formats:
+      - trash_ids:
+          - minz-seadex
+        assign_scores_to:
+          - name: "[Anime] Remux-1080p"
+            score: 5000
     custom_format_groups:
       add:
         - trash_id: e3f37512790f00d0e89e54fe5e790d1c  # [Optional] Golden Rule UHD

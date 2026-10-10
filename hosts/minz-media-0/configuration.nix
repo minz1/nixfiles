@@ -55,6 +55,31 @@ let
             }
           ];
   });
+
+  # seerr-team/seerr#3244: auto-approved anime requests get the default TV profile and type; drop once nixpkgs ships seerr >= 3.5.0
+  seerrWithAnimeRoutingFix = pkgs.seerr.overrideAttrs (old: {
+    patches =
+      (old.patches or [ ])
+      ++
+        map
+          (
+            c:
+            pkgs.fetchpatch {
+              inherit (c) hash;
+              url = "https://github.com/seerr-team/seerr/commit/${c.rev}.patch";
+            }
+          )
+          [
+            {
+              rev = "93c0b6a6d62687ba25c3adc7c74a3e7de55c9bc5";
+              hash = "sha256-Mi5xE3whLkyu2l5iO842tSWhQpTSpUwqlCtXSWlJy/o=";
+            }
+            {
+              rev = "42bee2aa10ff381cc9dca6305def8d0a334c2d26";
+              hash = "sha256-UPs+Qp0M+W/bj0/QEPnCjv+rS+gcHD0ILkWoMDhyYIU=";
+            }
+          ];
+  });
 in
 {
   imports = [
@@ -115,6 +140,8 @@ in
   sops.secrets.decypharr_torbox_download_key = { };
   sops.secrets.decypharr_usenet_username = { };
   sops.secrets.decypharr_usenet_password = { };
+  sops.secrets.decypharr_torbox_nntp_username = { };
+  sops.secrets.decypharr_torbox_nntp_password = { };
   sops.secrets.decypharr_username = { };
   sops.secrets.decypharr_password_hash = { };
   sops.secrets.decypharr_api_token.sopsFile = ../../secrets/shared/decypharr.yaml;
@@ -180,6 +207,8 @@ in
       DECYPHARR_ARRS__1__TOKEN=${config.sops.placeholder.radarr_api_key}
       DECYPHARR_USENET__PROVIDERS__0__USERNAME=${config.sops.placeholder.decypharr_usenet_username}
       DECYPHARR_USENET__PROVIDERS__0__PASSWORD=${config.sops.placeholder.decypharr_usenet_password}
+      DECYPHARR_USENET__PROVIDERS__1__USERNAME=${config.sops.placeholder.decypharr_torbox_nntp_username}
+      DECYPHARR_USENET__PROVIDERS__1__PASSWORD=${config.sops.placeholder.decypharr_torbox_nntp_password}
       DECYPHARR_SECRET_KEY=${config.sops.placeholder.decypharr_secret_key}
     '';
     owner = "decypharr";
@@ -317,6 +346,7 @@ in
   };
 
   services.seerr.enable = true;
+  services.seerr.package = seerrWithAnimeRoutingFix;
   systemd.services.seerr.environment.NODE_EXTRA_CA_CERTS = "/etc/ssl/certs/ca-bundle.crt";
 
   services.rootless-podman = {
@@ -334,14 +364,14 @@ in
     enable = true;
     package = sonarrWithJellyfin12Fix;
     settings.server.urlBase = "/sonarr";
-    settings.server.allowedHosts = "arr.minz1.com,${mediaIp}";
+    settings.server.allowedHosts = "arr.minz1.com,${mediaIp},host.containers.internal";
     environmentFiles = [ config.sops.templates.sonarr-env.path ];
   };
 
   services.radarr = {
     enable = true;
     settings.server.urlBase = "/radarr";
-    settings.server.allowedHosts = "arr.minz1.com,${mediaIp}";
+    settings.server.allowedHosts = "arr.minz1.com,${mediaIp},host.containers.internal";
     environmentFiles = [ config.sops.templates.radarr-env.path ];
   };
 
@@ -373,6 +403,20 @@ in
   services.recyclarr.enable = true;
 
   systemd.services.recyclarr.serviceConfig = {
+    ExecStartPre =
+      let
+        settings = (pkgs.formats.yaml { }).generate "recyclarr-settings.yml" {
+          resource_providers = [
+            {
+              name = "local-sonarr";
+              type = "custom-formats";
+              path = "${../../config/recyclarr/custom-formats/sonarr}";
+              service = "sonarr";
+            }
+          ];
+        };
+      in
+      "${pkgs.coreutils}/bin/ln -sfT ${settings} /var/lib/recyclarr/settings.yml";
     ExecStart = lib.mkForce "${config.services.recyclarr.package}/bin/recyclarr sync --config ${../../config/recyclarr/recyclarr.yml}";
     EnvironmentFile = config.sops.templates.recyclarr-env.path;
   };
@@ -468,6 +512,14 @@ in
             max_connections = 30;
             ssl = true;
             priority = 1;
+          }
+          {
+            host = "nntp.torbox.app";
+            port = 563;
+            max_connections = 10;
+            ssl = true;
+            priority = 2;
+            backup = true;
           }
         ];
         disk_buffer_path = "/var/lib/decypharr/usenet/streams";
@@ -633,14 +685,32 @@ in
         seadexerr = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "ghcr.io/ryder-c/seadexerr:latest@sha256:d0855f27ae7c8fd89c366516b148ef62f9e94f05db30134318ce5faef6426180";
-            publishPorts = [ "127.0.0.1:6868:6767" ];
-            # incus_bridge IP because 127.0.0.1 is the container's own loopback.
+            image = "ghcr.io/ryder-c/seadexerr:v3.1.0@sha256:a033cf28d5dd288d4d2dfc7d54cb2f8efd590ccb56d03c9ca6e9842d750c19b4";
+            publishPorts = [ "127.0.0.1:6868:2071" ];
             environments = {
-              SONARR_BASE_URL = "http://${mediaIp}:${toString sonarrPort}/sonarr/";
-              RADARR_BASE_URL = "http://${mediaIp}:${toString radarrPort}/radarr/";
+              SONARR_BASE_URL = "http://host.containers.internal:${toString sonarrPort}/sonarr/";
+              RADARR_BASE_URL = "http://host.containers.internal:${toString radarrPort}/radarr/";
+              SEADEXERR_PUBLIC_BASE_URL = "http://127.0.0.1:6868";
             };
             environmentFiles = [ config.sops.templates.seadexerr-env.path ];
+          };
+        };
+
+        comet = {
+          rootlessConfig.uid = 902;
+          containerConfig = {
+            image = "ghcr.io/g0ldyy/comet:latest@sha256:dca62133336e02784d02aaad861381820674d1c8e3e98a03797610b81ee4defe";
+            publishPorts = [ "127.0.0.1:8000:8000" ];
+            volumes = [ "/var/lib/comet:/app/data" ];
+            environments = {
+              DATABASE_TYPE = "sqlite";
+              COMETNET_ENABLED = "False";
+              SCRAPE_DMM = "both";
+              DMM_INGEST_ENABLED = "True";
+              SCRAPE_SEADEX = "both";
+              SCRAPE_NYAA = "both";
+              SCRAPE_ANIMETOSHO = "both";
+            };
           };
         };
       };
@@ -649,6 +719,7 @@ in
   systemd.tmpfiles.rules = [
     "d /mnt/decypharr               0775 root   media  -"
     "d /var/lib/zilean               0700 oci    oci    -"
+    "d /var/lib/comet                0700 oci    oci    -"
     "d /data                         0755 root   root   -"
     "d /data/downloads/sonarr        2775 sonarr media  -"
     "d /data/downloads/radarr        2775 radarr media  -"
