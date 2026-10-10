@@ -8,6 +8,7 @@ want=("$@")
 for w in "$@"; do
     grep -qw -- "$w" <<< "$phases_out" || { echo "Unknown host: $w" >&2; exit 1; }
 done
+nix flake check "${ROOT_DIR}" || exit 1
 failed=()
 
 pending_after() {
