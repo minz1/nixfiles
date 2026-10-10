@@ -2,6 +2,26 @@ resource "sonarr_root_folder" "tv" {
   path = "/data/library/tv"
 }
 
+resource "sonarr_root_folder" "anime" {
+  path = "/data/library/anime"
+}
+
+import {
+  to = sonarr_metadata_kodi.episodes
+  id = "1"
+}
+
+resource "sonarr_metadata_kodi" "episodes" {
+  enable              = true
+  name                = "Kodi (XBMC) / Emby"
+  episode_metadata    = true
+  series_metadata     = false
+  series_metadata_url = false
+  series_images       = false
+  season_images       = false
+  episode_images      = false
+}
+
 resource "sonarr_media_management" "sonarr" {
   # hardlinks_copy = false: /data/downloads resolves through the decypharr FUSE VFS; hardlinking across a FUSE mount to ext4 fails.
   hardlinks_copy              = false
