@@ -109,7 +109,7 @@
       deployed = true;
       incus = {
         incus_type = "container";
-        root_size = "60GiB";
+        root_size = "160GiB";
         cpus = 4;
         memory = "8GiB";
         gpu = true;
