@@ -6,11 +6,12 @@ resource "seerr_api_object" "jellyfin_settings" {
   skip_delete   = true
 
   request_body_json = jsonencode({
-    ip               = "127.0.0.1"
-    port             = 8096
-    useSsl           = false
-    apiKey           = var.jellyfin_api_key
-    externalHostname = "https://jellyfin.minz1.com"
+    ip                        = "127.0.0.1"
+    port                      = 8096
+    useSsl                    = false
+    apiKey                    = var.jellyfin_api_key
+    externalHostname          = "https://jellyfin.minz1.com"
+    jellyfinForgotPasswordUrl = "https://auth.minz1.com/if/flow/${authentik_flow.recovery.slug}/"
   })
 }
 
@@ -33,6 +34,7 @@ resource "seerr_sonarr_server" "default" {
   quality_profile_id     = 7 # WEB-2160p (Combined)
   extra_payload_json = jsonencode({
     activeAnimeProfileId = 8 # Remux-1080p Anime
+    externalUrl          = "https://arr.minz1.com/sonarr"
   })
   lifecycle { ignore_changes = [quality_profile_name, anime_tags, tags] }
 }
@@ -47,6 +49,9 @@ resource "seerr_radarr_server" "default" {
   active_directory   = "/data/library/movies"
   is_default         = true
   quality_profile_id = 7 # Remux 2160p (Combined)
+  extra_payload_json = jsonencode({
+    externalUrl = "https://arr.minz1.com/radarr"
+  })
   lifecycle { ignore_changes = [quality_profile_name, tags] }
 }
 

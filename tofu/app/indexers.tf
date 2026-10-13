@@ -31,8 +31,8 @@ locals {
       priority     = 5
       flaresolverr = false
       fields = [
-        { name = "baseUrl", text_value = "https://animetosho.org" },
-        { name = "apiPath", text_value = "/feed/api" },
+        { name = "baseUrl", text_value = "https://feed.animetosho.net" },
+        { name = "apiPath", text_value = "/api" },
       ]
     }
     animetosho_usenet = {
@@ -40,8 +40,8 @@ locals {
       priority     = 5
       flaresolverr = false
       fields = [
-        { name = "baseUrl", text_value = "https://animetosho.org" },
-        { name = "apiPath", text_value = "/feed/api" },
+        { name = "baseUrl", text_value = "https://feed.animetosho.net" },
+        { name = "apiPath", text_value = "/api" },
       ]
     }
     subsplease = {
