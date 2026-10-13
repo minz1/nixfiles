@@ -53,6 +53,9 @@ resource "sonarr_download_client_qbittorrent" "decypharr" {
   username    = "http://127.0.0.1:8989/sonarr"
   password    = data.sops_file.decypharr.data["decypharr_api_token"]
   tv_category = "sonarr"
+
+  remove_completed_downloads = true
+  remove_failed_downloads    = false
 }
 
 resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
@@ -65,6 +68,9 @@ resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
   username    = "http://127.0.0.1:8989/sonarr"
   password    = data.sops_file.decypharr.data["decypharr_api_token"]
   tv_category = "sonarr"
+
+  remove_completed_downloads = true
+  remove_failed_downloads    = false
 }
 
 resource "radarr_root_folder" "movies" {
@@ -102,6 +108,9 @@ resource "radarr_download_client_qbittorrent" "decypharr" {
   username       = "http://127.0.0.1:7878/radarr"
   password       = data.sops_file.decypharr.data["decypharr_api_token"]
   movie_category = "radarr"
+
+  remove_completed_downloads = true
+  remove_failed_downloads    = false
 }
 
 resource "radarr_download_client_sabnzbd" "decypharr_usenet" {
@@ -114,6 +123,9 @@ resource "radarr_download_client_sabnzbd" "decypharr_usenet" {
   username       = "http://127.0.0.1:7878/radarr"
   password       = data.sops_file.decypharr.data["decypharr_api_token"]
   movie_category = "radarr"
+
+  remove_completed_downloads = true
+  remove_failed_downloads    = false
 }
 
 resource "prowlarr_tag" "flaresolverr" {
