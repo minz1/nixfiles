@@ -857,7 +857,7 @@ in
   # elsewhere) and not decypharr's disposable cache (docs/ops.md). Deliberately excludes zilean's
   # postgres: it's a DMM/IMDb scrape cache the service rebuilds on its own, not user data.
   # The apps keep live SQLite DBs in WAL mode, so they're stopped for the ~30s snapshot; decypharr
-  # stays up since it backs the streaming mounts, and its small DB is the one hot copy.
+  # stays up since it backs the streaming mounts, so its DB and usenet metadata (not the streams buffer) are hot copies.
   systemd.services."restic-backups-media-configs".path = [ pkgs.systemd ];
   homelab.backups.targets.media-configs = {
     paths = [
@@ -868,6 +868,8 @@ in
       "/var/lib/bazarr"
       "/var/lib/jellyfin"
       "/var/lib/decypharr/db"
+      "/var/lib/decypharr/usenet/meta"
+      "/var/lib/decypharr/usenet/nzbs"
     ];
     prepareCommand = "systemctl stop ${mediaBackupUnits}";
     cleanupCommand = "systemctl start ${mediaBackupUnits}";
