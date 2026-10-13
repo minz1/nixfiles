@@ -397,7 +397,6 @@ in
 
   systemd.services.bazarr = {
     environment.TZ = "UTC";
-    serviceConfig = mkHardened { };
   };
 
   services.recyclarr.enable = true;
