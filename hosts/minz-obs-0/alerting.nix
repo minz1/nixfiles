@@ -253,6 +253,13 @@ in
               summary = "Decypharr FUSE mount failed to start, panicked, or left consumers on a dead mount";
             })
             (mkLogCountRule {
+              uid = "decypharr-prune-aborted";
+              title = "Decypharr prune aborted";
+              logql = ''sum by (host) (count_over_time({unit="decypharr.service"} |= "prune aborted" [2h]))'';
+              threshold = 0;
+              summary = "decypharr's prune run aborted (fail-closed); check the reason field and GET /api/prune/status";
+            })
+            (mkLogCountRule {
               uid = "svc-exec-nonstore";
               title = "Service exec from outside /nix/store";
               # UID="oci"/"podman-runner" excluded: game-0's container and CI job containers have their own rootfs.
