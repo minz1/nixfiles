@@ -677,6 +677,8 @@ in
             image = "ipromknight/zilean:latest@sha256:1b828ac0604235de7adb7757d11c88c1b3bb1a6319071b0c9d99325bc0f9d477";
             pod = pods.zilean.ref;
             volumes = [ "/var/lib/zilean:/app/data" ];
+            # DMM moved hashlists to lists/<id>.txt (2026-09); Zilean can't read them, so serve the existing index only.
+            environments.Zilean__Dmm__EnableScraping = "false";
             environmentFiles = [ config.sops.templates.zilean-app-env.path ];
           };
           unitConfig = {
@@ -716,7 +718,22 @@ in
           containerConfig = {
             image = "ghcr.io/g0ldyy/comet:latest@sha256:dca62133336e02784d02aaad861381820674d1c8e3e98a03797610b81ee4defe";
             publishPorts = [ "127.0.0.1:8000:8000" ];
-            volumes = [ "/var/lib/comet:/app/data" ];
+            # minz1/comet fixes (DMM lists/<id>.txt, animetosho.net) over identical upstream files; drop once upstream merges
+            volumes = [
+              "/var/lib/comet:/app/data"
+              "${
+                pkgs.fetchurl {
+                  url = "https://raw.githubusercontent.com/minz1/comet/0fdcf6d894f8fa4df08c961b51505cfa5a0ad614/comet/services/dmm_ingester.py";
+                  hash = "sha256-FD2whyIsKNatMGhfZfwQVc2cxid/lh8besmflpQ6Oeg=";
+                }
+              }:/app/comet/services/dmm_ingester.py:ro"
+              "${
+                pkgs.fetchurl {
+                  url = "https://raw.githubusercontent.com/minz1/comet/7bcba210e0858ce2afcd91edb4d84f613a32aaee/comet/scrapers/animetosho.py";
+                  hash = "sha256-+PY4NTHAQb9c++ik4z5AltbNhQCL6qj0SVx2kCnqpSI=";
+                }
+              }:/app/comet/scrapers/animetosho.py:ro"
+            ];
             environments = {
               DATABASE_TYPE = "sqlite";
               COMETNET_ENABLED = "False";
