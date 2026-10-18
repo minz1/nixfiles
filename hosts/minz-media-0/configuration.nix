@@ -433,7 +433,7 @@ in
     bindAddress = "127.0.0.1";
     downloadFolder = "/data/downloads";
     maxDownloads = 10;
-    removeStalledAfter = "2h";
+    removeStalledAfter = "12h";
 
     dfs = {
       cacheDir = "/var/cache/decypharr";

@@ -69,7 +69,7 @@ resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
   tv_category = "sonarr"
 
   remove_completed_downloads = true
-  remove_failed_downloads    = false
+  remove_failed_downloads    = true
 }
 
 resource "radarr_root_folder" "movies" {
@@ -123,7 +123,7 @@ resource "radarr_download_client_sabnzbd" "decypharr_usenet" {
   movie_category = "radarr"
 
   remove_completed_downloads = true
-  remove_failed_downloads    = false
+  remove_failed_downloads    = true
 }
 
 resource "prowlarr_tag" "flaresolverr" {
