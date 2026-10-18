@@ -367,6 +367,7 @@ in
     settings.server.allowedHosts = "arr.minz1.com,${mediaIp},host.containers.internal";
     environmentFiles = [ config.sops.templates.sonarr-env.path ];
   };
+  systemd.services.sonarr.serviceConfig.UMask = lib.mkForce "0002";
 
   services.radarr = {
     enable = true;
@@ -374,6 +375,7 @@ in
     settings.server.allowedHosts = "arr.minz1.com,${mediaIp},host.containers.internal";
     environmentFiles = [ config.sops.templates.radarr-env.path ];
   };
+  systemd.services.radarr.serviceConfig.UMask = lib.mkForce "0002";
 
   services.prowlarr = {
     enable = true;
@@ -756,9 +758,9 @@ in
     "d /data/downloads/sonarr        2775 sonarr media  -"
     "d /data/downloads/radarr        2775 radarr media  -"
     "d /data/library                 0775 root   media  -"
-    "d /data/library/tv              0775 sonarr media  -"
-    "d /data/library/anime           0775 sonarr media  -"
-    "d /data/library/movies          0775 radarr media  -"
+    "d /data/library/tv              2775 sonarr media  -"
+    "d /data/library/anime           2775 sonarr media  -"
+    "d /data/library/movies          2775 radarr media  -"
   ];
 
   services.caddy = {
