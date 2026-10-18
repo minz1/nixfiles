@@ -506,12 +506,12 @@ in
         {
           name = "sonarr";
           host = "http://127.0.0.1:8989/sonarr";
-          download_uncached = false;
+          download_uncached = true;
         }
         {
           name = "radarr";
           host = "http://127.0.0.1:7878/radarr";
-          download_uncached = false;
+          download_uncached = true;
         }
       ];
 
