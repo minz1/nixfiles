@@ -8,6 +8,8 @@ resource "authentik_provider_proxy" "media_fixer" {
   authorization_flow = data.authentik_flow.default_authorization.id
   invalidation_flow  = data.authentik_flow.default_invalidation.id
   mode               = "forward_single"
+
+  access_token_validity = "hours=24"
 }
 
 resource "authentik_application" "media_fixer" {
