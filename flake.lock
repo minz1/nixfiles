@@ -82,11 +82,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1792341034,
-        "narHash": "sha256-KyRClZAiWN7uIf2fPIQUNt6K74hHOzILTc4XOqHY3Dg=",
+        "lastModified": 1792347490,
+        "narHash": "sha256-DsHNV/MLkkrOOEbgDOCIkgtsv6peLTsZgUqrS008CLM=",
         "owner": "minz1",
         "repo": "decypharr",
-        "rev": "5d84037ef74f5af35489f00902f53ee9001e7685",
+        "rev": "75df42dcee04fab764c02156c8518138f7991a1d",
         "type": "github"
       },
       "original": {
