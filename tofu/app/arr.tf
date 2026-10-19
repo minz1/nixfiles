@@ -31,7 +31,7 @@ resource "sonarr_media_management" "sonarr" {
   import_extra_files          = false
   set_permissions             = false
   skip_free_space_check       = true
-  unmonitor_previous_episodes = true
+  unmonitor_previous_episodes = false
   minimum_free_space          = 100
   recycle_bin_days            = 0
   chmod_folder                = "755"
