@@ -24,8 +24,8 @@ terraform {
     }
     seerr = {
       source = "josh-archer/seerr"
-      # Exact pin: any other version (0.19.5-1.1.0-rc.2, tested) fails "unknown issuer" on `tofu init -upgrade` (broken/rotated upstream signing key); 0.19.3 only works via .terraform.lock.hcl trust-on-first-use. Revisit once upstream re-signs.
-      version = "0.19.3"
+      # Exact pin: upgrades are reviewed by hand (0.19.3 -> 2.2.1 on 2026-10-19; the upstream signing key is fixed since 2.x).
+      version = "2.2.1"
     }
   }
 

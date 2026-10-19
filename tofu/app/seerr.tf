@@ -17,6 +17,9 @@ resource "seerr_api_object" "jellyfin_settings" {
 
 resource "seerr_main_settings" "main" {
   local_login = false
+}
+
+resource "seerr_network_settings" "main" {
   trust_proxy = true
 }
 
