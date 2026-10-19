@@ -111,7 +111,7 @@
         incus_type = "container";
         root_size = "160GiB";
         cpus = 4;
-        memory = "8GiB";
+        memory = "14GiB";
         gpu = true;
         nesting = true;
       };
@@ -159,7 +159,7 @@
         nix_size = "20G";
         persist_size = "100GiB";
         cpus = 4;
-        memory = "20GiB";
+        memory = "14GiB";
       };
       networks.incus_bridge = {
         ip = "10.10.0.9";
