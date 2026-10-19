@@ -52,3 +52,50 @@ resource "radarr_notification" "jellyfin" {
   update_library = true
   notify         = false
 }
+
+resource "sonarr_notification_webhook" "decypharr_import" {
+  name   = "decypharr-import"
+  url    = "http://127.0.0.1:8282/webhooks/arr/sonarr"
+  method = 1
+
+  on_grab                            = false
+  on_download                        = true
+  on_upgrade                         = true
+  on_import_complete                 = false
+  on_rename                          = false
+  on_series_add                      = false
+  on_series_delete                   = false
+  on_episode_file_delete             = false
+  on_episode_file_delete_for_upgrade = false
+  on_health_issue                    = false
+  on_health_restored                 = false
+  on_application_update              = false
+  on_manual_interaction_required     = false
+  include_health_warnings            = false
+
+  username = "arr"
+  password = data.sops_file.decypharr.data["decypharr_api_token"]
+}
+
+resource "radarr_notification_webhook" "decypharr_import" {
+  name   = "decypharr-import"
+  url    = "http://127.0.0.1:8282/webhooks/arr/radarr"
+  method = 1
+
+  on_grab                          = false
+  on_download                      = true
+  on_upgrade                       = true
+  on_rename                        = false
+  on_movie_added                   = false
+  on_movie_delete                  = false
+  on_movie_file_delete             = false
+  on_movie_file_delete_for_upgrade = false
+  on_health_issue                  = false
+  on_health_restored               = false
+  on_application_update            = false
+  on_manual_interaction_required   = false
+  include_health_warnings          = false
+
+  username = "arr"
+  password = data.sops_file.decypharr.data["decypharr_api_token"]
+}
