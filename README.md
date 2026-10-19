@@ -12,7 +12,7 @@
 | `minz-media-0` | Jellyfin, Seerr, Sonarr, Radarr, Prowlarr, Bazarr, Decypharr, media-agent | `10.10.0.7` |
 | `minz-services-0` | ntfy, media-fixer | `10.10.0.6` |
 | `minz-pki-0` | step-ca internal CA (ACME + mTLS client cert issuance) | `10.10.0.8` |
-| `minz-game-0` | ATM10 Minecraft server (rootless Podman, oci user) | `10.10.0.9` |
+| `minz-game-0` | Minecraft server: Fabric 26.3, vanilla-compatible (rootless Podman, oci user) | `10.10.0.9` |
 | `minz-attic-0` | Attic binary cache (CI push target, fleet substituter) | `10.10.0.12` |
 | `minz-runner-0` | Forgejo Actions runner (rootless Podman job containers) | `10.10.0.13` |
 

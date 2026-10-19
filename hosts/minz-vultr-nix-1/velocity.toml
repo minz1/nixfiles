@@ -1,13 +1,13 @@
 config-version = "2.8"
 bind = "0.0.0.0:@velocityPort@"
-motd = "<gray>minz1's ATM10 Server</gray>"
+motd = "<gray>minz1's Minecraft Server</gray>"
 show-max-players = 10
 online-mode = true
 force-key-authentication = true
 prevent-client-proxy-connections = false
 player-info-forwarding-mode = "modern"
 forwarding-secret-file = "forwarding.secret"
-announce-forge = true
+announce-forge = false
 kick-existing-players = false
 ping-passthrough = "DISABLED"
 sample-players-in-ping = false
@@ -20,11 +20,11 @@ bytes-per-second = -1
 decompressed-bytes-per-second = 5242880
 
 [servers]
-atm10 = "@gameIp@:@gamePort@"
+vanilla = "@gameIp@:@gamePort@"
 
 # In what order we should try servers when a player logs in or is kicked from a server.
 try = [
-    "atm10"
+    "vanilla"
 ]
 
 [forced-hosts]
