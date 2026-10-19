@@ -45,7 +45,7 @@ let
     transport http {
       tls
       tls_client_auth /var/lib/acme/${hostName}.internal/cert.pem /var/lib/acme/${hostName}.internal/key.pem
-      tls_trusted_ca_certs /etc/ssl/internal-ca.crt
+      tls_trust_pool file /etc/ssl/internal-ca.crt
     }
   '';
 
