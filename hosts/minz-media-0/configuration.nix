@@ -509,11 +509,13 @@ in
           name = "sonarr";
           host = "http://127.0.0.1:8989/sonarr";
           download_uncached = true;
+          import_webhook = true;
         }
         {
           name = "radarr";
           host = "http://127.0.0.1:7878/radarr";
           download_uncached = true;
+          import_webhook = true;
         }
       ];
 
