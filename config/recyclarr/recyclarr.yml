@@ -15,7 +15,7 @@ sonarr:
       - trash_id: c4cadd6b35b95f62c3d47a408e53e2f7  # WEB-2160p (Combined)
         reset_unmatched_scores:
           enabled: true
-        # Guide qualities plus a BluRay fallback for shows that never had WEB releases; WEB still wins and upgrades it.
+        # Guide WEB qualities first, then BluRay, 720p and SD as fallbacks for older shows; WEB still wins and upgrades them.
         qualities:
           - name: WEB 2160p
             qualities:
@@ -27,6 +27,20 @@ sonarr:
               - WEBRip-1080p
           - name: Bluray-1080p
           - name: Bluray-1080p Remux
+          - name: HDTV-1080p
+          - name: 720p
+            qualities:
+              - WEBDL-720p
+              - WEBRip-720p
+              - Bluray-720p
+              - HDTV-720p
+          - name: SD
+            qualities:
+              - WEBDL-480p
+              - WEBRip-480p
+              - Bluray-480p
+              - DVD
+              - SDTV
       - trash_id: 20e0fc959f1f1704bed501f23bdae76f  # [Anime] Remux-1080p
         min_format_score: 0
         reset_unmatched_scores:
