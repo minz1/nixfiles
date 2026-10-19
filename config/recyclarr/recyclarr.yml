@@ -11,6 +11,15 @@ sonarr:
       qualities:
         - name: Bluray-1080p
           min: 15
+        # Viki WEB-DLs run ~10 MB/min at 1080p, ~6 at 720p
+        - name: WEBDL-1080p
+          min: 8
+        - name: WEBRip-1080p
+          min: 8
+        - name: WEBDL-720p
+          min: 5
+        - name: WEBRip-720p
+          min: 5
     quality_profiles:
       - trash_id: c4cadd6b35b95f62c3d47a408e53e2f7  # WEB-2160p (Combined)
         reset_unmatched_scores:
