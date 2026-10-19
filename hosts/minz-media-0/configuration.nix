@@ -633,7 +633,7 @@ in
         zilean-postgres = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "docker.io/library/postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685";
+            image = "docker.io/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea";
             pod = pods.zilean.ref;
             volumes = [ "${volumes.zilean-pg.ref}:/var/lib/postgresql/data" ];
             environments = {
@@ -664,7 +664,7 @@ in
         flaresolverr = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "ghcr.io/flaresolverr/flaresolverr:latest@sha256:139dfee1c6f89249c8d665d1333a42e8ec74ec0a86bc6bb1c8461e10d3a66a47";
+            image = "ghcr.io/flaresolverr/flaresolverr:latest@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767";
             publishPorts = [ "127.0.0.1:8191:8191" ];
             environments.LOG_LEVEL = "info";
           };
@@ -673,7 +673,7 @@ in
         seadexerr = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "ghcr.io/ryder-c/seadexerr:v3.1.0@sha256:a033cf28d5dd288d4d2dfc7d54cb2f8efd590ccb56d03c9ca6e9842d750c19b4";
+            image = "ghcr.io/ryder-c/seadexerr:v3.2.0@sha256:a4ae04b9eb29120d16a6adaf9520c810cd3d24e2fddcd72209ba24b2971d0483";
             publishPorts = [ "127.0.0.1:6868:2071" ];
             volumes = [
               "${pkgs.writeText "seadexerr-scoring.toml" "dual_audio = 150\n"}:/data/scoring.toml:ro"

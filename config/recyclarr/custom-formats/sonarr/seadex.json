@@ -7,9 +7,36 @@
       "name": "Freeleech25",
       "implementation": "IndexerFlagSpecification",
       "negate": false,
-      "required": false,
+      "required": true,
+      "fields": {
+        "value": 64
+      }
+    },
+    {
+      "name": "DoubleUpload",
+      "implementation": "IndexerFlagSpecification",
+      "negate": false,
+      "required": true,
+      "fields": {
+        "value": 4
+      }
+    },
+    {
+      "name": "Internal",
+      "implementation": "IndexerFlagSpecification",
+      "negate": false,
+      "required": true,
       "fields": {
         "value": 8
+      }
+    },
+    {
+      "name": "Scene",
+      "implementation": "IndexerFlagSpecification",
+      "negate": false,
+      "required": true,
+      "fields": {
+        "value": 16
       }
     }
   ]
