@@ -23,6 +23,11 @@ let
   decypharrPort = 8282;
   decypharrUiPort = 8443;
   jellyfinApiPort = 8920;
+  jellyfinProxy = {
+    handler = "reverse_proxy";
+    upstreams = [ { dial = "127.0.0.1:${toString jellyfinPort}"; } ];
+    flush_interval = -1;
+  };
   mediaAgentHttpsPort = 9443;
   desktopIp = topology.nodes."minz-desktop".networks.mgmt.ip;
   servicesIp = topology.nodes."minz-services-0".networks.incus_bridge.ip;
@@ -753,15 +758,45 @@ in
             { certificate_selection.any_tag = [ "media" ]; }
           ];
           routes = [
+            # Temporary (remove after 2026-10-27): flush browsers' heuristically cached pre-plugin web chunks.
             {
-              match = [ { host = [ "jellyfin.minz1.com" ]; } ];
-              handle = [
+              match = [
                 {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "127.0.0.1:${toString jellyfinPort}"; } ];
-                  flush_interval = -1;
+                  host = [ "jellyfin.minz1.com" ];
+                  path = [
+                    "/web/"
+                    "/web/index.html"
+                  ];
                 }
               ];
+              handle = [
+                (jellyfinProxy // {
+                  headers = {
+                    request.delete = [
+                      "If-None-Match"
+                      "If-Modified-Since"
+                    ];
+                    response.set = {
+                      "Cache-Control" = [ "no-cache" ];
+                      "Clear-Site-Data" = [ ''"cache"'' ];
+                    };
+                  };
+                })
+              ];
+            }
+            # Nix store files are dated 1970, so without this browsers cache /web/ for years.
+            {
+              match = [
+                {
+                  host = [ "jellyfin.minz1.com" ];
+                  path = [ "/web/*" ];
+                }
+              ];
+              handle = [ (jellyfinProxy // { headers.response.set."Cache-Control" = [ "no-cache" ]; }) ];
+            }
+            {
+              match = [ { host = [ "jellyfin.minz1.com" ]; } ];
+              handle = [ jellyfinProxy ];
             }
             # Path-specific routes before the seerr catch-all; mediaIp allows direct WireGuard access (e.g. from the Tofu runner at https://10.10.0.7/sonarr).
           ]
