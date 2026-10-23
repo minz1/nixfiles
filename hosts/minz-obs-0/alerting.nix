@@ -388,6 +388,17 @@ in
               for = "15m";
               summary = "No router syslog lines received in 30m — check stunnel/Alloy syslog listener on home-nix-0";
             })
+            (mkLogCountRule {
+              uid = "adguard-querylog-silent";
+              title = "AdGuard query log stream silent";
+              logql = ''sum(count_over_time({job="adguard-querylog"}[30m]))'';
+              threshold = 1;
+              evaluatorType = "lt";
+              noDataState = "Alerting";
+              from = 1800;
+              for = "15m";
+              summary = "No AdGuard query-log lines in 30m — if router-syslog-silent also fires it is the transport, else check /etc/init.d/adguard-querylog on the router";
+            })
             (mkThresholdRule {
               uid = "restic-backup-stale";
               title = "restic backup hasn't run recently";
