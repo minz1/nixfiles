@@ -5,6 +5,7 @@
   topology,
   node,
   mkHardened,
+  hostEndpoints,
   ...
 }:
 
@@ -20,6 +21,17 @@ let
   adguardExporterPort = 9618;
   certDir = "/var/lib/acme/minz-obs-0.internal";
 
+  mtlsClient = {
+    ca_file = "/etc/ssl/internal-ca.crt";
+    cert_file = "${certDir}/fullchain.pem";
+    key_file = "${certDir}/key.pem";
+  };
+  tunnelProbe = hostEndpoints.minz-home-nix-0.tunnelProbe;
+  tunnelTargets = with topology.nodes; [
+    minz-vultr-nix-0.networks.mgmt.ip
+    minz-vultr-nix-1.networks.mgmt.ip
+    minz-vultr-nix-1.networks.edge.ip
+  ];
   nixosNodes = lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
   nodeExporterTargets = lib.mapAttrsToList (
     _: n:
@@ -69,11 +81,7 @@ in
       {
         job_name = "node";
         scheme = "https";
-        tls_config = {
-          ca_file = "/etc/ssl/internal-ca.crt";
-          cert_file = "${certDir}/fullchain.pem";
-          key_file = "${certDir}/key.pem";
-        };
+        tls_config = mtlsClient;
         static_configs = [ { targets = nodeExporterTargets; } ];
       }
       {
@@ -102,6 +110,29 @@ in
           {
             target_label = "__address__";
             replacement = "127.0.0.1:${toString blackboxPort}";
+          }
+        ];
+      }
+      {
+        job_name = "tunnel";
+        scheme = "https";
+        tls_config = mtlsClient;
+        scrape_interval = "15s";
+        metrics_path = "/probe";
+        params.module = [ "icmp" ];
+        static_configs = [ { targets = tunnelTargets; } ];
+        relabel_configs = [
+          {
+            source_labels = [ "__address__" ];
+            target_label = "__param_target";
+          }
+          {
+            source_labels = [ "__param_target" ];
+            target_label = "instance";
+          }
+          {
+            target_label = "__address__";
+            replacement = "${tunnelProbe.ip}:${toString tunnelProbe.port}";
           }
         ];
       }

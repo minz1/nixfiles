@@ -196,11 +196,11 @@ in
             (mkThresholdRule {
               uid = "node-scrape-down";
               title = "Host metrics unreachable";
-              expr = ''up{job="node"}'';
+              expr = ''up{job=~"node|tunnel"}'';
               evaluatorType = "lt";
               evaluatorParams = [ 1 ];
               for = "10m";
-              summary = "{{ $labels.instance }} node_exporter scrape failing — host down, exporter down, or its TLS cert invalid";
+              summary = "{{ $labels.job }} scrape of {{ $labels.instance }} failing — host down, exporter down, or its TLS cert invalid";
             })
             (mkThresholdRule {
               uid = "service-down";
@@ -232,10 +232,19 @@ in
             (mkThresholdRule {
               uid = "public-endpoint-down";
               title = "Public endpoint down";
-              expr = "probe_success";
+              expr = ''probe_success{job="blackbox"}'';
               evaluatorType = "lt";
               evaluatorParams = [ 1 ];
               summary = "{{ $labels.instance }} failed its blackbox probe";
+            })
+            (mkThresholdRule {
+              uid = "tunnel-packet-loss";
+              title = "WireGuard tunnel packet loss";
+              expr = ''1 - avg_over_time(probe_success{job="tunnel"}[30m])'';
+              evaluatorType = "gt";
+              evaluatorParams = [ 0.05 ];
+              for = "30m";
+              summary = "{{ $labels.instance }} loses over 5% of pings across the WireGuard tunnel; toggle the tunnel (new source port); see main-plan 'attic copy stall on deploys'";
             })
             (mkThresholdRule {
               uid = "loki-error-rate";
