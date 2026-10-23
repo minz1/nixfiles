@@ -638,7 +638,7 @@ in
         zilean-postgres = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "docker.io/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea";
+            image = "docker.io/library/postgres:16-alpine@sha256:f4610795587492cd4fb887c2dc3de301b813278bb6f616992061141b5f15ac36";
             pod = pods.zilean.ref;
             volumes = [ "${volumes.zilean-pg.ref}:/var/lib/postgresql/data" ];
             environments = {
