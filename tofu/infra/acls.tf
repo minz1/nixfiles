@@ -264,6 +264,18 @@ resource "incus_network_acl" "obs" {
       description      = "SMTP egress for Grafana alert email via Resend"
       state            = "enabled"
     },
+    {
+      action = "allow"
+      destination = join(",", [
+        local.all_nodes["minz-vultr-nix-0"].networks.mgmt.ip,
+        local.all_nodes["minz-vultr-nix-1"].networks.mgmt.ip,
+        local.all_nodes["minz-vultr-nix-1"].networks.edge.ip,
+      ])
+      protocol    = "icmp4"
+      icmp_type   = "8"
+      description = "Tunnel loss probe: ICMP echo to the WireGuard tunnel endpoints"
+      state       = "enabled"
+    },
   ])
 }
 
