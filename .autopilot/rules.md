@@ -6,7 +6,8 @@ Run inside `nix develop` from `/home/minz1/projects/nixfiles`. Check `$?`; never
 - Tofu change in `tofu/app` or `tofu/infra`: `just tofu app-plan` or `just tofu infra-plan`, and read the plan.
 - Script change: `cd scripts && shellcheck -x *.sh`.
 - flake.lock bump: `just admin update` (updates inputs and builds every host). Only for a full input update.
-- Peer build (decypharr or mediafixer): `nix flake update <input>` only, then build each host that input reaches (decypharr → minz-media-0; mediafixer → minz-services-0 and minz-media-0).
+- Peer build (decypharr or mediafixer): lock that input to the posted sha only (`nix flake lock --override-input decypharr github:minz1/decypharr/<sha>`, `... mediafixer github:minz1/media-fixer/<sha>`), confirm `nix flake metadata --json` shows that rev and no other input moved, then build each host that input reaches (decypharr → minz-media-0; mediafixer → minz-services-0 and minz-media-0).
+- Load the `verification-before-completion` skill before marking an item `[x]` or posting an ack. Load `systematic-debugging` before changing anything to fix a failed check, deploy or live result.
 - Final item: `just admin check` (flake check, `nix fmt --fail-on-change`, shellcheck, secrets encrypted), then a build of every host the run changed.
 
 ## May happen mid-run
@@ -19,6 +20,13 @@ Run inside `nix develop` from `/home/minz1/projects/nixfiles`. Check `$?`; never
 
 ## Reviewer stand-in
 Before every deploy, and before the Final item merges and pushes: run the `reviewer` agent with `model: opus` on the diff. Apply its changes; record verdict and commit in `log.md`. A BLOCK verdict blocks the item.
+
+## New work
+A new feature, module, script, service or alert (not bumps, peer deploys, reads/reviews or one-line fixes):
+1. `brainstorming` skill → spec at `docs/specs/YYYY-MM-DD-<topic>-design.md`. No owner is present: answer its questions from plan.md, `docs/main-plan.md` and `docs/ops.md`, and record each decision in the spec. A decision only the owner can make (architecture, naming, a security trade-off the docs don't settle) goes to `## Owner` and parks the item.
+2. `reviewer` agent with `model: opus` on the spec. Apply its findings; BLOCK blocks the item.
+3. `writing-plans` skill → `docs/plans/YYYY-MM-DD-<topic>.md`, Native execution. `reviewer` with `model: opus` on the plan, same rules.
+4. Implement; the reviewer-before-deploy step above still applies.
 
 ## Fleet
 None. Do not launch fleet agents. decypharr code belongs to the decypharr session (`/home/minz1/projects/decypharr`), mediafixer code to the mediafixer session (`/home/minz1/projects/mediafixer`; media-fixer runs on minz-services-0, media-agent on minz-media-0). Never edit either. This session deploys and verifies their revisions, answers their board requests, and requests changes through the board.
