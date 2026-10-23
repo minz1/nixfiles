@@ -101,14 +101,10 @@
 
       dependsOnBinaryCache =
         name:
-        binaryCacheName != null
-        && name != binaryCacheName
-        && name != incusHostName
-        && name != mgmtHubName;
+        binaryCacheName != null && name != binaryCacheName && name != incusHostName && name != mgmtHubName;
 
       deployDependency =
-        name: node:
-        if dependsOnBinaryCache name then binaryCacheName else routingDependency name node;
+        name: node: if dependsOnBinaryCache name then binaryCacheName else routingDependency name node;
 
       deployLevel =
         name:

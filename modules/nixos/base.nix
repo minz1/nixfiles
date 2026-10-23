@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   # unreleased upstream fix: 4.2.1 splits records that straddle its read buffer into two syslog lines

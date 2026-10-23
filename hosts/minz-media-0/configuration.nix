@@ -770,18 +770,21 @@ in
                 }
               ];
               handle = [
-                (jellyfinProxy // {
-                  headers = {
-                    request.delete = [
-                      "If-None-Match"
-                      "If-Modified-Since"
-                    ];
-                    response.set = {
-                      "Cache-Control" = [ "no-cache" ];
-                      "Clear-Site-Data" = [ ''"cache"'' ];
+                (
+                  jellyfinProxy
+                  // {
+                    headers = {
+                      request.delete = [
+                        "If-None-Match"
+                        "If-Modified-Since"
+                      ];
+                      response.set = {
+                        "Cache-Control" = [ "no-cache" ];
+                        "Clear-Site-Data" = [ ''"cache"'' ];
+                      };
                     };
-                  };
-                })
+                  }
+                )
               ];
             }
             # Nix store files are dated 1970, so without this browsers cache /web/ for years.
