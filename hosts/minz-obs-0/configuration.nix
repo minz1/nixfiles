@@ -185,6 +185,13 @@ in
       # 90d minimum — breaches are typically discovered weeks after the fact
       limits_config = {
         retention_period = "90d";
+        retention_stream = [
+          {
+            selector = ''{job="adguard-querylog"}'';
+            priority = 1;
+            period = "30d";
+          }
+        ];
         # retention still runs via the compactor; this only closes the delete API
         deletion_mode = "disabled";
       };

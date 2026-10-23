@@ -113,7 +113,8 @@ check:
     nix flake check "${ROOT_DIR}"
     echo "==> nix fmt --fail-on-change"
     nix fmt -- --fail-on-change "${ROOT_DIR}"
-    echo "==> shellcheck scripts/*.sh"
+    echo "==> shellcheck scripts/*.sh scripts/router"
     (cd "${ROOT_DIR}/scripts" && shellcheck -x ./*.sh)
+    (cd "${ROOT_DIR}/scripts/router" && shellcheck -s sh adguard-querylog && shellcheck -x ./*.sh)
     echo "==> secrets/ encrypted"
     ${ROOT_DIR}/scripts/check-secrets-encrypted.sh

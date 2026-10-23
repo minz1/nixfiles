@@ -241,6 +241,17 @@ in
 
   # syslog_format = rfc3164 is a best guess for the real logread output — no parse errors seen, but confirm live in Grafana Explore.
   environment.etc."alloy/router.alloy".text = ''
+    loki.relabel "router" {
+      forward_to = []
+
+      rule {
+        source_labels = ["__syslog_message_app_name"]
+        regex         = "adguard-querylog"
+        target_label  = "job"
+        replacement   = "adguard-querylog"
+      }
+    }
+
     loki.source.syslog "router" {
       listener {
         address       = "0.0.0.0:${toString routerSyslogPort}"
@@ -256,7 +267,8 @@ in
         }
       }
 
-      forward_to = [loki.write.default.receiver]
+      forward_to    = [loki.write.default.receiver]
+      relabel_rules = loki.relabel.router.rules
     }
   '';
 
