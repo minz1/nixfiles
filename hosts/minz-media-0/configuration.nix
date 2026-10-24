@@ -890,7 +890,7 @@ in
     prepareCommand = "systemctl stop ${mediaBackupUnits}";
     cleanupCommand = "systemctl start ${mediaBackupUnits}";
     timerConfig = {
-      OnCalendar = "*-*-* 04:30:00";
+      OnCalendar = "*-*-* 06:00:00 America/New_York";
       RandomizedDelaySec = "30m";
       Persistent = true;
     };
