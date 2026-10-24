@@ -5,7 +5,6 @@
   topology,
   node,
   mkHardened,
-  hostEndpoints,
   ...
 }:
 
@@ -26,7 +25,6 @@ let
     cert_file = "${certDir}/fullchain.pem";
     key_file = "${certDir}/key.pem";
   };
-  tunnelProbe = hostEndpoints.minz-home-nix-0.tunnelProbe;
   tunnelTargets = with topology.nodes; [
     minz-vultr-nix-0.networks.mgmt.ip
     minz-vultr-nix-1.networks.mgmt.ip
@@ -60,6 +58,12 @@ let
         method = "GET";
         follow_redirects = true;
         preferred_ip_protocol = "ip4";
+      };
+      # unprivileged ICMP via net.ipv4.ping_group_range; the hardened unit has no CAP_NET_RAW
+      modules.icmp = {
+        prober = "icmp";
+        timeout = "2s";
+        icmp.preferred_ip_protocol = "ip4";
       };
     }
   );
@@ -115,8 +119,6 @@ in
       }
       {
         job_name = "tunnel";
-        scheme = "https";
-        tls_config = mtlsClient;
         scrape_interval = "15s";
         metrics_path = "/probe";
         params.module = [ "icmp" ];
@@ -132,7 +134,7 @@ in
           }
           {
             target_label = "__address__";
-            replacement = "${tunnelProbe.ip}:${toString tunnelProbe.port}";
+            replacement = "127.0.0.1:${toString blackboxPort}";
           }
         ];
       }

@@ -5,7 +5,6 @@
   hostName,
   topology,
   node,
-  mkHardened,
   ...
 }:
 
@@ -20,28 +19,6 @@ let
   routerSyslogPort = 1514; # unprivileged; DynamicUser Alloy lacks CAP_NET_BIND_SERVICE
   certDir = "/var/lib/acme/${hostName}.internal";
   routerIp = "192.168.0.1";
-
-  tunnelProbePort = 9115;
-  tunnelProbeConfig = pkgs.writeText "blackbox-tunnel.yml" (
-    builtins.toJSON {
-      modules.icmp = {
-        prober = "icmp";
-        timeout = "2s";
-        icmp.preferred_ip_protocol = "ip4";
-      };
-    }
-  );
-  tunnelProbeWebConfig = pkgs.writeText "blackbox-tunnel-web.yml" (
-    builtins.toJSON {
-      tls_server_config = {
-        cert_file = "${certDir}/fullchain.pem";
-        key_file = "${certDir}/key.pem";
-        client_auth_type = "RequireAndVerifyClientCert";
-        client_ca_file = "/etc/ssl/internal-ca.crt";
-        client_allowed_sans = [ "minz-obs-0.internal" ];
-      };
-    }
-  );
 in
 {
   imports = [
@@ -311,36 +288,4 @@ in
     };
   };
 
-  # tunnel loss probe for obs-0: home-nix-0 is the WireGuard endpoint, and obs-0's ACL has no ICMP egress
-  services.prometheus.exporters.blackbox = {
-    enable = true;
-    listenAddress = incusNodeNetwork.ip;
-    port = tunnelProbePort;
-    configFile = tunnelProbeConfig;
-    extraFlags = [ "--web.config.file=${tunnelProbeWebConfig}" ];
-  };
-  systemd.services.prometheus-blackbox-exporter = {
-    serviceConfig =
-      (mkHardened {
-        umask = null;
-        privateUsers = false;
-      })
-      // {
-        SupplementaryGroups = [ "caddy" ];
-      };
-    # binds the bridge IP, which exists only once incus is up
-    after = [
-      "incus.service"
-      "acme-${hostName}.internal.service"
-    ];
-    wants = [
-      "incus.service"
-      "acme-${hostName}.internal.service"
-    ];
-  };
-
-  homelab.endpoints.tunnelProbe = {
-    ip = incusNodeNetwork.ip;
-    port = tunnelProbePort;
-  };
 }
