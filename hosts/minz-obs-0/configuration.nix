@@ -155,6 +155,10 @@ in
 
   services.loki = {
     enable = true;
+    # grafana/loki#8468: with deletion_mode disabled every query logs a failed cache-gen RPC
+    package = pkgs.grafana-loki.overrideAttrs (old: {
+      patches = (old.patches or [ ]) ++ [ ./loki-cache-gen-deletion-disabled.patch ];
+    });
     configuration = {
       auth_enabled = false;
       server = {

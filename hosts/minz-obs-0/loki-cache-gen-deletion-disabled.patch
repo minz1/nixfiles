@@ -1,0 +1,33 @@
+--- a/pkg/compactor/deletion/grpc_request_handler.go
++++ b/pkg/compactor/deletion/grpc_request_handler.go
+@@ -81,7 +81,7 @@
+ 	}
+ 
+ 	if !hasDelete {
+-		return nil, errors.New(deletionNotAvailableMsg)
++		return &grpc.GetCacheGenNumbersResponse{}, nil
+ 	}
+ 
+ 	cacheGenNumber, err := g.deleteRequestsStore.GetCacheGenerationNumber(ctx, userID)
+--- a/pkg/compactor/deletion/grpc_request_handler_test.go
++++ b/pkg/compactor/deletion/grpc_request_handler_test.go
+@@ -125,6 +125,19 @@
+ 		require.Equal(t, store.genNumber, resp.ResultsCacheGen)
+ 	})
+ 
++	t.Run("deletion disabled", func(t *testing.T) {
++		store := &mockDeleteRequestsStore{}
++		store.genNumber = "123"
++		h := NewGRPCRequestHandler(store, &fakeLimits{defaultLimit: limit{deletionMode: deletionmode.Disabled.String()}})
++		grpcClient, closer := server(t, h)
++		t.Cleanup(closer)
++
++		ctx, _ := user.InjectIntoGRPCRequest(user.InjectOrgID(context.Background(), user1))
++		resp, err := grpcClient.GetCacheGenNumbers(ctx, &compactor_client_grpc.GetCacheGenNumbersRequest{})
++		require.NoError(t, err)
++		require.Equal(t, "", resp.ResultsCacheGen)
++	})
++
+ 	t.Run("error getting from store", func(t *testing.T) {
+ 		store := &mockDeleteRequestsStore{}
+ 		store.getErr = errors.New("something bad")
