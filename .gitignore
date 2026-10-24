@@ -56,3 +56,4 @@ result-*
 
 docs
 .autopilot/runs/
+.autopilot/rules.md

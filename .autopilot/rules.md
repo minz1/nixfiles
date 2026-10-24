@@ -19,7 +19,13 @@ Run inside `nix develop` from `/home/minz1/projects/nixfiles`. Check `$?`; never
 - Not allowed mid-run: `just tofu infra-apply`, `tofu destroy`, `just tofu infra-destroy-host`, `just admin gc`, reboots, bootstrap or install scripts.
 
 ## Reviewer stand-in
-Before every deploy, and before the Final item merges and pushes: run the `reviewer` agent with `model: opus` on the diff. Apply its changes; record verdict and commit in `log.md`. A BLOCK verdict blocks the item.
+Before every deploy, and before the Final item merges and pushes: run the `reviewer` agent with `model: opus` on the diff, with a `ponytail:ponytail-review` pass. Apply its changes; record verdict and commit in `log.md`. A BLOCK verdict blocks the item.
+
+## Skills
+- work: `superpowers:brainstorming` and `superpowers:writing-plans` for New work (steps 1 and 3 below); `superpowers:systematic-debugging` for cause-first items and any fix to a failed check.
+- retry: `superpowers:systematic-debugging`: a failed attempt or revisit finds the root cause before trying a different approach.
+- done: `superpowers:verification-before-completion`: run the check and read its output before `[x]` or an ack.
+- review: `superpowers:receiving-code-review`: verify each reviewer finding before applying it.
 
 ## New work
 A new feature, module, script, service or alert (not bumps, peer deploys, reads/reviews or one-line fixes):
