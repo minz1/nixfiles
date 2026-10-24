@@ -244,7 +244,7 @@ in
         }
       }
 
-      forward_to    = [loki.write.default.receiver]
+      forward_to    = [loki.process.scrub.receiver]
       relabel_rules = loki.relabel.router.rules
     }
   '';
