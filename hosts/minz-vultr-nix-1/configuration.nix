@@ -162,6 +162,8 @@ in
   # Caddy already owns :80 for its own public ACME; lego listens locally and Caddy relays the challenge
   security.acme.certs."${hostName}.internal".listenHTTP =
     "127.0.0.1:${toString internalAcmeHttpPort}";
+  # step-ca validates HTTP-01 once; at boot the order must not start before Caddy relays :80
+  systemd.services."acme-order-renew-${hostName}.internal".after = [ "caddy.service" ];
 
   services.caddy = {
     enable = true;
