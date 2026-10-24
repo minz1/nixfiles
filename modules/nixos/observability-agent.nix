@@ -107,6 +107,11 @@ in
             expression = "(?:ma_username|ma_password|apikey|api_key|passwd)=([^&[:space:]]+)"
             replace    = "REDACTED"
           }
+
+          stage.replace {
+            expression = "(eyJ[A-Za-z0-9_-]+[.]eyJ[A-Za-z0-9_-]+[.][A-Za-z0-9_-]+)"
+            replace    = "REDACTED_JWT"
+          }
         }
 
         loki.write "default" {
