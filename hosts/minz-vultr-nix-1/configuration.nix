@@ -112,6 +112,8 @@ in
 
   services.crowdsec = {
     enable = true;
+    settings.config.api.server.online_client.credentials_path =
+      "/var/lib/crowdsec/data/online_api_credentials.yaml";
     hub.collections = [
       "crowdsecurity/linux"
       "crowdsecurity/caddy"
