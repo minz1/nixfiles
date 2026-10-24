@@ -83,10 +83,10 @@
       },
       "locked": {
         "lastModified": 1792809881,
-        "narHash": "sha256-i2/IEW2fczCIEC94ApD3Rl/WCb/n9R0NLHP7aJ9bInY=",
+        "narHash": "sha256-5Ox0fcmF3dHFcV1mEcflnXOQVRw34iNhx7ysvPOpMFc=",
         "owner": "minz1",
         "repo": "decypharr",
-        "rev": "d2bad0480d91c40da3d6b1342c1d445247624267",
+        "rev": "75890df2edae3cedbcfc79ce62b6eeeeb9234159",
         "type": "github"
       },
       "original": {
