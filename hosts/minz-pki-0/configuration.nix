@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -9,6 +10,12 @@ let
 in
 {
   system.stateVersion = "25.11";
+
+  # 9.7G /nix fits ~3 nixpkgs revisions (~2.1G each); fleet 14d GC keeps 5 and a bump trips disk-nix 85%.
+  nix.gc = {
+    dates = lib.mkForce "daily";
+    options = lib.mkForce "--delete-older-than 3d";
+  };
 
   environment.etc."step-ca/certs/root_ca.crt".source = ./root_ca.crt;
   environment.etc."step-ca/certs/intermediate_ca.crt".source = ./intermediate_ca.crt;
