@@ -230,7 +230,7 @@ in
     rootlessConfig.uid = 902;
     containerConfig = {
       # Digest is pinned; image updates require a deliberate change here (world backup + join test).
-      image = "docker.io/itzg/minecraft-server:java25@sha256:59feb0a1ef286f20a20560c56adf5b927155bfa842951f5db8b8bbc5a1a3ebde";
+      image = "docker.io/itzg/minecraft-server:java25@sha256:3168dfa30c35fa1f99b8edde120f934a03ee780fcf905f450a1dbd9551d719f5";
       volumes = [ "/persist/vanilla:/data" ];
       publishPorts = [
         "${toString gamePort}:${toString gamePort}"
