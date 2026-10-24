@@ -18,7 +18,6 @@ let
   media = hostEndpoints.minz-media-0.caddy;
   servicesCaddy = hostEndpoints.minz-services-0.caddy;
 
-  fwBouncerKeyFile = "/var/lib/crowdsec/state/fw-bouncer.key";
   arrApps = [
     "sonarr"
     "radarr"
@@ -95,7 +94,10 @@ in
     }
   ];
 
-  sops.secrets.crowdsec_caddy_api_key = { };
+  sops.secrets.crowdsec_caddy_api_key = {
+    owner = "crowdsec";
+    restartUnits = [ "crowdsec.service" ];
+  };
 
   sops.secrets.minecraft_velocity_forwarding_secret = { };
 
@@ -110,17 +112,13 @@ in
 
   services.crowdsec = {
     enable = true;
-    settings = {
-      lapi.credentialsFile = "/var/lib/crowdsec/state/lapi-credentials.yaml";
-      general.api.server.enable = true;
-    };
     hub.collections = [
       "crowdsecurity/linux"
       "crowdsecurity/caddy"
       "crowdsecurity/http-cve"
       "crowdsecurity/base-http-scenarios"
     ];
-    localConfig.acquisitions = [
+    settings.acquisitions = [
       {
         source = "journalctl";
         journalctl_filter = [ "_SYSTEMD_UNIT=caddy.service" ];
@@ -134,32 +132,30 @@ in
     ];
   };
 
-  # cscli writes directly to SQLite; registerBouncer.enable conflicts with DynamicUser symlink (status=238)
+  # the caddy bouncer's key is fixed in sops, so it is registered with that key rather than via cscli's generated one
   systemd.services.crowdsec.serviceConfig.ExecStartPre = [
-    "+${pkgs.writeShellScript "crowdsec-register-bouncers" ''
+    "${pkgs.writeShellScript "crowdsec-register-bouncers" ''
       cscli=/run/current-system/sw/bin/cscli
-      grep=${pkgs.gnugrep}/bin/grep
       tr=${pkgs.coreutils}/bin/tr
-      chmod=${pkgs.coreutils}/bin/chmod
 
       $cscli bouncers delete "caddy-bouncer" 2>/dev/null || true
       $cscli bouncers add "caddy-bouncer" \
         --key "$($tr -d '[:space:]' < ${config.sops.secrets.crowdsec_caddy_api_key.path})"
-
-      if ! $cscli bouncers list 2>/dev/null | $grep -q "nftables-bouncer" \
-          || [ ! -f "${fwBouncerKeyFile}" ]; then
-        $cscli bouncers delete "nftables-bouncer" 2>/dev/null || true
-        $cscli bouncers add "nftables-bouncer" --output raw > "${fwBouncerKeyFile}"
-        $chmod 600 "${fwBouncerKeyFile}"
-      fi
     ''}"
   ];
 
-  services.crowdsec-firewall-bouncer = {
-    enable = true;
-    registerBouncer.enable = false;
-    secrets.apiKeyPath = fwBouncerKeyFile;
+  # on a live switch the /var/lib/crowdsec bind mount appears after tmpfiles ran; crowdsec-setup's own namespace needs data/ to exist, so this runs outside it
+  systemd.services.crowdsec-data-dirs = {
+    requiredBy = [ "crowdsec-setup.service" ];
+    before = [ "crowdsec-setup.service" ];
+    unitConfig.RequiresMountsFor = [ "/var/lib/crowdsec" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${config.systemd.package}/bin/systemd-tmpfiles --create --prefix=/var/lib/crowdsec";
+    };
   };
+
+  services.crowdsec-firewall-bouncer.enable = true;
 
   networking.nftables.enable = true;
 
@@ -352,10 +348,11 @@ in
   networking.firewall.allowedTCPPorts = [ velocityPort ];
 
   environment.persistence."/persist".directories = [
-    # CrowdSec uses DynamicUser; real state is at /var/lib/private/crowdsec.
     {
-      directory = "/var/lib/private/crowdsec";
-      mode = "0700";
+      directory = "/var/lib/crowdsec";
+      user = "crowdsec";
+      group = "crowdsec";
+      mode = "0750";
     }
     # Velocity uses DynamicUser (real state at /var/lib/private/velocity) — persisting avoids losing logs across reboots; config is re-written by ExecStartPre.
     {

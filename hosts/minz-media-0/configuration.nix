@@ -32,30 +32,6 @@ let
   desktopIp = topology.nodes."minz-desktop".networks.mgmt.ip;
   servicesIp = topology.nodes."minz-services-0".networks.incus_bridge.ip;
 
-  # seerr-team/seerr#3244: auto-approved anime requests get the default TV profile and type; drop once nixpkgs ships seerr >= 3.5.0
-  seerrWithAnimeRoutingFix = pkgs.seerr.overrideAttrs (old: {
-    patches =
-      (old.patches or [ ])
-      ++
-        map
-          (
-            c:
-            pkgs.fetchpatch {
-              inherit (c) hash;
-              url = "https://github.com/seerr-team/seerr/commit/${c.rev}.patch";
-            }
-          )
-          [
-            {
-              rev = "93c0b6a6d62687ba25c3adc7c74a3e7de55c9bc5";
-              hash = "sha256-Mi5xE3whLkyu2l5iO842tSWhQpTSpUwqlCtXSWlJy/o=";
-            }
-            {
-              rev = "42bee2aa10ff381cc9dca6305def8d0a334c2d26";
-              hash = "sha256-UPs+Qp0M+W/bj0/QEPnCjv+rS+gcHD0ILkWoMDhyYIU=";
-            }
-          ];
-  });
 in
 {
   imports = [
@@ -322,7 +298,6 @@ in
   };
 
   services.seerr.enable = true;
-  services.seerr.package = seerrWithAnimeRoutingFix;
   systemd.services.seerr.environment.NODE_EXTRA_CA_CERTS = "/etc/ssl/certs/ca-bundle.crt";
 
   services.rootless-podman = {
