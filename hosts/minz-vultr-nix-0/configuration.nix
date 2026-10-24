@@ -161,6 +161,7 @@ in
       "/var/lib/forgejo"
       "/var/backup/forgejo-db.sql"
     ];
+    wants = [ "postgresql.service" ];
     prepareCommand = ''
       mkdir -p /var/backup
       ${pkgs.util-linux}/bin/setpriv --reuid postgres --regid postgres --init-groups -- ${config.services.postgresql.package}/bin/pg_dumpall --clean --if-exists > /var/backup/forgejo-db.sql

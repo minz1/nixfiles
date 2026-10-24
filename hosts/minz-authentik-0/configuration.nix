@@ -233,6 +233,7 @@ in
   # setpriv privilege drop for pg_dumpall; see docs/main-plan.md's S6 section for why.
   homelab.backups.targets.authentik-db = {
     paths = [ "/var/backup/authentik-db.sql" ];
+    wants = [ "postgresql.service" ];
     prepareCommand = ''
       mkdir -p /var/backup
       ${pkgs.util-linux}/bin/setpriv --reuid postgres --regid postgres --init-groups -- ${config.services.postgresql.package}/bin/pg_dumpall --clean --if-exists > /var/backup/authentik-db.sql

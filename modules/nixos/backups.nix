@@ -30,6 +30,11 @@ in
             default = null;
             description = "Shell run before the backup.";
           };
+          wants = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = [ ];
+            description = "Units the backup starts and waits for first, e.g. the database prepareCommand dumps.";
+          };
           cleanupCommand = lib.mkOption {
             type = lib.types.nullOr lib.types.lines;
             default = null;
@@ -95,6 +100,8 @@ in
     systemd.services = lib.mapAttrs' (
       name: target:
       lib.nameValuePair "restic-backups-${name}" {
+        inherit (target) wants;
+        after = target.wants;
         restartTriggers = [ config.sops.templates."restic-s3-env".content ];
         serviceConfig = mkHardened (
           let
