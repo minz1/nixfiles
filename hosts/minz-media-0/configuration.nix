@@ -439,7 +439,6 @@ in
           minimum_free_slot = 1;
           torrents_refresh_interval = "10m";
           download_links_refresh_interval = "40m";
-          workers = 100;
           auto_expire_links_after = "3d";
         }
         {
@@ -449,7 +448,6 @@ in
           minimum_free_slot = 1;
           torrents_refresh_interval = "10m";
           download_links_refresh_interval = "40m";
-          workers = 100;
           auto_expire_links_after = "3d";
         }
       ];
