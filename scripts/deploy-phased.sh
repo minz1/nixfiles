@@ -12,18 +12,16 @@ failed=()
 
 selected=()
 attic_phase=-1
-declare -A phase_of=()
 for ((i = 0; i < total; i++)); do
     read -ra hs <<< "${phases[$i]}"
     for h in "${hs[@]}"; do
-        phase_of[$h]=$i
         # shortcut: binary-cache host name hardcoded as in verify-attic-closure.sh, replaced by fleet data in OPS-5 B
         [ "$h" = minz-attic-0 ] && attic_phase=$i
         if [ "${#want[@]}" -eq 0 ]; then
             selected+=("$h")
         else
             for w in "${want[@]}"; do
-                [ "$h" = "$w" ] && selected+=("$h")
+                [ "$h" = "$w" ] && { selected+=("$h"); break; }
             done
         fi
     done
@@ -50,23 +48,18 @@ pending_after() {
     for ((j = from; j < total; j++)); do
         read -ra rest <<< "${phases[$j]}"
         for h in "${rest[@]}"; do
-            if [ "${#want[@]}" -eq 0 ]; then
-                return 0
-            fi
-            for w in "${want[@]}"; do
-                [ "$h" = "$w" ] && return 0
-            done
+            [[ -v path_of[$h] ]] && return 0
         done
     done
     return 1
 }
 
 attic_ok() {
-    local host=$1 rc=0
+    local host=$1 phase=$2 rc=0
     [ "${SKIP_ATTIC_VERIFY:-0}" = "1" ] && return 0
     "${ROOT_DIR}/scripts/verify-attic-closure.sh" "$host" "${path_of[$host]}" || rc=$?
     [ "$rc" -eq 0 ] && return 0
-    if [ "$rc" -eq 2 ] && [ "${phase_of[$host]}" -le "$attic_phase" ]; then
+    if [ "$rc" -eq 2 ] && [ "$phase" -le "$attic_phase" ]; then
         echo "${host}: Attic unreachable; deploying anyway (phase at or before the binary cache)" >&2
         return 0
     fi
@@ -77,13 +70,7 @@ for ((i = 0; i < total; i++)); do
     read -ra all_hosts <<< "${phases[$i]}"
     phase_hosts=()
     for h in "${all_hosts[@]}"; do
-        if [ "${#want[@]}" -eq 0 ]; then
-            phase_hosts+=("$h")
-        else
-            for w in "${want[@]}"; do
-                [ "$h" = "$w" ] && phase_hosts+=("$h")
-            done
-        fi
+        [[ -v path_of[$h] ]] && phase_hosts+=("$h")
     done
     [ "${#phase_hosts[@]}" -eq 0 ] && continue
 
@@ -91,7 +78,7 @@ for ((i = 0; i < total; i++)); do
     phase_failed=()
     deployed_hosts=()
     for host in "${phase_hosts[@]}"; do
-        if ! attic_ok "$host"; then
+        if ! attic_ok "$host" "$i"; then
             phase_failed+=("$host (attic verify failed)")
             continue
         fi

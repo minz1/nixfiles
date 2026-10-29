@@ -2,7 +2,7 @@ set tempdir := "/tmp"
 
 # Deploy one host: build it, check Attic, deploy with retry, wait until reachable.
 node host:
-    ${ROOT_DIR}/scripts/deploy-phased.sh {{ host }}
+    ${ROOT_DIR}/scripts/deploy-phased.sh "{{ host }}"
 
 # List all nodes defined in the flake.
 list:

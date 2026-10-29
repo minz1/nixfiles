@@ -4,7 +4,7 @@ set -euo pipefail
 scripts="$(cd "$(dirname "$0")" && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-unset SKIP_ATTIC_VERIFY STUB_VERIFY_RC STUB_RETRY_RC STUB_WAIT_RC STUB_NIX_BUILD_RC STUB_NIX_OMIT
+unset SKIP_ATTIC_VERIFY STUB_VERIFY_RC STUB_RETRY_RC STUB_WAIT_RC STUB_NIX_BUILD_RC STUB_NIX_OMIT STUB_NIX_DUP
 export ROOT_DIR="$work"
 log="$work/log"
 mkdir -p "$work/scripts" "$work/bin"
@@ -49,6 +49,7 @@ if [ "${1:-}" = build ]; then
     for ((i = ${#hosts[@]} - 1; i >= 0; i--)); do
         [ "${hosts[$i]}" = "${STUB_NIX_OMIT:-}" ] && continue
         echo "/nix/store/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-nixos-system-${hosts[$i]}-26.11"
+        [ "${hosts[$i]}" = "${STUB_NIX_DUP:-}" ] && echo "/nix/store/yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy-nixos-system-${hosts[$i]}-26.11"
     done
 fi
 exit 0
@@ -140,5 +141,17 @@ if STUB_NIX_OMIT=minz-runner-0 run minz-obs-0 minz-runner-0; then fail "case 10:
 SKIP_ATTIC_VERIFY=1 run || fail "case 11: exited non-zero"
 [ "$(count '^verify-attic-closure.sh')" = 0 ] || fail "case 11: verified despite SKIP_ATTIC_VERIFY"
 [ "$(count '^deploy-retry.sh')" = 6 ] || fail "case 11: not all hosts deployed"
+
+STUB_VERIFY_RC_minz_attic_0=2 run minz-attic-0 || fail "case 12: unreachable Attic blocked attic-0 itself"
+has "deploy-retry.sh minz-attic-0" || fail "case 12: attic-0 not deployed"
+
+STUB_VERIFY_RC_minz_home_nix_0=2 run minz-home-nix-0 || fail "case 13: unreachable Attic blocked home-nix-0"
+has "deploy-retry.sh minz-home-nix-0" || fail "case 13: home-nix-0 not deployed"
+
+if STUB_NIX_DUP=minz-obs-0 run minz-obs-0; then fail "case 14: ambiguous path not fatal"; fi
+[ "$(count '^deploy-retry.sh')" = 0 ] || fail "case 14: deployed with an ambiguous path"
+
+run minz-obs-0 minz-obs-0 || fail "case 15: repeated host name rejected"
+[ "$(count '^deploy-retry.sh minz-obs-0$')" = 1 ] || fail "case 15: repeated host not deployed exactly once"
 
 echo "deploy-phased.test.sh: all cases passed"
