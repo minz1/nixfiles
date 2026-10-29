@@ -1,8 +1,8 @@
 set tempdir := "/tmp"
 
-# Deploy a single node with auto-rollback on failure.
+# Deploy one host: build it, check Attic, deploy with retry, wait until reachable.
 node host:
-    nix run ${ROOT_DIR}#deploy-rs -- ${ROOT_DIR}#{{ host }}
+    ${ROOT_DIR}/scripts/deploy-phased.sh {{ host }}
 
 # List all nodes defined in the flake.
 list:

@@ -90,16 +90,12 @@ reboot-all:
 
 # Update flake inputs, then build every host closure so hash breakage (e.g. a pkgs.caddy.withPlugins vendor hash going stale) surfaces now, not at deploy time. Does not touch anything outside flake.lock.
 update:
-    #!/usr/bin/env bash
-    set -euo pipefail
     nix flake update --flake "${ROOT_DIR}"
-    echo "==> Building all host closures..."
-    attrs=()
-    for host in $(just deploy list); do
-      attrs+=("${ROOT_DIR}#nixosConfigurations.${host}.config.system.build.toplevel")
-    done
-    nix build --no-link "${attrs[@]}"
-    echo "All host closures built. Review flake.lock and commit."
+    just admin build-all
+
+# Build every host's system closure.
+build-all:
+    nix build --no-link $(just deploy list | sed "s|.*|${ROOT_DIR}#nixosConfigurations.&.config.system.build.toplevel|")
 
 # Fail if anything tracked under secrets/ isn't sops-encrypted.
 check-secrets:

@@ -29,6 +29,7 @@ just deploy phased                   # deploy in dependency order
 
 just admin check                     # flake check + fmt + shellcheck
 just admin update                    # bump flake.lock, build every host closure
+just admin build-all                 # build every host closure
 just admin health                    # fleet-wide failed-unit / crash-loop check
 
 just tofu infra-plan                 # plan Incus VM lifecycle
