@@ -21,10 +21,10 @@ infra-init flags="":
     @just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra init {{ flags }}'"
 
 infra-plan:
-    @just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra plan -out=${ROOT_DIR}/tofu/infra/tofu.plan'"
+    @TF_VAR_fleet="$(nix eval --json ${ROOT_DIR}#fleet)" just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra plan -out=${ROOT_DIR}/tofu/infra/tofu.plan'"
 
 infra-apply:
-    @just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra apply ${ROOT_DIR}/tofu/infra/tofu.plan'"
+    @TF_VAR_fleet="$(nix eval --json ${ROOT_DIR}#fleet)" just tofu _with-incus "sops exec-env ${ROOT_DIR}/secrets/tofu.env 'tofu -chdir=${ROOT_DIR}/tofu/infra apply ${ROOT_DIR}/tofu/infra/tofu.plan'"
 
 # Destroys exactly one host's Incus instance + persist volume, via -target= (never a bare destroy).
 infra-destroy-host hostname:

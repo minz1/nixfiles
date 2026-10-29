@@ -4,13 +4,12 @@ set -euo pipefail
 
 host="${1:?usage: tofu-destroy-host.sh <hostname>}"
 
-incus_type=$(nix eval --raw --impure --expr "
-  let t = import ${ROOT_DIR}/common/topology.nix;
-  in t.nodes.\"${host}\".incus.incus_type or \"virtual-machine\"
-")
+kind=$(nix eval --raw "${ROOT_DIR}#fleet.nodes.\"${host}\".kind")
+TF_VAR_fleet=$(nix eval --json "${ROOT_DIR}#fleet")
+export TF_VAR_fleet
 
 instance_resource="incus_instance.vm"
-if [ "$incus_type" = "container" ]; then
+if [ "$kind" = "incus-container" ]; then
     instance_resource="incus_instance.container"
 fi
 

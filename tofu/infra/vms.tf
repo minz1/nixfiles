@@ -1,30 +1,24 @@
-# Nix eval wraps the result in a JSON string so Tofu doesn't try to parse nested Nix types.
-data "external" "topology" {
-  program = [
-    "nix", "eval", "--json", "--impure",
-    "--expr",
-    "let nodes = import ../../common/topology.nix; in { data = builtins.toJSON { inherit (nodes) nodes; }; }",
-  ]
+# The checked fleet data (`nix eval --json .#fleet`); the `just tofu` recipes set TF_VAR_fleet.
+variable "fleet" {
+  type = any
 }
 
 locals {
-  # Decode the string-encoded JSON back into a Tofu map.
-  all_data  = jsondecode(data.external.topology.result.data)
-  all_nodes = local.all_data.nodes
+  all_nodes = var.fleet.nodes
 
   all_vms = {
     for name, node in local.all_nodes : name => node
-    if try(node.provisioner, "") == "incus"
+    if contains(["incus-vm", "incus-container"], node.kind)
   }
 
   nixos_vms = {
     for name, node in local.all_vms : name => node
-    if try(node.os, "") == "nixos" && try(node.incus.incus_type, "virtual-machine") != "container"
+    if node.kind == "incus-vm"
   }
 
   nixos_containers = {
     for name, node in local.all_vms : name => node
-    if try(node.os, "") == "nixos" && try(node.incus.incus_type, "virtual-machine") == "container"
+    if node.kind == "incus-container"
   }
 }
 
@@ -41,7 +35,7 @@ resource "incus_instance" "vm" {
 
   config = {
     "limits.cpu"          = tostring(each.value.incus.cpus)
-    "limits.memory"       = each.value.incus.memory
+    "limits.memory"       = "${each.value.incus.memory_gib}GiB"
     "security.secureboot" = true
   }
 
@@ -102,8 +96,8 @@ resource "incus_instance" "container" {
 
   config = {
     "limits.cpu"       = tostring(each.value.incus.cpus)
-    "limits.memory"    = each.value.incus.memory
-    "security.nesting" = try(each.value.incus.nesting, false)
+    "limits.memory"    = "${each.value.incus.memory_gib}GiB"
+    "security.nesting" = each.value.incus.nesting
   }
 
   device {
@@ -129,7 +123,7 @@ resource "incus_instance" "container" {
     properties = {
       path = "/"
       pool = "default"
-      size = try(each.value.incus.root_size, "60GiB")
+      size = "${each.value.incus.root_gib}GiB"
     }
   }
 
@@ -148,7 +142,7 @@ resource "incus_instance" "container" {
 
   # GPU DRM passthrough via cgroup device allowlisting — no VFIO/IOMMU required.
   dynamic "device" {
-    for_each = try(each.value.incus.gpu, false) ? [1] : []
+    for_each = each.value.incus.gpu ? [1] : []
     content {
       name = "gpu"
       type = "gpu"

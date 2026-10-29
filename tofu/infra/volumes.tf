@@ -6,7 +6,7 @@ resource "incus_storage_volume" "persist" {
   content_type = "block"
 
   config = {
-    size = try(each.value.incus.persist_size, "100GiB")
+    size = "${each.value.incus.total_gib}GiB"
   }
 }
 
