@@ -249,6 +249,32 @@
 
       inherit deployPhases;
 
+      checks.${system} =
+        let
+          lib = nixpkgs.lib;
+          t = import ./common/fleet/tests.nix {
+            inherit lib;
+            mkFleet = import ./common/fleet;
+          };
+          passedNegatives = builtins.filter (n: !n.failed) t.negative;
+        in
+        {
+          fleet-unit = pkgs.runCommand "fleet-unit" { } (
+            if t.unit == [ ] && t.positive then
+              "touch $out"
+            else
+              throw "fleet unit tests failed: ${builtins.toJSON t.unit}, base fixture evaluates: ${lib.boolToString t.positive}"
+          );
+          fleet-negative = pkgs.runCommand "fleet-negative" { } (
+            if passedNegatives == [ ] then
+              "touch $out"
+            else
+              throw "fleet fixtures that should fail evaluated cleanly: ${
+                lib.concatMapStringsSep ", " (n: n.name) passedNegatives
+              }"
+          );
+        };
+
       deploy.nodes = builtins.mapAttrs (name: node: {
         hostname = deployHostname name node;
         inherit (node) sshUser;
