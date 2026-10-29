@@ -1,4 +1,4 @@
-# S6 backups: one bucket, per-host/per-target prefixes. See docs/main-plan.md's S6 section.
+# Backups: one bucket, per-host/per-target prefixes.
 resource "aws_s3_bucket" "backups" {
   bucket = "backups"
 }

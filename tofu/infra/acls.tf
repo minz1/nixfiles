@@ -175,7 +175,7 @@ resource "incus_network_acl" "pki" {
       destination      = local.mgmt_subnet
       destination_port = "9000"
       protocol         = "tcp"
-      description      = "S6: restic backups to RustFS on vultr-nix-0"
+      description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
   ])
@@ -210,7 +210,7 @@ resource "incus_network_acl" "services" {
       destination      = local.mgmt_subnet
       destination_port = "9000"
       protocol         = "tcp"
-      description      = "S6: restic backups to RustFS on vultr-nix-0"
+      description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
   ])
@@ -340,7 +340,7 @@ resource "incus_network_acl" "game" {
       destination      = local.mgmt_subnet
       destination_port = "9000"
       protocol         = "tcp"
-      description      = "S6: restic backups to RustFS on vultr-nix-0"
+      description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
   ])
@@ -444,7 +444,7 @@ resource "incus_network_acl" "authentik" {
       destination      = local.mgmt_subnet
       destination_port = "9000"
       protocol         = "tcp"
-      description      = "S6: restic backups to RustFS on vultr-nix-0"
+      description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
   ])

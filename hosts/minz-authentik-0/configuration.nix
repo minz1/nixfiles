@@ -230,7 +230,6 @@ in
     port = authentikHttpsPort;
   };
 
-  # setpriv privilege drop for pg_dumpall; see docs/main-plan.md's S6 section for why.
   homelab.backups.targets.authentik-db = {
     paths = [ "/var/backup/authentik-db.sql" ];
     wants = [ "postgresql.service" ];

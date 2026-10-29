@@ -1,4 +1,4 @@
-# CI-only recipes: build + push to Attic. No deploy authority — see docs/main-plan.md's S7 section.
+# CI-only recipes: build + push to Attic. No deploy authority.
 
 # Print the space-separated affected-host list for commits between `before` and `after`.
 affected-hosts before after="HEAD":
