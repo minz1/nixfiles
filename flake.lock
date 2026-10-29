@@ -346,11 +346,11 @@
         "nixpkgs": "nixpkgs_4"
       },
       "locked": {
-        "lastModified": 1792974566,
-        "narHash": "sha256-ld85NZRpz1D0MDfFKxartZAOOr22heFMDum7RPLrtmc=",
+        "lastModified": 1793304447,
+        "narHash": "sha256-RvNE5mbY6k2rOKW9BWYHhRPdBa2OQdAnY2MA30Y6zC8=",
         "owner": "minz1",
         "repo": "media-fixer",
-        "rev": "b3e6afbd57526410ab795d9162bbd88b4542c528",
+        "rev": "ee8d65342e1228692cc21ecf9f65ca75f54021c7",
         "type": "github"
       },
       "original": {
@@ -579,11 +579,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1791456040,
-        "narHash": "sha256-H83yz/do+hjOO0uujHyH8RgtIQP2v7Mw+cLwcZK/xKc=",
+        "lastModified": 1793110635,
+        "narHash": "sha256-dhoW6VgFWlaodSY5jrBn+CF2FLmaUvDVgM7+C7T2+NM=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "e7439b6b14ad3cc35d05608ebca9bce01a25f5f8",
+        "rev": "31ecbaca1bdefa45dffc409f0250bd8039ea0010",
         "type": "github"
       },
       "original": {
