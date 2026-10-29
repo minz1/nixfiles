@@ -162,6 +162,7 @@ in
       DECYPHARR_USENET__PROVIDERS__1__USERNAME=${config.sops.placeholder.decypharr_torbox_nntp_username}
       DECYPHARR_USENET__PROVIDERS__1__PASSWORD=${config.sops.placeholder.decypharr_torbox_nntp_password}
       DECYPHARR_SECRET_KEY=${config.sops.placeholder.decypharr_secret_key}
+      DECYPHARR_API_TOKEN=${config.sops.placeholder.decypharr_api_token}
     '';
     owner = "decypharr";
   };
@@ -171,7 +172,6 @@ in
     content = builtins.toJSON {
       username = config.sops.placeholder.decypharr_username;
       password = config.sops.placeholder.decypharr_password_hash;
-      api_token = config.sops.placeholder.decypharr_api_token;
     };
     owner = "decypharr";
     mode = "0600";
