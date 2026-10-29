@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-host="${1:?usage: verify-attic-closure.sh <host>}"
+host="${1:?usage: verify-attic-closure.sh <host> [<toplevel>]}"
 
 # IP, not the .internal DNS name — Caddy's route match and atticd's allowed-hosts both
 # accept it (hosts/minz-attic-0/configuration.nix), so this needs no DNS resolution on
@@ -16,10 +16,10 @@ fi
 
 if ! curl -fsS --max-time 5 "${attic_url}/nix-cache-info" > /dev/null; then
     echo "Attic cache unreachable at $attic_url — use SKIP_ATTIC_VERIFY=1 if that's expected" >&2
-    exit 1
+    exit 2
 fi
 
-path=$(nix build --no-link --print-out-paths "${ROOT_DIR}#nixosConfigurations.${host}.config.system.build.toplevel")
+path="${2:-$(nix build --no-link --print-out-paths "${ROOT_DIR}#nixosConfigurations.${host}.config.system.build.toplevel")}"
 
 local_json=$(nix path-info --json --json-format 1 -r "$path")
 
@@ -64,7 +64,7 @@ total=$(echo "$local_json" | jq 'keys | length')
 
 if [ "$checked" -eq 0 ]; then
     echo "verify-attic-closure: 0 of $total closure paths reachable on Attic — cache may be down; use SKIP_ATTIC_VERIFY=1 if that's expected" >&2
-    exit 1
+    exit 2
 fi
 
 echo "verify-attic-closure: $host OK ($checked of $total closure paths cross-checked against Attic, $allowlisted allowlisted)"

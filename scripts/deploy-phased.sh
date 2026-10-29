@@ -6,10 +6,44 @@ mapfile -t phases <<< "$phases_out"
 total="${#phases[@]}"
 want=("$@")
 for w in "$@"; do
-    grep -qw -- "$w" <<< "$phases_out" || { echo "Unknown host: $w" >&2; exit 1; }
+    tr ' ' '\n' <<< "$phases_out" | grep -qxF -- "$w" || { echo "Unknown host: $w" >&2; exit 1; }
 done
-nix flake check "${ROOT_DIR}" || exit 1
 failed=()
+
+selected=()
+attic_phase=-1
+declare -A phase_of=()
+for ((i = 0; i < total; i++)); do
+    read -ra hs <<< "${phases[$i]}"
+    for h in "${hs[@]}"; do
+        phase_of[$h]=$i
+        # shortcut: binary-cache host name hardcoded as in verify-attic-closure.sh, replaced by fleet data in OPS-5 B
+        [ "$h" = minz-attic-0 ] && attic_phase=$i
+        if [ "${#want[@]}" -eq 0 ]; then
+            selected+=("$h")
+        else
+            for w in "${want[@]}"; do
+                [ "$h" = "$w" ] && selected+=("$h")
+            done
+        fi
+    done
+done
+
+attrs=()
+for h in "${selected[@]}"; do
+    attrs+=("${ROOT_DIR}#nixosConfigurations.${h}.config.system.build.toplevel")
+done
+built=$(nix build --no-link --print-out-paths "${attrs[@]}") || { echo "Build failed; nothing deployed." >&2; exit 1; }
+
+declare -A path_of=()
+for h in "${selected[@]}"; do
+    matches=$(grep -F -- "-nixos-system-${h}-" <<< "$built" || true)
+    if [ -z "$matches" ] || [ "$(wc -l <<< "$matches")" -ne 1 ]; then
+        echo "Expected exactly one built system for ${h}, got: ${matches:-none}. Nothing deployed." >&2
+        exit 1
+    fi
+    path_of[$h]=$matches
+done
 
 pending_after() {
     local from=$1
@@ -24,6 +58,18 @@ pending_after() {
             done
         done
     done
+    return 1
+}
+
+attic_ok() {
+    local host=$1 rc=0
+    [ "${SKIP_ATTIC_VERIFY:-0}" = "1" ] && return 0
+    "${ROOT_DIR}/scripts/verify-attic-closure.sh" "$host" "${path_of[$host]}" || rc=$?
+    [ "$rc" -eq 0 ] && return 0
+    if [ "$rc" -eq 2 ] && [ "${phase_of[$host]}" -le "$attic_phase" ]; then
+        echo "${host}: Attic unreachable; deploying anyway (phase at or before the binary cache)" >&2
+        return 0
+    fi
     return 1
 }
 
@@ -45,7 +91,7 @@ for ((i = 0; i < total; i++)); do
     phase_failed=()
     deployed_hosts=()
     for host in "${phase_hosts[@]}"; do
-        if [ "${SKIP_ATTIC_VERIFY:-0}" != "1" ] && ! "${ROOT_DIR}/scripts/verify-attic-closure.sh" "$host"; then
+        if ! attic_ok "$host"; then
             phase_failed+=("$host (attic verify failed)")
             continue
         fi
