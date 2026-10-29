@@ -8,9 +8,9 @@ Anything not declared in this repo (Nix, tofu, repo scripts + just recipes) is t
 ## Commands
 - Dev shell: `nix develop` (tofu, aws, etc. only exist inside it).
 - Before any deploy or install of a changed host: `nix build .#nixosConfigurations.<host>.config.system.build.toplevel`. `nix eval` misses derivation-time errors.
-- Deploy: `just deploy node <host>`, `just deploy phased`, `just deploy all`, `just deploy list`. Phased/all runs `nix flake check` once up front, then per-host `--skip-checks`; don't re-add per-host checks.
+- Deploy: `just deploy node <host>`, `just deploy phased`, `just deploy all`, `just deploy list`. Every deploy pre-builds exactly the hosts it deploys, then deploys each with `--skip-checks`. Hosts after attic-0's phase need `SKIP_ATTIC_VERIFY=1` if Attic is down. `just admin build-all` checks the whole fleet builds.
 - Never pipe `just deploy` through `tail`/`head`: it hides progress and replaces the exit status. Judge progress from the hosts' own state.
-- While `just deploy all/phased` runs, don't edit any `.nix` or `secrets/*.yaml` (the whole flake is re-evaluated per phase). Editing `docs/` is fine.
+- While any `just deploy` runs, don't edit any `.nix` or `secrets/*.yaml` (the whole flake is re-evaluated per phase). Editing `docs/` is fine.
 - Tofu: `just tofu ...`. Always review `plan` before `apply`.
 
 ## Deploy ordering
