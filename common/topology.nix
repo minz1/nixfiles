@@ -172,7 +172,7 @@
       deployed = true;
       incus = {
         nix_size = "18G";
-        persist_size = "20GiB";
+        persist_size = "24GiB";
         cpus = 2;
         memory = "2GiB";
       };
