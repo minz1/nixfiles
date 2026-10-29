@@ -24,8 +24,8 @@ let
     "bazarr"
   ];
 
-  gameIp = topology.nodes."minz-game-0".networks.incus_bridge.ip;
-  gamePort = 25565;
+  gameIp = endpoints.minecraft.ip;
+  gamePort = endpoints.minecraft.port;
 
   # own Caddy holds :80 for its own public ACME; internal-cert ACME (lego) gets this local port instead, fronted by the :80 catch-all below
   internalAcmeHttpPort = 18080;

@@ -21,14 +21,14 @@ let
   prowlarrPort = 9696;
   bazarrPort = 6767;
   decypharrPort = 8282;
-  decypharrUiPort = 8443;
-  jellyfinApiPort = 8920;
+  decypharrUiPort = topology.services.decypharr-ui.port;
+  jellyfinApiPort = topology.services.jellyfin-api.port;
   jellyfinProxy = {
     handler = "reverse_proxy";
     upstreams = [ { dial = "127.0.0.1:${toString jellyfinPort}"; } ];
     flush_interval = -1;
   };
-  mediaAgentHttpsPort = 9443;
+  mediaAgentHttpsPort = topology.services.media-agent.port;
   desktopIp = topology.nodes."minz-desktop".networks.mgmt.ip;
   servicesIp = topology.nodes."minz-services-0".networks.incus_bridge.ip;
 

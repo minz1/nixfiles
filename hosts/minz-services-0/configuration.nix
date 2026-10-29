@@ -50,8 +50,8 @@ in
 
     llm.model = "google/gemini-2.5-flash";
 
-    decypharr.url = "https://${mediaIp}:8443";
-    jellyfin.url = "https://${mediaIp}:8920";
+    decypharr.url = "https://${endpoints.decypharr-ui.ip}:${toString endpoints.decypharr-ui.port}";
+    jellyfin.url = "https://${endpoints.jellyfin-api.ip}:${toString endpoints.jellyfin-api.port}";
     sonarr.url = "https://${mediaIp}/sonarr";
     radarr.url = "https://${mediaIp}/radarr";
     loki = {
@@ -59,7 +59,7 @@ in
       tlsCert = "/var/lib/acme/minz-services-0.internal/cert.pem";
       tlsKey = "/var/lib/acme/minz-services-0.internal/key.pem";
     };
-    mediaAgent.url = "https://${mediaIp}:9443";
+    mediaAgent.url = "https://${endpoints.media-agent.ip}:${toString endpoints.media-agent.port}";
     seerr.url = "https://${mediaIp}";
   };
 

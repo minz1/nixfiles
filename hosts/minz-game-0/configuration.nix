@@ -5,6 +5,7 @@
   pkgs,
   endpoints,
   node,
+  topology,
   mkHardened,
   ...
 }:
@@ -12,7 +13,7 @@
 let
   gameIp = node.networks.incus_bridge.ip;
 
-  gamePort = 25565;
+  gamePort = topology.services.minecraft.port;
   rconPort = 25575;
   proxyPort = 3128;
 

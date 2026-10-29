@@ -14,7 +14,7 @@ let
       lib.filterAttrs (n: _: n != config.networking.hostName) topology.nodes
     )
   );
-  pkiPort = 9443;
+  pkiPort = topology.services.step-ca.port;
   allHostIps = lib.filter (ip: ip != null) (
     lib.mapAttrsToList (name: net: if name != "edge" then (net.ip or null) else null) (
       me.networks or { }

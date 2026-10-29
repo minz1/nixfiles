@@ -2,13 +2,15 @@
   config,
   pkgs,
   node,
+  topology,
   mkHardened,
   ...
 }:
 
 let
   wgAddr = node.networks.mgmt.ip;
-  forgejoPort = 3000;
+  forgejoPort = topology.services.forgejo.port;
+  rustfsPort = toString topology.services.rustfs.port;
 in
 {
   imports = [
@@ -58,7 +60,7 @@ in
       env_auth = false
       access_key_id = ${config.sops.placeholder.rustfs-access-key}
       secret_access_key = ${config.sops.placeholder.rustfs-secret-key}
-      endpoint = http://127.0.0.1:9000
+      endpoint = http://127.0.0.1:${rustfsPort}
       region = us-east-1
 
       [b2]
@@ -115,7 +117,7 @@ in
     environmentFile = config.sops.templates.rustfs-env.path;
     settings = {
       RUSTFS_VOLUMES = "/var/lib/rustfs";
-      RUSTFS_ADDRESS = ":9000";
+      RUSTFS_ADDRESS = ":${rustfsPort}";
       RUSTFS_CONSOLE_ENABLE = "true";
       RUSTFS_CONSOLE_ADDRESS = "127.0.0.1:9001";
       RUSTFS_LOG_LEVEL = "info";
@@ -133,7 +135,7 @@ in
     };
     environment = {
       AWS_DEFAULT_REGION = "us-east-1";
-      AWS_ENDPOINT_URL = "http://127.0.0.1:9000";
+      AWS_ENDPOINT_URL = "http://127.0.0.1:${rustfsPort}";
     };
     script = ''
       source ${config.sops.templates.rustfs-env.path}

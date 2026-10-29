@@ -2,11 +2,12 @@
   config,
   lib,
   pkgs,
+  topology,
   ...
 }:
 
 let
-  stepCaPort = 9443;
+  stepCaPort = topology.services.step-ca.port;
 in
 {
   system.stateVersion = "25.11";

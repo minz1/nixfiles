@@ -2,14 +2,13 @@
   config,
   lib,
   pkgs,
-  topology,
+  endpoints,
   ...
 }:
 
 let
-  forgejo = topology.nodes."minz-vultr-nix-0";
-  forgejoAddr = forgejo.networks.mgmt.ip;
-  forgejoPort = 3000;
+  forgejoAddr = endpoints.forgejo.ip;
+  forgejoPort = endpoints.forgejo.port;
 in
 {
   imports = [ ../../modules/nixos/rootless-podman.nix ];

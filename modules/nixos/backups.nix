@@ -2,7 +2,7 @@
   lib,
   config,
   hostName,
-  topology,
+  endpoints,
   mkHardened,
   ...
 }:
@@ -11,8 +11,8 @@ let
   cfg = config.homelab.backups;
 
   # shared restic repository host for the fleet; rclone mirrors it to B2 separately
-  rustfsAddr = topology.nodes."minz-vultr-nix-0".networks.mgmt.ip;
-  rustfsPort = 9000;
+  rustfsAddr = endpoints.rustfs.ip;
+  rustfsPort = endpoints.rustfs.port;
 in
 {
   options.homelab.backups.targets = lib.mkOption {
