@@ -42,7 +42,7 @@ let
       hub = hubOf netName;
       isWireguard = net.type == "wireguard";
       # extractor already finds this address on nixos hosts; don't duplicate it
-      extractorCoversAddress = isWireguard && node.os == "nixos";
+      extractorCoversAddress = isWireguard && node.kind != "device";
     in
     lib.optionalAttrs (!extractorCoversAddress) { addresses = [ netCfg.ip ]; }
     // {
@@ -63,7 +63,7 @@ let
 
   topoNodes = lib.mapAttrs (
     nodeName: node:
-    lib.optionalAttrs (node.os == "external") { deviceType = "device"; }
+    lib.optionalAttrs (node.kind == "device") { deviceType = "device"; }
     // lib.optionalAttrs (nodeIcons ? ${nodeName}) { icon = nodeIcons.${nodeName}; }
     // {
       interfaces = lib.mapAttrs' (

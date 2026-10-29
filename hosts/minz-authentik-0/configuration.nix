@@ -14,7 +14,7 @@ let
 
   authentikPort = 9000;
   desktopIp = topology.nodes."minz-desktop".networks.mgmt.ip;
-  authentikHttpsPort = 9443;
+  authentikHttpsPort = topology.services.authentik.port;
   ldapPort = 3389;
   ldapTlsPort = 6636;
   # +1: Caddy owns the external ports; outpost listeners must not conflict
@@ -223,11 +223,6 @@ in
       "@chown"
       "bpf"
     ];
-  };
-
-  homelab.endpoints.authentik = {
-    ip = authentikIp;
-    port = authentikHttpsPort;
   };
 
   homelab.backups.targets.authentik-db = {

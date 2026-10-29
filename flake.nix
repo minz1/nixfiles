@@ -56,43 +56,40 @@
     let
       system = "x86_64-linux";
       overlay = import ./pkgs;
-      topology = import ./common/topology.nix;
+      lib = nixpkgs.lib;
+      fleet = import ./common/fleet {
+        inherit lib;
+        topology = import ./common/topology.nix;
+        services = ./common/services.nix;
+        hostDirs = builtins.attrNames (lib.filterAttrs (_: t: t == "directory") (builtins.readDir ./hosts));
+      };
+      topology = { inherit (fleet) networks nodes services; };
+      fleetArgs = { inherit (fleet) addressOf; };
+      isGuest = node: node.kind == "incus-vm" || node.kind == "incus-container";
 
       overlays = [
         overlay
         nix-topology.overlays.default
       ];
 
-      nixosNodes = nixpkgs.lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
+      nixosNodes = nixpkgs.lib.filterAttrs (_: n: n.kind != "device") topology.nodes;
 
-      configurableNodes =
-        let
-          isDeployed = _: node: (node.provisioner or "") != "incus" || (node.deployed or false);
-          skipped = nixpkgs.lib.filterAttrs (n: v: !isDeployed n v) nixosNodes;
-        in
-        nixpkgs.lib.warnIf (skipped != { })
-          "nixfiles: skipping undeployed VMs: ${builtins.concatStringsSep ", " (builtins.attrNames skipped)}"
-          (nixpkgs.lib.filterAttrs isDeployed nixosNodes);
+      configurableNodes = nixpkgs.lib.filterAttrs (_: n: n.hasConfig) nixosNodes;
 
-      # incus nodes: bridge IP because the WG tunnel doesn't route to VMs from the runner
-      deployHostname =
-        _: node:
-        if node.provisioner or "" == "incus" then node.networks.incus_bridge.ip else node.networks.mgmt.ip;
+      deployHostname = name: _: fleet.addressOf "minz-desktop" name;
 
       deployableNodes = configurableNodes;
 
       # Dependency-ordered deploy phases, derived from the routing topology
-      topologyList = nixpkgs.lib.mapAttrsToList (name: node: node // { inherit name; }) topology.nodes;
+      topologyList = nixpkgs.lib.attrValues topology.nodes;
       mgmtHubName =
         (nixpkgs.lib.findFirst (n: n.networks.mgmt.role or "" == "server") null topologyList).name or null;
-      incusHostName =
-        (nixpkgs.lib.findFirst (n: (n.provisioner or "") == "incus-host") null topologyList).name or null;
-      binaryCacheName =
-        (nixpkgs.lib.findFirst (n: n.binaryCache or false) null topologyList).name or null;
+      incusHostName = (nixpkgs.lib.findFirst (n: n.kind == "incus-host") null topologyList).name or null;
+      binaryCacheName = (nixpkgs.lib.findFirst (n: n.binaryCache) null topologyList).name or null;
 
       routingDependency =
         name: node:
-        if (node.provisioner or "") == "incus" then
+        if isGuest node then
           (if incusHostName != null && incusHostName != name then incusHostName else null)
         else if node.networks ? mgmt then
           (if mgmtHubName != null && mgmtHubName != name then mgmtHubName else null)
@@ -141,7 +138,10 @@
 
       bootstrapImage = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit topology; };
+        specialArgs = {
+          inherit topology;
+          fleet = fleetArgs;
+        };
         modules = [
           ./modules/profiles/bootstrap.nix
         ];
@@ -149,21 +149,22 @@
 
       bootstrapContainerImage = nixpkgs.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit topology; };
+        specialArgs = {
+          inherit topology;
+          fleet = fleetArgs;
+        };
         modules = [
           ./modules/profiles/bootstrap-container.nix
         ];
       };
 
-      # mutual let binding: Nix lazy eval makes this safe; hostEndpoints only forces config.homelab.endpoints
       nixosConfigurations = builtins.mapAttrs (
         name: _:
         let
           node = topology.nodes.${name} or { };
-          isContainer =
-            (node.provisioner or "") == "incus" && (node.incus.incus_type or "virtual-machine") == "container";
-          isVm = (node.provisioner or "") == "incus" && !isContainer;
-          isBareMetal = !isVm && !isContainer && (node ? storage);
+          isContainer = node.kind == "incus-container";
+          isVm = node.kind == "incus-vm";
+          isBareMetal = node.kind == "vps" || node.kind == "incus-host";
           vmModule =
             if isVm then
               [
@@ -198,10 +199,11 @@
           specialArgs = {
             hostName = name;
             incusGatewayIp = topology.nodes.${incusHostName}.networks.incus_bridge.ip;
+            fleet = fleetArgs;
+            endpoints = fleet.endpointsFor name;
             inherit
               lanzaboote
               authentik-nix
-              hostEndpoints
               topology
               node
               mkHardened
@@ -234,7 +236,6 @@
         }
       ) configurableNodes;
 
-      hostEndpoints = nixpkgs.lib.mapAttrs (_: nixos: nixos.config.homelab.endpoints) nixosConfigurations;
     in
     {
       inherit nixosConfigurations;
@@ -248,6 +249,8 @@
       };
 
       inherit deployPhases;
+
+      fleet = { inherit (fleet) nodes; };
 
       checks.${system} =
         let

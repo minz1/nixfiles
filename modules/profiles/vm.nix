@@ -8,7 +8,7 @@
 
 let
   vmIp = node.networks.incus_bridge.ip;
-  nixSize = node.incus.nix_size or "60G";
+  nixSize = "${toString node.incus.nix_gib}G";
 in
 {
   imports = [

@@ -20,7 +20,6 @@ in
 {
   imports = [
     ./common.nix
-    ./endpoints.nix
     ./observability-agent.nix
     ./backups.nix
     ./binary-cache.nix

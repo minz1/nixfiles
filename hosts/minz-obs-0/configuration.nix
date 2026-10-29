@@ -13,9 +13,9 @@ let
 
   victoriaPort = 9090;
   lokiPort = 3100;
-  lokiHttpsPort = 3101;
+  lokiHttpsPort = topology.services.loki.port;
   grafanaPort = 3000;
-  grafanaHttpsPort = 3443;
+  grafanaHttpsPort = topology.services.grafana.port;
   blackboxPort = 9115;
   adguardExporterPort = 9618;
   certDir = "/var/lib/acme/minz-obs-0.internal";
@@ -30,7 +30,7 @@ let
     minz-vultr-nix-1.networks.mgmt.ip
     minz-vultr-nix-1.networks.edge.ip
   ];
-  nixosNodes = lib.filterAttrs (_: n: n.os == "nixos") topology.nodes;
+  nixosNodes = lib.filterAttrs (_: n: n.kind != "device") topology.nodes;
   nodeExporterTargets = lib.mapAttrsToList (
     _: n:
     let
@@ -360,17 +360,6 @@ in
       ExecStart = lib.getExe pkgs.adguard-exporter;
       Restart = "on-failure";
       RestartSec = "10s";
-    };
-  };
-
-  homelab.endpoints = {
-    loki = {
-      ip = obsIp;
-      port = lokiHttpsPort;
-    };
-    grafana = {
-      ip = obsIp;
-      port = grafanaHttpsPort;
     };
   };
 

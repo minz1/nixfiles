@@ -1,8 +1,12 @@
 # Auto-configures WireGuard interfaces + IP forwarding for hosts with a wireguard-type network in common/topology.nix; private keys are sops secrets named wg_private_<networkName>.
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  topology,
+  ...
+}:
 
 let
-  topology = import ./topology.nix;
   inherit (topology) nodes networks;
 
   hostName = config.networking.hostName;
@@ -33,7 +37,7 @@ let
       # extraAllowedIPs from other nodes so clients can reach subnets routed through peers, excluding our own to avoid local routing conflicts.
       otherNodesExtraAllowedIPs = lib.flatten (
         lib.mapAttrsToList (
-          n: node: if n != hostName then (node.networks.${networkName}.extraAllowedIPs or [ ]) else [ ]
+          n: node: if n != hostName then node.networks.${networkName}.extraAllowedIPs else [ ]
         ) nodesInNetwork
       );
 
@@ -54,11 +58,11 @@ let
           inherit (peerCfg) publicKey;
           allowedIPs =
             if isServer then
-              [ "${peerCfg.ip}/32" ] ++ (peerCfg.extraAllowedIPs or [ ])
+              [ "${peerCfg.ip}/32" ] ++ peerCfg.extraAllowedIPs
             else
               lib.unique ([ networkConfig.subnet ] ++ otherNodesExtraAllowedIPs);
         }
-        // lib.optionalAttrs (peerCfg ? endpoint) {
+        // lib.optionalAttrs (peerCfg.endpoint != null) {
           inherit (peerCfg) endpoint;
           persistentKeepalive = 25;
         };

@@ -3,7 +3,7 @@
   config,
   pkgs,
   lib,
-  hostEndpoints,
+  endpoints,
   topology,
   node,
   mkHardened,
@@ -13,10 +13,9 @@
 let
   wgAddr = node.networks.mgmt.ip;
 
-  authentik = hostEndpoints.minz-authentik-0.authentik;
-  grafana = hostEndpoints.minz-obs-0.grafana;
-  media = hostEndpoints.minz-media-0.caddy;
-  servicesCaddy = hostEndpoints.minz-services-0.caddy;
+  inherit (endpoints) authentik grafana;
+  media = endpoints.media-caddy;
+  servicesCaddy = endpoints.services-caddy;
 
   arrApps = [
     "sonarr"

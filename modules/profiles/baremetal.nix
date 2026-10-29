@@ -2,7 +2,7 @@
 
 let
   disk = node.storage.disk;
-  nixSize = node.storage.nix_size or "30G";
+  nixSize = "${toString node.storage.nix_gib}G";
 in
 {
   boot.initrd.availableKernelModules = [

@@ -2,12 +2,13 @@
   hostName,
   config,
   node,
+  topology,
   ...
 }:
 
 let
   atticIp = node.networks.incus_bridge.ip;
-  caddyHttpsPort = 443;
+  caddyHttpsPort = topology.services.attic.port;
   atticPort = 8080;
 in
 {
@@ -83,11 +84,6 @@ in
   networking.firewall.allowedTCPPorts = [
     caddyHttpsPort
   ];
-
-  homelab.endpoints.attic = {
-    ip = atticIp;
-    port = caddyHttpsPort;
-  };
 
   environment.persistence."/persist".directories = [
     {

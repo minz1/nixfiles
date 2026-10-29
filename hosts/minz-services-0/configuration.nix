@@ -1,6 +1,6 @@
 {
   hostName,
-  hostEndpoints,
+  endpoints,
   config,
   topology,
   node,
@@ -10,12 +10,12 @@
 let
   servicesIp = node.networks.incus_bridge.ip;
 
-  caddyHttpsPort = 443;
+  caddyHttpsPort = topology.services.services-caddy.port;
   mediaFixerPort = 8081;
   ntfyPort = 2586; # module default listen-http = "127.0.0.1:2586"
 
   mediaIp = topology.nodes."minz-media-0".networks.incus_bridge.ip;
-  loki = hostEndpoints."minz-obs-0".loki;
+  inherit (endpoints) loki;
 in
 {
   system.stateVersion = "25.11";
@@ -198,11 +198,6 @@ in
   networking.firewall.allowedTCPPorts = [
     caddyHttpsPort
   ];
-
-  homelab.endpoints.caddy = {
-    ip = servicesIp;
-    port = caddyHttpsPort;
-  };
 
   systemd.services.media-fixer.serviceConfig.SupplementaryGroups = [ "caddy" ];
   systemd.services.media-fixer.serviceConfig.EnvironmentFile = [

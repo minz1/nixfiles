@@ -1,17 +1,18 @@
 {
   lib,
   hostName,
-  hostEndpoints,
   topology,
   ...
 }:
 
 let
-  attic = (hostEndpoints."minz-attic-0" or { }).attic or null;
-  isGuest = (topology.nodes.${hostName}.provisioner or "") == "incus";
+  isGuest = builtins.elem topology.nodes.${hostName}.kind [
+    "incus-vm"
+    "incus-container"
+  ];
   atticUrl = "https://minz-attic-0.internal/homelab";
   atticKeys = [ "homelab:/832u4B/jZREiimqBzchHGyXQZaUVKoG4TlO/nUJh10=" ];
-  applies = attic != null && hostName != "minz-attic-0";
+  applies = hostName != "minz-attic-0";
   # minz-runner-0's incus_network_acl (tofu/infra/acls.tf) explicitly grants full HTTP/HTTPS
   # egress for nix builds, unlike other Incus guests (default-reject) — safe to also use
   # cache.nixos.org as a substituter fallback here, the network access already exists.

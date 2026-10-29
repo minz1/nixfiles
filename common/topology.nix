@@ -21,11 +21,11 @@
 
   nodes = {
     minz-vultr-nix-1 = {
-      os = "nixos";
+      kind = "vps";
       sshUser = "minz1";
       storage = {
         disk = "/dev/vda";
-        nix_size = "20G";
+        nix_gib = 20;
       };
       networks = {
         mgmt = {
@@ -43,11 +43,11 @@
     };
 
     minz-vultr-nix-0 = {
-      os = "nixos";
+      kind = "vps";
       sshUser = "minz1";
       storage = {
         disk = "/dev/vda";
-        nix_size = "20G";
+        nix_gib = 20;
         rustfs_disk = "/dev/disk/by-id/virtio-ord-0120c5fa42b742";
       };
       networks.mgmt = {
@@ -59,7 +59,7 @@
     };
 
     device-2 = {
-      os = "external";
+      kind = "device";
       networks.mgmt = {
         ip = "10.8.0.2";
         role = "client";
@@ -68,7 +68,7 @@
     };
 
     device-3 = {
-      os = "external";
+      kind = "device";
       networks.mgmt = {
         ip = "10.8.0.3";
         role = "client";
@@ -77,7 +77,7 @@
     };
 
     minz-desktop = {
-      os = "external";
+      kind = "device";
       networks.mgmt = {
         ip = "10.8.0.4";
         role = "client";
@@ -86,15 +86,13 @@
     };
 
     minz-obs-0 = {
-      os = "nixos";
+      kind = "incus-vm";
       sshUser = "minz1";
-      provisioner = "incus";
-      deployed = true;
       incus = {
-        nix_size = "30G";
-        persist_size = "100GiB";
+        nix_gib = 30;
+        total_gib = 100;
         cpus = 2;
-        memory = "4GiB";
+        memory_gib = 4;
       };
       networks.incus_bridge = {
         ip = "10.10.0.2";
@@ -102,15 +100,12 @@
     };
 
     minz-media-0 = {
-      os = "nixos";
+      kind = "incus-container";
       sshUser = "minz1";
-      provisioner = "incus";
-      deployed = true;
       incus = {
-        incus_type = "container";
-        root_size = "160GiB";
+        root_gib = 160;
         cpus = 4;
-        memory = "14GiB";
+        memory_gib = 14;
         gpu = true;
         nesting = true;
       };
@@ -120,15 +115,13 @@
     };
 
     minz-authentik-0 = {
-      os = "nixos";
+      kind = "incus-vm";
       sshUser = "minz1";
-      provisioner = "incus";
-      deployed = true;
       incus = {
-        nix_size = "30G";
-        persist_size = "100GiB";
+        nix_gib = 30;
+        total_gib = 100;
         cpus = 2;
-        memory = "2GiB";
+        memory_gib = 2;
       };
       networks.incus_bridge = {
         ip = "10.10.0.3";
@@ -136,29 +129,25 @@
     };
 
     minz-pki-0 = {
-      os = "nixos";
+      kind = "incus-vm";
       sshUser = "minz1";
-      provisioner = "incus";
-      deployed = true;
       incus = {
-        nix_size = "10G";
-        persist_size = "15GiB";
+        nix_gib = 10;
+        total_gib = 15;
         cpus = 1;
-        memory = "2GiB";
+        memory_gib = 2;
       };
       networks.incus_bridge.ip = "10.10.0.8";
     };
 
     minz-game-0 = {
-      os = "nixos";
+      kind = "incus-vm";
       sshUser = "minz1";
-      provisioner = "incus";
-      deployed = true;
       incus = {
-        nix_size = "20G";
-        persist_size = "100GiB";
+        nix_gib = 20;
+        total_gib = 100;
         cpus = 4;
-        memory = "14GiB";
+        memory_gib = 14;
       };
       networks.incus_bridge = {
         ip = "10.10.0.9";
@@ -166,15 +155,13 @@
     };
 
     minz-services-0 = {
-      os = "nixos";
+      kind = "incus-vm";
       sshUser = "minz1";
-      provisioner = "incus";
-      deployed = true;
       incus = {
-        nix_size = "18G";
-        persist_size = "24GiB";
+        nix_gib = 18;
+        total_gib = 24;
         cpus = 2;
-        memory = "2GiB";
+        memory_gib = 2;
       };
       networks.incus_bridge = {
         ip = "10.10.0.6";
@@ -182,42 +169,37 @@
     };
 
     minz-attic-0 = {
-      os = "nixos";
+      kind = "incus-vm";
       sshUser = "minz1";
-      provisioner = "incus";
-      deployed = true;
       binaryCache = true;
       incus = {
-        nix_size = "20G";
-        persist_size = "100GiB";
+        nix_gib = 20;
+        total_gib = 100;
         cpus = 2;
-        memory = "2GiB";
+        memory_gib = 2;
       };
       networks.incus_bridge.ip = "10.10.0.12";
     };
 
     minz-runner-0 = {
-      os = "nixos";
+      kind = "incus-vm";
       sshUser = "minz1";
-      provisioner = "incus";
-      deployed = true;
       incus = {
-        nix_size = "60G";
-        persist_size = "100GiB";
+        nix_gib = 60;
+        total_gib = 100;
         cpus = 4;
-        memory = "16GiB";
+        memory_gib = 16;
       };
       networks.incus_bridge.ip = "10.10.0.13";
     };
 
     minz-home-nix-0 = {
-      os = "nixos";
+      kind = "incus-host";
       sshUser = "minz1";
-      provisioner = "incus-host";
       storage = {
         # 256GB NVMe — NixOS system disk
         disk = "/dev/disk/by-id/nvme-SAMSUNG_MZALQ256HAJD-000L1_S4YDNX0R638478";
-        nix_size = "60G";
+        nix_gib = 60;
         # 500GB SATA SSD — ZFS pool "incus", backs the Incus storage pool and /var/lib/incus
         incus_disk = "/dev/disk/by-id/ata-WDC_WDBNCE5000PNC_21112L803982";
       };

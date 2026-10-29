@@ -3,7 +3,7 @@
   config,
   lib,
   pkgs,
-  hostEndpoints,
+  endpoints,
   node,
   mkHardened,
   ...
@@ -16,8 +16,8 @@ let
   rconPort = 25575;
   proxyPort = 3128;
 
-  authentikIp = hostEndpoints.minz-authentik-0.authentik.ip;
-  authentikPort = hostEndpoints.minz-authentik-0.authentik.port;
+  authentikIp = endpoints.authentik.ip;
+  authentikPort = endpoints.authentik.port;
 
   whitelistSyncPort = 8765;
 

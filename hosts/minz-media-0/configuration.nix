@@ -12,7 +12,7 @@ let
   mediaIp = node.networks.incus_bridge.ip;
   mediaBackupUnits = "sonarr.service radarr.service prowlarr.service bazarr.service seerr.service jellyfin.service";
 
-  caddyHttpsPort = 443;
+  caddyHttpsPort = topology.services.media-caddy.port;
   jellyfinPort = 8096;
   mediaAgentPort = 9191;
   seerrPort = 5055;
@@ -862,11 +862,6 @@ in
     iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString jellyfinApiPort} -j nixos-fw-accept
     iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString mediaAgentHttpsPort} -j nixos-fw-accept
   '';
-
-  homelab.endpoints.caddy = {
-    ip = mediaIp;
-    port = caddyHttpsPort;
-  };
 
   # Config + operational state only — not the media library itself (lives on NFS/decypharr mounts
   # elsewhere) and not decypharr's disposable cache (docs/ops.md). Deliberately excludes zilean's

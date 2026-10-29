@@ -1,13 +1,13 @@
 {
   config,
   lib,
-  hostEndpoints,
+  endpoints,
   mkHardened,
   ...
 }:
 
 let
-  loki = hostEndpoints."minz-obs-0".loki;
+  inherit (endpoints) loki;
   lokiUrl = "https://${loki.ip}:${toString loki.port}/loki/api/v1/push";
   certName = "${config.networking.hostName}.internal";
   certDir = "/var/lib/acme/${certName}";

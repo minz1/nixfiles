@@ -1,7 +1,7 @@
 {
   config,
   lib,
-  hostEndpoints,
+  endpoints,
   mkHardened,
   ...
 }:
@@ -11,7 +11,7 @@ let
   lokiPort = 3100;
   grafanaPort = 3000;
   certDir = "/var/lib/acme/minz-obs-0.internal";
-  authentikHttpsPort = hostEndpoints.minz-authentik-0.authentik.port;
+  authentikHttpsPort = endpoints.authentik.port;
 in
 {
   services.grafana = {

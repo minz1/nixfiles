@@ -2,34 +2,17 @@
   config,
   lib,
   topology,
+  fleet,
   ...
 }:
 
 let
   sshKeys = import ../../common/ssh-keys.nix;
   me = topology.nodes.${config.networking.hostName} or { };
-  myNetworks = builtins.filter (net: (me.networks or { }) ? ${net}) [
-    "incus_bridge"
-    "mgmt"
-    "edge"
-  ];
-  resolve =
-    _: node:
-    let
-      shared = builtins.filter (
-        net: (node.networks or { }) ? ${net} && (node.networks.${net} ? ip)
-      ) myNetworks;
-    in
-    if shared != [ ] then
-      node.networks.${builtins.head shared}.ip
-    else if (node.networks or { }) ? mgmt then
-      node.networks.mgmt.ip
-    else if (node.networks or { }) ? incus_bridge then
-      node.networks.incus_bridge.ip
-    else
-      null;
   entries = lib.filterAttrs (_: v: v != null) (
-    lib.mapAttrs resolve (lib.filterAttrs (n: _: n != config.networking.hostName) topology.nodes)
+    lib.mapAttrs (name: _: fleet.addressOf config.networking.hostName name) (
+      lib.filterAttrs (n: _: n != config.networking.hostName) topology.nodes
+    )
   );
   pkiPort = 9443;
   allHostIps = lib.filter (ip: ip != null) (
