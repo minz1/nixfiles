@@ -8,7 +8,11 @@
 let
   sshKeys = import ../../common/ssh-keys.nix;
   me = topology.nodes.${config.networking.hostName} or { };
-  myNetworks = builtins.attrNames (me.networks or { });
+  myNetworks = builtins.filter (net: (me.networks or { }) ? ${net}) [
+    "incus_bridge"
+    "mgmt"
+    "edge"
+  ];
   resolve =
     _: node:
     let
