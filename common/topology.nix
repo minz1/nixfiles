@@ -32,7 +32,6 @@
           ip = "10.8.0.6";
           role = "client";
           publicKey = "q/T9w4if7+hSzwGQ1Rez7LrPmuKNGUEJIzL6WhQFIAo=";
-          endpoint = "144.202.63.186:51820";
         };
         edge = {
           ip = "10.9.0.1";
