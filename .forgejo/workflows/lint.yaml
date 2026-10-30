@@ -19,10 +19,9 @@ jobs:
       - name: nix fmt
         run: nix fmt -- --fail-on-change .
 
-      # shortcut: no -lockfile=readonly while state still needs hashicorp/external; add it after an infra apply drops it and the lock is refreshed
       - name: tofu validate infra
         run: |
-          nix develop --no-update-lock-file --command tofu -chdir=tofu/infra init -backend=false -input=false
+          nix develop --no-update-lock-file --command tofu -chdir=tofu/infra init -backend=false -input=false -lockfile=readonly
           nix develop --no-update-lock-file --command tofu -chdir=tofu/infra validate
 
       # validate needs the provider's token argument set, never its value
