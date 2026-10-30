@@ -193,6 +193,12 @@
         # 500GB SATA SSD — ZFS pool "incus", backs the Incus storage pool and /var/lib/incus
         incus_disk = "/dev/disk/by-id/ata-WDC_WDBNCE5000PNC_21112L803982";
       };
+      # overcommit leans on zram, see docs/roadmap.md HOST-6
+      memory = {
+        total_gib = 46;
+        overcommit = 1.25;
+        reserve_gib = 8;
+      };
       networks = {
         mgmt = {
           ip = "10.8.0.5";

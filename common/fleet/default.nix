@@ -37,6 +37,9 @@ let
   dupes = xs: unique (filter (x: length (filter (y: y == x) xs) > 1) xs);
   # shortcut: /24 only, upgrade if a non-/24 network is added
   prefixOf = subnet: lib.concatStringsSep "." (lib.take 3 (lib.splitString "." subnet));
+  isGuest = node: node.kind == "incus-vm" || node.kind == "incus-container";
+  guests = filter (n: isGuest n && n.incus != null) nodeList;
+  incusHost = lib.findFirst (n: n.kind == "incus-host") null nodeList;
   needs =
     n: field: value:
     lib.optional (value == null) "${n.name}: ${n.kind} needs ${field}";
@@ -72,8 +75,10 @@ let
     )
     ++ concatMap (
       n:
-      if n.kind == "vps" || n.kind == "incus-host" then
+      if n.kind == "vps" then
         needs n "storage" n.storage
+      else if n.kind == "incus-host" then
+        needs n "storage" n.storage ++ needs n "memory" n.memory
       else if n.kind == "incus-vm" || n.kind == "incus-container" then
         needs n "incus" n.incus
         ++ lib.optionals (n.incus != null) (
@@ -111,7 +116,21 @@ let
     ) (attrNames cfg.services)
     ++ lib.optional (
       filter (n: lib.elem "admin-client" n.roles) nodeList == [ ]
-    ) "no node has role admin-client";
+    ) "no node has role admin-client"
+    # shortcut: every guest counts against the one incus host, upgrade if a second incus host is added
+    ++ lib.optionals (incusHost != null && incusHost.memory != null) (
+      let
+        mem = incusHost.memory;
+        sum = lib.foldl' (acc: n: acc + n.incus.memory_gib) 0 guests;
+        cap = mem.total_gib * mem.overcommit;
+      in
+      lib.optional (sum > cap)
+        "guest memory ${toString sum} GiB exceeds ${incusHost.name}'s overcommit cap ${builtins.toJSON cap} GiB"
+      ++ map (
+        n:
+        "${n.name}: memory_gib ${toString n.incus.memory_gib} exceeds ${incusHost.name}'s ${toString mem.total_gib} GiB minus ${toString mem.reserve_gib} GiB reserve"
+      ) (filter (n: n.incus.memory_gib > mem.total_gib - mem.reserve_gib) guests)
+    );
 
   errors = filter (e: e != "") failures;
   undeployed = map (n: n.name) (filter (n: n.kind != "device" && !n.hasConfig) nodeList);
@@ -152,7 +171,7 @@ let
 in
 {
   inherit nodes addressOf;
-  isGuest = node: node.kind == "incus-vm" || node.kind == "incus-container";
+  inherit isGuest;
   networks = guard cfg.networks;
   services = services';
   hostPorts = guard cfg.hostPorts;

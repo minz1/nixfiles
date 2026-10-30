@@ -73,6 +73,11 @@ let
             disk = "/dev/nvme0n1";
             nix_gib = 60;
           };
+          memory = {
+            total_gib = 16;
+            overcommit = 1.25;
+            reserve_gib = 4;
+          };
           networks = {
             mgmt = {
               ip = "10.8.0.5";
@@ -193,7 +198,24 @@ in
     };
   };
 
-  positive = evaluates base;
+  positive =
+    evaluates base
+    && evaluates (with' {
+      topology.nodes.guest.incus.memory_gib = 12;
+    })
+    && evaluates (with' {
+      topology.nodes.guest.incus.memory_gib = 8;
+      topology.nodes.box = {
+        kind = "incus-container";
+        incus = {
+          cpus = 1;
+          memory_gib = 12;
+          root_gib = 10;
+        };
+        networks.incus_bridge.ip = "10.10.0.9";
+      };
+      hostDirs = base.hostDirs ++ [ "box" ];
+    });
 
   negative = map (n: n // { failed = !(evaluates n.args); }) [
     {
@@ -310,6 +332,30 @@ in
           role = "client";
           endpoint = null;
         };
+      };
+    }
+    {
+      name = "incus host without memory";
+      args = with' { topology.nodes.host.memory = null; };
+    }
+    {
+      name = "guest memory over host minus reserve";
+      args = with' { topology.nodes.guest.incus.memory_gib = 13; };
+    }
+    {
+      name = "guest memory sum over overcommit";
+      args = with' {
+        topology.nodes.guest.incus.memory_gib = 10;
+        topology.nodes.box = {
+          kind = "incus-container";
+          incus = {
+            cpus = 1;
+            memory_gib = 12;
+            root_gib = 10;
+          };
+          networks.incus_bridge.ip = "10.10.0.9";
+        };
+        hostDirs = base.hostDirs ++ [ "box" ];
       };
     }
     {

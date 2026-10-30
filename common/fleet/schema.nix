@@ -84,6 +84,23 @@ let
     };
   };
 
+  memory = types.submodule {
+    options = {
+      total_gib = mkOption {
+        type = types.int;
+        description = "Host RAM in GiB.";
+      };
+      overcommit = mkOption {
+        type = types.number;
+        description = "Sum of guest memory limits may reach total_gib times this.";
+      };
+      reserve_gib = mkOption {
+        type = types.int;
+        description = "RAM kept for the host itself (ZFS ARC included); no single guest may use it.";
+      };
+    };
+  };
+
   node = types.submodule (
     { name, ... }:
     {
@@ -126,6 +143,10 @@ let
         };
         incus = mkOption {
           type = types.nullOr incus;
+          default = null;
+        };
+        memory = mkOption {
+          type = types.nullOr memory;
           default = null;
         };
         networks = mkOption {
