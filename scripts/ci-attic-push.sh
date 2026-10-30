@@ -9,7 +9,7 @@ config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/attic"
 mkdir -p "$config_dir"
 umask 077
 printf '%s' "$ATTIC_PUSH_TOKEN" > "${config_dir}/token"
-cat > "${config_dir}/config.toml" <<CONF
+cat > "${config_dir}/config.toml" << CONF
 default-server = "homelab"
 
 [servers.homelab]

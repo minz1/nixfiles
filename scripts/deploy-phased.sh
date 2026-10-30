@@ -7,7 +7,10 @@ mapfile -t phases <<< "$phases_out"
 total="${#phases[@]}"
 want=("$@")
 for w in "$@"; do
-    tr ' ' '\n' <<< "$phases_out" | grep -qxF -- "$w" || { echo "Unknown host: $w" >&2; exit 1; }
+    tr ' ' '\n' <<< "$phases_out" | grep -qxF -- "$w" || {
+        echo "Unknown host: $w" >&2
+        exit 1
+    }
 done
 failed=()
 
@@ -22,7 +25,10 @@ for ((i = 0; i < total; i++)); do
             selected+=("$h")
         else
             for w in "${want[@]}"; do
-                [ "$h" = "$w" ] && { selected+=("$h"); break; }
+                [ "$h" = "$w" ] && {
+                    selected+=("$h")
+                    break
+                }
             done
         fi
     done
@@ -32,7 +38,10 @@ attrs=()
 for h in "${selected[@]}"; do
     attrs+=("${repo}#nixosConfigurations.${h}.config.system.build.toplevel")
 done
-built=$(nix build --no-link --print-out-paths "${attrs[@]}") || { echo "Build failed; nothing deployed." >&2; exit 1; }
+built=$(nix build --no-link --print-out-paths "${attrs[@]}") || {
+    echo "Build failed; nothing deployed." >&2
+    exit 1
+}
 
 declare -A path_of=()
 for h in "${selected[@]}"; do

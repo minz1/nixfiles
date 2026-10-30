@@ -10,23 +10,23 @@ log="$work/log"
 mkdir -p "$work/bin"
 export PATH="$work/bin:$PATH"
 
-cat > "$work/bin/verify-attic-closure" <<'EOF'
+cat > "$work/bin/verify-attic-closure" << 'EOF'
 #!/usr/bin/env bash
 echo "verify-attic-closure $*" >> "$STUB_WORK/log"
 var="STUB_VERIFY_RC_${1//-/_}"
 exit "${!var:-${STUB_VERIFY_RC:-0}}"
 EOF
-cat > "$work/bin/deploy-retry" <<'EOF'
+cat > "$work/bin/deploy-retry" << 'EOF'
 #!/usr/bin/env bash
 echo "deploy-retry $*" >> "$STUB_WORK/log"
 exit "${STUB_RETRY_RC:-0}"
 EOF
-cat > "$work/bin/deploy-wait-healthy" <<'EOF'
+cat > "$work/bin/deploy-wait-healthy" << 'EOF'
 #!/usr/bin/env bash
 echo "deploy-wait-healthy $*" >> "$STUB_WORK/log"
 exit "${STUB_WAIT_RC:-0}"
 EOF
-cat > "$work/bin/fleet" <<'EOF'
+cat > "$work/bin/fleet" << 'EOF'
 #!/usr/bin/env bash
 if [ "$*" = phases ]; then
     printf '%s\n' minz-vultr-nix-0 minz-home-nix-0 minz-attic-0 "minz-obs-0 minz-runner-0 minz-vultr-nix-1"
@@ -35,12 +35,12 @@ fi
 echo "unexpected fleet call: $*" >&2
 exit 99
 EOF
-cat > "$work/bin/git" <<'EOF'
+cat > "$work/bin/git" << 'EOF'
 #!/usr/bin/env bash
 [ "${STUB_GIT_RC:-0}" = 0 ] || exit "$STUB_GIT_RC"
 echo "$STUB_WORK"
 EOF
-cat > "$work/bin/nix" <<'EOF'
+cat > "$work/bin/nix" << 'EOF'
 #!/usr/bin/env bash
 echo "nix $*" >> "$STUB_WORK/log"
 if [ "${1:-}" = build ]; then

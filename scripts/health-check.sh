@@ -8,7 +8,8 @@ check_host() {
     local host="$1" target out
     target=$(fleet target "$host")
     # heredoc is quoted ('REMOTE') so it runs server-side verbatim; restart_threshold is passed as $1 rather than interpolated, so no client/server escaping to track.
-    out=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" bash -s -- "$restart_threshold" <<'REMOTE'
+    out=$(
+        ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" bash -s -- "$restart_threshold" << 'REMOTE'
 set -uo pipefail
 restart_threshold="$1"
 systemctl --failed --no-legend --plain | sed 's/^/  failed: /'
@@ -38,7 +39,8 @@ check_obs0_functional() {
     local target
     target=$(fleet target minz-obs-0)
     local out
-    out=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" bash -s <<'REMOTE'
+    out=$(
+        ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" bash -s << 'REMOTE'
 set -uo pipefail
 grafana_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://127.0.0.1:3000/api/health 2>/dev/null)
 loki_result=$(curl -s --max-time 5 --get "http://127.0.0.1:3100/loki/api/v1/query" \
@@ -54,13 +56,25 @@ else
 fi
 echo "vm_targets_down=${vm_up:-0}"
 REMOTE
-    ) || { echo "==> obs-0 functional checks: unreachable"; return 1; }
+    ) || {
+        echo "==> obs-0 functional checks: unreachable"
+        return 1
+    }
 
     echo "$out"
     local rc=0
-    echo "$out" | grep -q "grafana_code=200" || { echo "  Grafana not returning 200"; rc=1; }
-    echo "$out" | grep -q "loki_recent=empty" && { echo "  Loki has no ingestion in the last 10m"; rc=1; }
-    echo "$out" | grep -q "vm_targets_down=0" || { echo "  VictoriaMetrics has scrape targets down"; rc=1; }
+    echo "$out" | grep -q "grafana_code=200" || {
+        echo "  Grafana not returning 200"
+        rc=1
+    }
+    echo "$out" | grep -q "loki_recent=empty" && {
+        echo "  Loki has no ingestion in the last 10m"
+        rc=1
+    }
+    echo "$out" | grep -q "vm_targets_down=0" || {
+        echo "  VictoriaMetrics has scrape targets down"
+        rc=1
+    }
     return $rc
 }
 

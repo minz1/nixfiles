@@ -9,7 +9,7 @@ reboot_and_wait() {
 
     echo "Waiting for $host to go down..."
     deadline=$((SECONDS + 60))
-    while ssh -o BatchMode=yes -o ConnectTimeout=3 "$target" true 2>/dev/null; do
+    while ssh -o BatchMode=yes -o ConnectTimeout=3 "$target" true 2> /dev/null; do
         if [ "$SECONDS" -ge "$deadline" ]; then
             echo "$host did not go down within 60s — continuing anyway" >&2
             break
@@ -28,7 +28,10 @@ reboot_and_wait() {
 
 mapfile -t vps < <(fleet hosts --kind vps)
 mapfile -t incus_hosts < <(fleet hosts --kind incus-host)
-mapfile -t guests < <(fleet hosts --kind incus-vm; fleet hosts --kind incus-container)
+mapfile -t guests < <(
+    fleet hosts --kind incus-vm
+    fleet hosts --kind incus-container
+)
 
 failed=()
 

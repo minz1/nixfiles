@@ -27,12 +27,12 @@ trap 'rm -rf "$tmpdir"' EXIT
 mkdir -p "$tmpdir/streams/v1"
 
 # index.json — references both products in the same images.json
-cat > "$tmpdir/streams/v1/index.json" <<ENDJSON
+cat > "$tmpdir/streams/v1/index.json" << ENDJSON
 {"format":"index:1.0","index":{"images":{"datatype":"image-downloads","path":"streams/v1/images.json","format":"products:1.0","products":["nixos:unstable:default:amd64","nixos:unstable:container:amd64"]}}}
 ENDJSON
 
 # images.json — VM product + container product
-cat > "$tmpdir/streams/v1/images.json" <<ENDJSON
+cat > "$tmpdir/streams/v1/images.json" << ENDJSON
 {
   "content_id": "images",
   "datatype": "image-downloads",
@@ -99,32 +99,32 @@ ENDJSON
 endpoint="http://10.8.0.1:9000"
 
 if [ -n "${AWS_ACCESS_KEY_ID:-}" ]; then
-  _aws() { aws --endpoint-url "$endpoint" "$@"; }
+    _aws() { aws --endpoint-url "$endpoint" "$@"; }
 else
-  creds="${repo}/secrets/tofu.env"
-  _aws() { sops exec-env "$creds" "aws --endpoint-url $endpoint $*"; }
+    creds="${repo}/secrets/tofu.env"
+    _aws() { sops exec-env "$creds" "aws --endpoint-url $endpoint $*"; }
 fi
 
 # Upload VM image artifacts (skip if already present)
-if ! _aws s3api head-object --bucket incus-images --key "images/${vm_disk_sha256}.qcow2" 2>/dev/null; then
-  _aws s3 cp result/metadata.tar.xz "s3://incus-images/images/${vm_meta_sha256}.incus.tar.xz"
-  _aws s3 cp result/nixos.qcow2     "s3://incus-images/images/${vm_disk_sha256}.qcow2"
-  echo "Uploaded VM image ${version} (${vm_disk_sha256})"
+if ! _aws s3api head-object --bucket incus-images --key "images/${vm_disk_sha256}.qcow2" 2> /dev/null; then
+    _aws s3 cp result/metadata.tar.xz "s3://incus-images/images/${vm_meta_sha256}.incus.tar.xz"
+    _aws s3 cp result/nixos.qcow2 "s3://incus-images/images/${vm_disk_sha256}.qcow2"
+    echo "Uploaded VM image ${version} (${vm_disk_sha256})"
 else
-  echo "VM image ${vm_disk_sha256} already in registry, skipping upload."
+    echo "VM image ${vm_disk_sha256} already in registry, skipping upload."
 fi
 
 # Upload container image artifacts (skip if already present)
-if ! _aws s3api head-object --bucket incus-images --key "images/${ct_rootfs_sha256}.root.tar.xz" 2>/dev/null; then
-  _aws s3 cp result-container/metadata.tar.xz "s3://incus-images/images/${ct_meta_sha256}.incus.tar.xz"
-  _aws s3 cp result-container/rootfs.tar.xz   "s3://incus-images/images/${ct_rootfs_sha256}.root.tar.xz"
-  echo "Uploaded container image ${version} (${ct_rootfs_sha256})"
+if ! _aws s3api head-object --bucket incus-images --key "images/${ct_rootfs_sha256}.root.tar.xz" 2> /dev/null; then
+    _aws s3 cp result-container/metadata.tar.xz "s3://incus-images/images/${ct_meta_sha256}.incus.tar.xz"
+    _aws s3 cp result-container/rootfs.tar.xz "s3://incus-images/images/${ct_rootfs_sha256}.root.tar.xz"
+    echo "Uploaded container image ${version} (${ct_rootfs_sha256})"
 else
-  echo "Container image ${ct_rootfs_sha256} already in registry, skipping upload."
+    echo "Container image ${ct_rootfs_sha256} already in registry, skipping upload."
 fi
 
 # Always update the manifests so aliases and product list stay current
-_aws s3 cp "$tmpdir/streams/v1/index.json"  s3://incus-images/streams/v1/index.json
+_aws s3 cp "$tmpdir/streams/v1/index.json" s3://incus-images/streams/v1/index.json
 _aws s3 cp "$tmpdir/streams/v1/images.json" s3://incus-images/streams/v1/images.json
 
 echo "Registry updated: VM=${vm_combined_sha256} container=${ct_combined_sha256}"

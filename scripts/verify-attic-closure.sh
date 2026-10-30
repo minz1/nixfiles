@@ -41,7 +41,7 @@ checked=0
 while IFS= read -r p; do
     local_hash=$(echo "$local_json" | jq -r --arg p "$p" '.[$p].narHash')
 
-    remote_json=$(nix path-info --store "$attic_url" --json --json-format 1 "$p" 2>/dev/null) || continue
+    remote_json=$(nix path-info --store "$attic_url" --json --json-format 1 "$p" 2> /dev/null) || continue
     remote_hash=$(echo "$remote_json" | jq -r --arg p "$p" '.[$p].narHash // empty')
     [ -z "$remote_hash" ] && continue
 

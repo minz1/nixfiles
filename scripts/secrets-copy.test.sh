@@ -6,10 +6,10 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 cd "$work"
 
-age-keygen -o key.txt 2>/dev/null
+age-keygen -o key.txt 2> /dev/null
 export SOPS_AGE_KEY_FILE="$work/key.txt"
 recipient="$(age-keygen -y key.txt)"
-cat > .sops.yaml <<EOF
+cat > .sops.yaml << EOF
 creation_rules:
   - path_regex: src\.(yaml|env)$
     age: $recipient
@@ -37,7 +37,7 @@ sops decrypt --extract '["k1"]' shared/t.yaml | cmp -s - <(printf 'a"b\nc\n') ||
 [ "$("$scripts/secrets-same.sh" src.yaml:k1 shared/t.yaml:k1)" = match ] || fail "same values not reported as match"
 
 mkdir norule
-if "$scripts/secrets-copy.sh" norule/x.yaml src.yaml k1 >/dev/null 2>&1; then
+if "$scripts/secrets-copy.sh" norule/x.yaml src.yaml k1 > /dev/null 2>&1; then
     fail "copy to a path with no creation rule succeeded"
 fi
 [ -z "$(ls -A norule)" ] || fail "failed copy left files behind: $(ls -A norule)"
@@ -49,7 +49,7 @@ mv enc.tmp src.env
 jq -n '{e: ""}' | sops encrypt --filename-override src.yaml --input-type json --output-type yaml /dev/stdin > enc.tmp
 mv enc.tmp shared/empty.yaml
 set +e
-out="$("$scripts/secrets-same.sh" shared/empty.yaml:e src.yaml:nope 2>/dev/null)"
+out="$("$scripts/secrets-same.sh" shared/empty.yaml:e src.yaml:nope 2> /dev/null)"
 rc=$?
 set -e
 [ "$rc" -ne 0 ] || fail "undecryptable reference exited 0"

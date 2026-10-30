@@ -8,7 +8,7 @@ cd "$(git rev-parse --show-toplevel)"
 bad=()
 while IFS= read -r f; do
     case "$f" in
-        *.crt) openssl x509 -in "$f" -noout 2>/dev/null || bad+=("$f (not a certificate)") ;;
+        *.crt) openssl x509 -in "$f" -noout 2> /dev/null || bad+=("$f (not a certificate)") ;;
         *) grep -q '^sops:\|"sops":\|sops_version' "$f" || bad+=("$f (no sops metadata)") ;;
     esac
 done < <(git ls-files 'secrets/*')

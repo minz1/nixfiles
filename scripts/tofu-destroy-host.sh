@@ -6,7 +6,10 @@ repo=$(git rev-parse --show-toplevel)
 host="${1:?usage: tofu-destroy-host.sh <hostname>}"
 
 TF_VAR_fleet=$(nix eval --json "${repo}#fleet")
-kind=$(jq -er --arg h "$host" '.nodes[$h].kind' <<< "$TF_VAR_fleet") || { echo "unknown host: $host" >&2; exit 1; }
+kind=$(jq -er --arg h "$host" '.nodes[$h].kind' <<< "$TF_VAR_fleet") || {
+    echo "unknown host: $host" >&2
+    exit 1
+}
 export TF_VAR_fleet
 
 instance_resource="incus_instance.vm"

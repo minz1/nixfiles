@@ -7,8 +7,8 @@ log="$work/querylog.json"
 out="$work/out"
 pid=
 cleanup() {
-    if [ -n "$pid" ]; then kill "$pid" 2>/dev/null || true; fi
-    pkill -f -- "-F $log" 2>/dev/null || true
+    if [ -n "$pid" ]; then kill "$pid" 2> /dev/null || true; fi
+    pkill -f -- "-F $log" 2> /dev/null || true
     rm -rf "$work"
 }
 trap cleanup EXIT

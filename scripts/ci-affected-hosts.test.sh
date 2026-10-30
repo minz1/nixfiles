@@ -11,11 +11,11 @@ fail() {
 }
 
 mkdir -p "$tmp/bin" "$tmp/fixtures" "$tmp/repo"
-cat > "$tmp/bin/fleet" <<EOF
+cat > "$tmp/bin/fleet" << EOF
 #!$(command -v bash)
 [ "\$1" = hosts ] && printf '%s\n' a b c
 EOF
-cat > "$tmp/bin/nix" <<EOF
+cat > "$tmp/bin/nix" << EOF
 #!$(command -v bash)
 echo "warning: stub noise" >&2
 for arg in "\$@"; do

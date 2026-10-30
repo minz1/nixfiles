@@ -9,7 +9,7 @@ wait_remote_idle() {
     target=$(fleet target "$host") || return 1
     while :; do
         rc=0
-        ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" pgrep -x activate >/dev/null 2>&1 || rc=$?
+        ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" pgrep -x activate > /dev/null 2>&1 || rc=$?
         [ "$rc" -eq 1 ] && return 0
         if [ "$SECONDS" -ge "$deadline" ]; then
             echo "${host}: activate still running or host unreachable after 600s" >&2
