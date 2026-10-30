@@ -3,6 +3,8 @@
   lib,
   endpoints,
   topology,
+  fleet,
+  node,
   mkHardened,
   ...
 }:
@@ -12,6 +14,8 @@ let
   lokiUrl = "https://${loki.ip}:${toString loki.port}/loki/api/v1/push";
   certName = "${config.networking.hostName}.internal";
   certDir = "/var/lib/acme/${certName}";
+  scrapedViaMgmt =
+    fleet.addressOf "minz-obs-0" config.networking.hostName == (node.networks.mgmt.ip or null);
 in
 {
   # Host-specific Alloy components go in their own environment.etc."alloy/<name>.alloy":
@@ -27,10 +31,14 @@ in
       '';
     };
 
+    networking.firewall.interfaces = lib.mkIf scrapedViaMgmt {
+      ${topology.networks.mgmt.interface}.allowedTCPPorts = [ topology.hostPorts.node-exporter ];
+    };
+
     services.prometheus.exporters.node = {
       enable = true;
       port = topology.hostPorts.node-exporter;
-      openFirewall = true;
+      openFirewall = fleet.isGuest node;
       extraFlags = [
         "--web.config.file=/etc/node-exporter-web.yml"
         # scoped to bound cardinality; restic-backups-*.timer carve-out for staleness alerting

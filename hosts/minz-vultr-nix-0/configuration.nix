@@ -124,6 +124,11 @@ in
     };
   };
 
+  networking.firewall.interfaces.${topology.networks.mgmt.interface}.allowedTCPPorts = [
+    forgejoPort
+    topology.services.rustfs.port
+  ];
+
   systemd.services.rustfs-bucket-setup = {
     description = "Ensure RustFS buckets exist";
     after = [ "rustfs.service" ];

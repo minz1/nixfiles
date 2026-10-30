@@ -109,11 +109,6 @@ in
     ) wireguardNetworks
   );
 
-  # All WG interfaces carry internal traffic and are trusted.
-  networking.firewall.trustedInterfaces = lib.mapAttrsToList (
-    _: netCfg: netCfg.interface
-  ) wireguardNetworks;
-
   # sshd binds a WG IP but wireguard-wgN.service going active doesn't guarantee the address is bindable yet.
   systemd.services.sshd.after = lib.mapAttrsToList (
     _: netCfg: "wireguard-${netCfg.interface}.service"

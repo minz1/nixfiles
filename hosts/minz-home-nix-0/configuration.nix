@@ -12,6 +12,7 @@ let
   incusNetwork = topology.networks.incus_bridge;
   incusNodeNetwork = node.networks.incus_bridge;
   wgAddr = node.networks.mgmt.ip;
+  incusApiPort = 8443;
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
   incusClientCert = ../../secrets/incus-client.crt;
 
@@ -71,6 +72,9 @@ in
 
   networking.nftables.enable = true;
   networking.firewall.trustedInterfaces = [ incusNetwork.interface ];
+  networking.firewall.interfaces.${topology.networks.mgmt.interface}.allowedTCPPorts = [
+    incusApiPort
+  ];
 
   systemd.network = {
     netdevs."10-vlan10" = {
@@ -163,7 +167,7 @@ in
     enable = true;
     preseed = {
       config = {
-        "core.https_address" = "${wgAddr}:8443";
+        "core.https_address" = "${wgAddr}:${toString incusApiPort}";
       };
       networks = [
         {

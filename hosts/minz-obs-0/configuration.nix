@@ -28,11 +28,7 @@ let
   };
   nixosNodes = lib.filterAttrs (_: n: n.kind != "device") topology.nodes;
   nodeExporterTargets = lib.mapAttrsToList (
-    _: n:
-    let
-      ip = if n.networks ? incus_bridge then n.networks.incus_bridge.ip else n.networks.mgmt.ip;
-    in
-    "${ip}:${toString topology.hostPorts.node-exporter}"
+    name: _: "${fleet.addressOf "minz-obs-0" name}:${toString topology.hostPorts.node-exporter}"
   ) nixosNodes;
 
   # public vhosts on the edge Caddy, probed for availability + cert expiry
