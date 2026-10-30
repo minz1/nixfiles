@@ -320,11 +320,7 @@ in
 
   systemd.services.velocity = {
     description = "Velocity Minecraft proxy";
-    after = [
-      "network.target"
-      "wireguard-wg1.service"
-    ];
-    wants = [ "wireguard-wg1.service" ];
+    after = [ "network.target" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig =
       mkHardened {

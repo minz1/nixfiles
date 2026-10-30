@@ -20,6 +20,11 @@ let
     (builtins.hasAttr networkName currentNode.networks) && (networkConfig.type == "wireguard")
   ) networks;
 
+  sshdListenIps = map (a: a.addr) config.services.openssh.listenAddresses;
+  sshdWaitOnline = lib.mapAttrsToList (
+    _: netCfg: "systemd-networkd-wait-online@${netCfg.interface}.service"
+  ) (lib.filterAttrs (n: _: lib.elem currentNode.networks.${n}.ip sshdListenIps) wireguardNetworks);
+
   # True if this host is a server on any WireGuard network (needs IP forwarding).
   isAnyServer = lib.any (networkName: currentNode.networks.${networkName}.role == "server") (
     lib.attrNames wireguardNetworks
@@ -109,13 +114,9 @@ in
     ) wireguardNetworks
   );
 
-  # sshd binds a WG IP but wireguard-wgN.service going active doesn't guarantee the address is bindable yet.
-  systemd.services.sshd.after = lib.mapAttrsToList (
-    _: netCfg: "wireguard-${netCfg.interface}.service"
-  ) wireguardNetworks;
-  systemd.services.sshd.wants = lib.mapAttrsToList (
-    _: netCfg: "wireguard-${netCfg.interface}.service"
-  ) wireguardNetworks;
+  # sshd binds a WG IP; networking.wireguard runs on networkd here, so wait for the link's address, not a wireguard-wgN unit
+  systemd.services.sshd.after = sshdWaitOnline;
+  systemd.services.sshd.wants = sshdWaitOnline;
 
   # default RestartSec=100ms + StartLimitBurst=5/10s burns the whole retry budget in ~0.5s
   systemd.services.sshd.serviceConfig.RestartSec = lib.mkIf (wireguardNetworks != { }) 5;
