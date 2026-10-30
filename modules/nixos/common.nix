@@ -39,7 +39,7 @@ in
     validMinDays = 6;
   };
 
-  # renew ~daily (6 of 168h left) without upstream's 24h jitter; retry failed orders
+  # renew ~daily (6 of 7 days left) without upstream's 24h jitter; retry failed orders
   systemd.timers."acme-renew-${config.networking.hostName}.internal".timerConfig = {
     RandomizedDelaySec = lib.mkForce "30m";
     FixedRandomDelay = lib.mkForce false;
