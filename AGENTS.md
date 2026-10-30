@@ -74,7 +74,7 @@ Each section applies when working on the paths in its heading.
 
 ### Scripts and justfiles (`scripts/**`, `pkgs/**`, `justfile`, `just/**`)
 
-- Every shell script passes `shellcheck -x -P scripts` with no suppressions. SC1091 info on sourcing `lib.sh` is expected.
+- Every shell script passes `shellcheck -x -P scripts` with no suppressions. `scripts/default.nix` prepends `lib.sh` to scripts that use it, so nothing sources it; run scripts as `nix run .#<name>`, not by path (helpers like `find_ram_dir` are undefined by path).
 - Public justfile recipes are 1-3 command invocations. Anything with control flow moves to `scripts/*.sh` (only scripts get shellcheck coverage).
 - Quote heredocs sent to remote shells (`<<'REMOTE'`) and pass local values as `bash -s -- "$val"`.
 
