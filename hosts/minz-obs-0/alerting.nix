@@ -297,7 +297,7 @@ in
               evaluatorType = "gt";
               evaluatorParams = [ 0 ];
               for = "30m";
-              summary = "{{ $labels.name }} failed on {{ $labels.instance }} — internal certs are 24h, this needs attention promptly";
+              summary = "{{ $labels.name }} failed on {{ $labels.instance }} — internal certs are 168h, pki-0 may be unreachable";
             })
             (mkThresholdRule {
               uid = "public-cert-expiry";
