@@ -204,10 +204,11 @@ in
     '';
   };
 
+  # after the fleet's last restic window (media-0, 06:00 America/New_York + 30m)
   systemd.timers.b2-mirror = {
     wantedBy = [ "timers.target" ];
     timerConfig = {
-      OnCalendar = "*-*-* 06:00:00";
+      OnCalendar = "*-*-* 13:00:00";
       RandomizedDelaySec = "30m";
       Persistent = true;
     };
