@@ -32,6 +32,10 @@ if [ "$*" = phases ]; then
     printf '%s\n' minz-vultr-nix-0 minz-home-nix-0 minz-attic-0 "minz-obs-0 minz-runner-0 minz-vultr-nix-1"
     exit 0
 fi
+if [ "$*" = "host attic" ]; then
+    echo minz-attic-0
+    exit 0
+fi
 echo "unexpected fleet call: $*" >&2
 exit 99
 EOF
