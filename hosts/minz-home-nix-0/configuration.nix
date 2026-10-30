@@ -15,6 +15,9 @@ let
   incusApiPort = 8443;
   incusPrefix = lib.last (lib.splitString "/" incusNetwork.subnet);
   incusClientCert = ../../secrets/incus-client.crt;
+  lanNetwork = topology.networks.home_lan;
+  lanAddr = node.networks.home_lan.ip;
+  lanWaitOnline = "systemd-networkd-wait-online@${lanNetwork.interface}.service";
 
   # fed by stunnel client mode on the router
   routerSyslogPort = 1514; # unprivileged; DynamicUser Alloy lacks CAP_NET_BIND_SERVICE
@@ -73,8 +76,10 @@ in
   networking.nftables.enable = true;
   networking.firewall.trustedInterfaces = [ incusNetwork.interface ];
   networking.firewall.interfaces.${topology.networks.mgmt.interface}.allowedTCPPorts = [
+    22
     incusApiPort
   ];
+  networking.firewall.interfaces.${lanNetwork.interface}.allowedTCPPorts = [ 22 ];
 
   systemd.network = {
     netdevs."10-vlan10" = {
@@ -87,7 +92,11 @@ in
     networks."20-eno1" = {
       matchConfig.Name = "eno1";
       vlan = [ "vlan10" ];
-      networkConfig.DHCP = "ipv4";
+      address = [ "${lanAddr}/${lib.last (lib.splitString "/" lanNetwork.subnet)}" ];
+      networkConfig = {
+        DHCP = "ipv4";
+        ConfigureWithoutCarrier = true;
+      };
       dhcpV4Config.UseGateway = false;
     };
     networks."30-vlan10" = {
@@ -97,12 +106,21 @@ in
     };
   };
 
+  services.openssh.openFirewall = false;
   services.openssh.listenAddresses = [
     {
       addr = wgAddr;
       port = 22;
     }
+    {
+      addr = lanAddr;
+      port = 22;
+    }
   ];
+  systemd.services.sshd = {
+    after = [ lanWaitOnline ];
+    wants = [ lanWaitOnline ];
+  };
 
   users.users.minz1 = {
     description = "Minz One";

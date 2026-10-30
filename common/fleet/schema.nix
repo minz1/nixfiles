@@ -24,6 +24,7 @@ let
         type = types.enum [
           "wireguard"
           "incus"
+          "lan"
         ];
       };
       subnet = mkOption { type = types.str; };

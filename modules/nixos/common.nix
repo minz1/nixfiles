@@ -15,8 +15,8 @@ let
     )
   );
   pkiPort = topology.services.step-ca.port;
-  allHostIps = lib.filter (ip: ip != null) (
-    lib.mapAttrsToList (name: net: if name != "edge" then (net.ip or null) else null) (
+  allHostIps = lib.mapAttrsToList (_: net: net.ip) (
+    lib.filterAttrs (name: _: name != "edge" && topology.networks.${name}.type != "lan") (
       me.networks or { }
     )
   );

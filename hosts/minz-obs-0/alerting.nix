@@ -393,7 +393,7 @@ in
             (mkLogCountRule {
               uid = "ssh-unexpected-source";
               title = "SSH login from unexpected source";
-              # SSH is WireGuard-only on this fleet; anything outside these prefixes is anomalous.
+              # SSH is WG/bridge-only plus home-nix-0's LAN break-glass; anything outside these prefixes is anomalous.
               logql = ''
                 sum by (host) (
                   count_over_time(

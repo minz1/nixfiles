@@ -8,6 +8,7 @@ let
     mgmt = "Management (WireGuard)";
     edge = "Edge (WireGuard)";
     incus_bridge = "Incus Bridge";
+    home_lan = "Home LAN";
   };
 
   nodeIcons = {
@@ -42,7 +43,7 @@ let
       hub = hubOf netName;
       isWireguard = net.type == "wireguard";
       # extractor already finds this address on nixos hosts; don't duplicate it
-      extractorCoversAddress = isWireguard && node.kind != "device";
+      extractorCoversAddress = (isWireguard || net.type == "lan") && node.kind != "device";
     in
     lib.optionalAttrs (!extractorCoversAddress) { addresses = [ netCfg.ip ]; }
     // {

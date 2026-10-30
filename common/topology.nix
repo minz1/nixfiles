@@ -17,6 +17,11 @@
       subnet = "10.10.0.0/24";
       interface = "incusbr0";
     };
+    home_lan = {
+      type = "lan";
+      subnet = "192.168.0.0/24";
+      interface = "eno1";
+    };
   };
 
   nodes = {
@@ -216,6 +221,7 @@
           ip = "10.10.0.1";
           role = "gateway";
         };
+        home_lan.ip = "192.168.0.5";
       };
     };
   };
