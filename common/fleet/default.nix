@@ -108,7 +108,10 @@ let
           cfg.services.${s}.port == p
         ) "service ${s} uses hostPort ${h}'s port ${toString p}"
       ) cfg.hostPorts
-    ) (attrNames cfg.services);
+    ) (attrNames cfg.services)
+    ++ lib.optional (
+      filter (n: lib.elem "admin-client" n.roles) nodeList == [ ]
+    ) "no node has role admin-client";
 
   errors = filter (e: e != "") failures;
   undeployed = map (n: n.name) (filter (n: n.kind != "device" && !n.hasConfig) nodeList);
@@ -153,8 +156,7 @@ in
   networks = guard cfg.networks;
   services = services';
   hostPorts = guard cfg.hostPorts;
-  withRole =
-    role: lib.sort lib.lessThan (map (n: n.name) (filter (n: lib.elem role n.roles) nodeList));
+  withRole = role: map (n: n.name) (filter (n: lib.elem role n.roles) nodeList);
   tunnelEndpoints = lib.sort lib.lessThan (
     map (m: m.ip) (
       filter (m: nodes.${m.node}.kind == "vps" && cfg.networks.${m.net}.type == "wireguard") memberships

@@ -212,6 +212,10 @@ in
       args = with' { topology.nodes.guest.roles = [ "nope" ]; };
     }
     {
+      name = "no admin-client";
+      args = with' { topology.nodes.desktop.roles = [ ]; };
+    }
+    {
       name = "service port on a hostPort";
       args = base // {
         services = {
