@@ -23,7 +23,10 @@ rm -f err
 
 [ "$(bash "$fleet" address d)" = 10.0.0.4 ] || fail "5: address d"
 
-for args in "" bogus "target" "target a b"; do
+[ "$(bash "$fleet" hosts --kind vps)" = a ] || fail "7: hosts --kind vps"
+[ -z "$(bash "$fleet" hosts --kind device)" ] || fail "7: --kind device lists an undeployable node"
+
+for args in "" bogus "target" "target a b" "hosts --kind" "hosts --bogus vps"; do
     rc=0
     read -ra argv <<< "$args"
     bash "$fleet" "${argv[@]}" > /dev/null 2>&1 || rc=$?

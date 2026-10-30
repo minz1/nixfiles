@@ -1,5 +1,6 @@
 {
   "phases": [["a"], ["b", "c"]],
+  "nodes": { "a": { "kind": "vps" }, "b": { "kind": "incus-host" }, "c": { "kind": "incus-vm" }, "d": { "kind": "device" } },
   "addresses": { "a": "10.0.0.1", "b": "10.0.0.2", "c": "10.0.0.3", "d": "10.0.0.4" },
   "targets": { "a": "minz1@10.0.0.1", "b": "root@10.0.0.2", "c": "minz1@10.0.0.3" }
 }

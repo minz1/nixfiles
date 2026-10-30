@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-# Reboot order: standalone hosts first, then the Incus host last — its reboot cascades all 8 guest VMs/containers automatically via boot.autostart=last-state.
-standalone=(minz-vultr-nix-0 minz-vultr-nix-1)
-incus_host=minz-home-nix-0
-incus_guests=(minz-obs-0 minz-authentik-0 minz-pki-0 minz-game-0 minz-services-0 minz-media-0 minz-attic-0 minz-runner-0)
-
 reboot_and_wait() {
     local host="$1" target deadline
     target=$(fleet target "$host")
@@ -31,16 +26,19 @@ reboot_and_wait() {
     fi
 }
 
+mapfile -t vps < <(fleet hosts --kind vps)
+mapfile -t incus_hosts < <(fleet hosts --kind incus-host)
+mapfile -t guests < <(fleet hosts --kind incus-vm; fleet hosts --kind incus-container)
+
 failed=()
 
-for h in "${standalone[@]}"; do
+for h in "${vps[@]}" "${incus_hosts[@]}"; do
     reboot_and_wait "$h" || failed+=("$h")
 done
 
-reboot_and_wait "$incus_host" || failed+=("$incus_host")
-
-echo "==> Waiting for Incus guests to autostart on $incus_host..."
-for h in "${incus_guests[@]}"; do
+# Guests come back with their Incus host (boot.autostart=last-state).
+echo "==> Waiting for Incus guests to autostart..."
+for h in "${guests[@]}"; do
     deploy-wait-healthy "$h" 180 && echo "$h back up" || failed+=("$h")
 done
 
