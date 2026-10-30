@@ -538,14 +538,14 @@ in
                   count_over_time(
                     {host="minz-game-0", transport="kernel"}
                       |= "oci-egress-bypass"
-                      !~ "DST=(162\\.159\\.(12[89]|1[3-4][0-9])\\.|150\\.171\\.(109|110)\\.)"
+                      !~ "DST=(162\\.159\\.(12[89]|13[0-9]|14[0-3])\\.|150\\.171\\.(109|110)\\.)"
                     [10m]
                   )
                 )
               '';
               threshold = 0;
               for = "0s";
-              summary = "{{ $labels.host }} rootless containers opened a connection outside the Discord and Microsoft ranges — compare with the nftables egress allow-list";
+              summary = "{{ $labels.host }} rootless containers opened a connection outside the Discord and Microsoft ranges — see docs/ops.md known bypasses; journalctl -k | grep oci-egress-bypass on game-0";
             })
           ];
         }
