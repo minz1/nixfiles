@@ -154,6 +154,21 @@ in
         port = 443;
       };
     };
+    testEdgeOnlyNoRoute = {
+      expr =
+        (mkFleet (with' {
+          topology.nodes.edgeonly = {
+            kind = "device";
+            networks.edge = {
+              ip = "10.9.0.7";
+              role = "client";
+            };
+          };
+        })).addressOf
+          "guest"
+          "edgeonly";
+      expected = null;
+    };
     testDefaults = {
       expr = {
         inherit (f.nodes.edgevps.networks.mgmt) endpoint extraAllowedIPs;
@@ -219,6 +234,52 @@ in
       name = "host dir without node";
       args = base // {
         hostDirs = base.hostDirs ++ [ "ghost" ];
+      };
+    }
+    {
+      name = "node on an unknown network";
+      args = with' { topology.nodes.guest.networks.lan.ip = "192.168.0.2"; };
+    }
+    {
+      name = "service hosted on a device";
+      args =
+        base
+        // withServices (config: {
+          other = {
+            host = config.nodes.desktop.name;
+            port = 80;
+          };
+        });
+    }
+    {
+      name = "container without root_gib";
+      args = with' {
+        topology.nodes.box = {
+          kind = "incus-container";
+          incus = {
+            cpus = 1;
+            memory_gib = 1;
+          };
+          networks.incus_bridge.ip = "10.10.0.9";
+        };
+        hostDirs = base.hostDirs ++ [ "box" ];
+      };
+    }
+    {
+      name = "vm without total_gib";
+      args = with' { topology.nodes.guest.incus.total_gib = null; };
+    }
+    {
+      name = "vps without storage";
+      args = with' { topology.nodes.hub.storage = null; };
+    }
+    {
+      name = "wireguard network without a server";
+      args = with' {
+        topology.nodes.edgevps.networks.edge = {
+          role = "client";
+          endpoint = null;
+        };
       };
     }
     {

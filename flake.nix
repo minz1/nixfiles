@@ -64,8 +64,8 @@
         hostDirs = builtins.attrNames (lib.filterAttrs (_: t: t == "directory") (builtins.readDir ./hosts));
       };
       topology = { inherit (fleet) networks nodes services; };
-      fleetArgs = { inherit (fleet) addressOf; };
-      isGuest = node: node.kind == "incus-vm" || node.kind == "incus-container";
+      fleetArgs = { inherit (fleet) addressOf isGuest; };
+      inherit (fleet) isGuest;
 
       overlays = [
         overlay
@@ -159,9 +159,8 @@
       };
 
       nixosConfigurations = builtins.mapAttrs (
-        name: _:
+        name: node:
         let
-          node = topology.nodes.${name} or { };
           isContainer = node.kind == "incus-container";
           isVm = node.kind == "incus-vm";
           isBareMetal = node.kind == "vps" || node.kind == "incus-host";
@@ -254,7 +253,6 @@
 
       checks.${system} =
         let
-          lib = nixpkgs.lib;
           t = import ./common/fleet/tests.nix {
             inherit lib;
             mkFleet = import ./common/fleet;

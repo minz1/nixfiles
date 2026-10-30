@@ -127,7 +127,6 @@ let
       own = filter (net: toNets ? ${net}) [
         "mgmt"
         "incus_bridge"
-        "edge"
       ];
     in
     if shared != [ ] then
@@ -141,6 +140,7 @@ let
 in
 {
   inherit nodes addressOf;
+  isGuest = node: node.kind == "incus-vm" || node.kind == "incus-container";
   networks = guard cfg.networks;
   services = services';
   endpointsFor =

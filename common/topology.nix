@@ -22,7 +22,6 @@
   nodes = {
     minz-vultr-nix-1 = {
       kind = "vps";
-      sshUser = "minz1";
       storage = {
         disk = "/dev/vda";
         nix_gib = 20;
@@ -44,7 +43,6 @@
 
     minz-vultr-nix-0 = {
       kind = "vps";
-      sshUser = "minz1";
       storage = {
         disk = "/dev/vda";
         nix_gib = 20;
@@ -87,7 +85,6 @@
 
     minz-obs-0 = {
       kind = "incus-vm";
-      sshUser = "minz1";
       incus = {
         nix_gib = 30;
         total_gib = 100;
@@ -101,7 +98,6 @@
 
     minz-media-0 = {
       kind = "incus-container";
-      sshUser = "minz1";
       incus = {
         root_gib = 160;
         cpus = 4;
@@ -116,7 +112,6 @@
 
     minz-authentik-0 = {
       kind = "incus-vm";
-      sshUser = "minz1";
       incus = {
         nix_gib = 30;
         total_gib = 100;
@@ -130,7 +125,6 @@
 
     minz-pki-0 = {
       kind = "incus-vm";
-      sshUser = "minz1";
       incus = {
         nix_gib = 10;
         total_gib = 15;
@@ -142,7 +136,6 @@
 
     minz-game-0 = {
       kind = "incus-vm";
-      sshUser = "minz1";
       incus = {
         nix_gib = 20;
         total_gib = 100;
@@ -156,7 +149,6 @@
 
     minz-services-0 = {
       kind = "incus-vm";
-      sshUser = "minz1";
       incus = {
         nix_gib = 18;
         total_gib = 24;
@@ -170,7 +162,6 @@
 
     minz-attic-0 = {
       kind = "incus-vm";
-      sshUser = "minz1";
       binaryCache = true;
       incus = {
         nix_gib = 20;
@@ -183,7 +174,6 @@
 
     minz-runner-0 = {
       kind = "incus-vm";
-      sshUser = "minz1";
       incus = {
         nix_gib = 60;
         total_gib = 100;
@@ -195,7 +185,6 @@
 
     minz-home-nix-0 = {
       kind = "incus-host";
-      sshUser = "minz1";
       storage = {
         # 256GB NVMe — NixOS system disk
         disk = "/dev/disk/by-id/nvme-SAMSUNG_MZALQ256HAJD-000L1_S4YDNX0R638478";
