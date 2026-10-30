@@ -37,6 +37,7 @@ start_service
 [ "${cmd[0]}" = awk ] || fail "command is not awk: ${cmd[0]}"
 
 touch "$out"
+: > "$work/err"
 busybox awk -v f="$log" -v dst="cat >> $out" "${cmd[-1]}" 2> "$work/err" &
 pid=$!
 
