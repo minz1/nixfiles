@@ -2,7 +2,7 @@ flake := justfile_directory()
 
 # CI-only recipes: build + push to Attic. No deploy authority.
 
-# Print the space-separated affected-host list for commits between `before` and `after`.
+# Print the space-separated hosts whose system drvPath differs between `before` and `after`.
 affected-hosts before after="HEAD":
     nix run {{ flake }}#ci-affected-hosts -- "{{ before }}" "{{ after }}"
 

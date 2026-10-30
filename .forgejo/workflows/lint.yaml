@@ -1,0 +1,37 @@
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: nixos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: https://github.com/DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - name: nix flake check
+        run: nix flake check --no-update-lock-file
+
+      - name: nix fmt
+        run: nix fmt -- --fail-on-change .
+
+      - name: tofu fmt
+        run: nix develop --no-update-lock-file --command tofu fmt -check -recursive tofu
+
+      # shortcut: no -lockfile=readonly while state still needs hashicorp/external; add it after an infra apply drops it and the lock is refreshed
+      - name: tofu validate infra
+        run: |
+          nix develop --no-update-lock-file --command tofu -chdir=tofu/infra init -backend=false -input=false
+          nix develop --no-update-lock-file --command tofu -chdir=tofu/infra validate
+
+      # validate needs the provider's token argument set, never its value
+      - name: tofu validate app
+        env:
+          AUTHENTIK_TOKEN: unused-by-validate
+        run: |
+          nix develop --no-update-lock-file --command tofu -chdir=tofu/app init -backend=false -input=false -lockfile=readonly
+          nix develop --no-update-lock-file --command tofu -chdir=tofu/app validate

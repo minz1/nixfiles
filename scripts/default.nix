@@ -92,10 +92,9 @@ let
     };
     ci-affected-hosts = mkScript "ci-affected-hosts" {
       runtimeInputs = [
-        coreutils
         findutils
         git
-        gnugrep
+        jq
         p.fleet-cli
       ];
     };
@@ -215,6 +214,7 @@ in
           nativeBuildInputs = with pkgs; [
             age
             coreutils
+            git
             gnugrep
             gnused
             jq
@@ -228,6 +228,7 @@ in
           patchShebangs scripts
           cd scripts
           bash fleet.test.sh
+          bash ci-affected-hosts.test.sh
           bash deploy-phased.test.sh
           bash secrets-copy.test.sh
           bash router/adguard-querylog.test.sh
