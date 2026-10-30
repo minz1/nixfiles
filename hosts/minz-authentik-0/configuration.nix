@@ -117,6 +117,7 @@ in
   };
 
   services.caddy = {
+    enable = true;
     package = pkgs.caddy.withPlugins {
       plugins = [ "github.com/mholt/caddy-l4@v0.1.2" ];
       hash = "sha256-Dz510teYCUvEA7MR8ERpaKsDHS5dBCDO+AjszV96si4=";
