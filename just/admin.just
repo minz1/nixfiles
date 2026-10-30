@@ -41,7 +41,7 @@ build-all:
 check-secrets:
     nix run {{ flake }}#check-secrets-encrypted
 
-# nix flake check (script tests and shellcheck included) + formatting. Read-only; run before committing.
+# nix flake check (script tests and shellcheck included) + formatting; run before committing.
 check:
     #!/usr/bin/env bash
     set -euo pipefail

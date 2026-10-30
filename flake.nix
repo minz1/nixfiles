@@ -156,7 +156,7 @@
         nixos-anywhere = nixos-anywhere.packages.${system}.nixos-anywhere;
       };
 
-      # re-use deploy-rs binary from pkgs to avoid building it twice across two nixpkgs evals
+      # nixpkgs' deploy-rs is in cache.nixos.org; the overlay's source build is not
       deployPkgs = import nixpkgs {
         inherit system;
         overlays = [
