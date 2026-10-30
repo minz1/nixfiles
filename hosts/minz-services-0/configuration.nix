@@ -14,7 +14,7 @@ let
   mediaFixerPort = 8081;
   ntfyPort = 2586; # module default listen-http = "127.0.0.1:2586"
 
-  mediaIp = topology.nodes."minz-media-0".networks.incus_bridge.ip;
+  mediaIp = topology.nodes.${topology.services.media-caddy.host}.networks.incus_bridge.ip;
   inherit (endpoints) loki;
 in
 {

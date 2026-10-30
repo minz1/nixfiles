@@ -2,6 +2,7 @@
   config,
   lib,
   topology,
+  fleet,
   node,
   ...
 }:
@@ -25,8 +26,8 @@ let
     flush_interval = -1;
   };
   mediaAgentHttpsPort = topology.services.media-agent.port;
-  desktopIp = topology.nodes."minz-desktop".networks.mgmt.ip;
-  servicesIp = topology.nodes."minz-services-0".networks.incus_bridge.ip;
+  adminIps = map (n: topology.nodes.${n}.networks.mgmt.ip) (fleet.withRole "admin-client");
+  servicesIp = topology.nodes.${topology.services.services-caddy.host}.networks.incus_bridge.ip;
 in
 {
   imports = [
@@ -182,10 +183,13 @@ in
     caddyHttpsPort
   ];
 
-  networking.firewall.extraCommands = ''
-    iptables -A nixos-fw -s ${desktopIp} -p tcp --dport ${toString decypharrUiPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString decypharrUiPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString jellyfinApiPort} -j nixos-fw-accept
-    iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString mediaAgentHttpsPort} -j nixos-fw-accept
-  '';
+  networking.firewall.extraCommands =
+    lib.concatMapStrings (
+      ip: "iptables -A nixos-fw -s ${ip} -p tcp --dport ${toString decypharrUiPort} -j nixos-fw-accept\n"
+    ) adminIps
+    + ''
+      iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString decypharrUiPort} -j nixos-fw-accept
+      iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString jellyfinApiPort} -j nixos-fw-accept
+      iptables -A nixos-fw -s ${servicesIp} -p tcp --dport ${toString mediaAgentHttpsPort} -j nixos-fw-accept
+    '';
 }

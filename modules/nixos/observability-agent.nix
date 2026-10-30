@@ -2,6 +2,7 @@
   config,
   lib,
   endpoints,
+  topology,
   mkHardened,
   ...
 }:
@@ -28,6 +29,7 @@ in
 
     services.prometheus.exporters.node = {
       enable = true;
+      port = topology.hostPorts.node-exporter;
       openFirewall = true;
       extraFlags = [
         "--web.config.file=/etc/node-exporter-web.yml"

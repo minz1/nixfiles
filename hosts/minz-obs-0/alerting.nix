@@ -1,15 +1,18 @@
 {
   config,
   lib,
+  topology,
   fleet,
   ...
 }:
 
 let
-  criticalInstances = map (n: "${fleet.addressOf "minz-obs-0" n}:9100") [
-    "minz-vultr-nix-0"
-    "minz-pki-0"
-  ];
+  criticalInstances =
+    map (n: "${fleet.addressOf "minz-obs-0" n}:${toString topology.hostPorts.node-exporter}")
+      [
+        "minz-vultr-nix-0"
+        "minz-pki-0"
+      ];
   criticalRe = lib.concatStringsSep "|" criticalInstances;
   nodeTargets =
     lib.concatMap (s: s.targets)
@@ -145,7 +148,7 @@ in
               type = "webhook";
               settings = {
                 # root URL, not the topic path: ntfy only parses structured JSON (title/priority/tags/click) at the root, keyed by the "topic" field below
-                url = "https://minz-services-0.internal/";
+                url = "https://${topology.services.services-caddy.host}.internal/";
                 httpMethod = "POST";
                 # ngalert's webhook schema, not the legacy basicAuthUsername/basicAuthPassword names
                 username = "grafana";

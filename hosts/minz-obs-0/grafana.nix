@@ -2,6 +2,7 @@
   config,
   lib,
   endpoints,
+  topology,
   mkHardened,
   ...
 }:
@@ -45,8 +46,8 @@ in
         client_secret = "$__file{${config.sops.secrets.grafana_oauth_client_secret.path}}";
         scopes = "openid email profile";
         auth_url = "https://auth.minz1.com/application/o/authorize/";
-        token_url = "https://minz-authentik-0.internal:${toString authentikHttpsPort}/application/o/token/";
-        api_url = "https://minz-authentik-0.internal:${toString authentikHttpsPort}/application/o/userinfo/";
+        token_url = "https://${topology.services.authentik.host}.internal:${toString authentikHttpsPort}/application/o/token/";
+        api_url = "https://${topology.services.authentik.host}.internal:${toString authentikHttpsPort}/application/o/userinfo/";
         role_attribute_path = "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'";
         allow_sign_up = true;
         tls_client_cert = "${certDir}/cert.pem";

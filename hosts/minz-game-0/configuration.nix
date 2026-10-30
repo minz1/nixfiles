@@ -14,7 +14,8 @@ let
   gameIp = node.networks.incus_bridge.ip;
 
   gamePort = topology.services.minecraft.port;
-  rconPort = 25575;
+  rconPort = topology.services.minecraft-rcon.port;
+  webhookPort = topology.services.game-caddy.port;
   proxyPort = 3128;
 
   authentikIp = endpoints.authentik.ip;
@@ -77,7 +78,7 @@ in
 
   networking.firewall.allowedTCPPorts = [
     gamePort
-    443
+    webhookPort
   ];
 
   networking.nftables.enable = true;
@@ -139,7 +140,7 @@ in
           ];
         };
         http.servers.webhook = {
-          listen = [ "${gameIp}:443" ];
+          listen = [ "${gameIp}:${toString webhookPort}" ];
           automatic_https.disable = true;
           strict_sni_host = false;
           tls_connection_policies = [ { certificate_selection.any_tag = [ "game" ]; } ];

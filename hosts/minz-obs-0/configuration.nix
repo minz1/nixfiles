@@ -3,6 +3,7 @@
   lib,
   pkgs,
   topology,
+  fleet,
   node,
   mkHardened,
   ...
@@ -25,18 +26,13 @@ let
     cert_file = "${certDir}/fullchain.pem";
     key_file = "${certDir}/key.pem";
   };
-  tunnelTargets = with topology.nodes; [
-    minz-vultr-nix-0.networks.mgmt.ip
-    minz-vultr-nix-1.networks.mgmt.ip
-    minz-vultr-nix-1.networks.edge.ip
-  ];
   nixosNodes = lib.filterAttrs (_: n: n.kind != "device") topology.nodes;
   nodeExporterTargets = lib.mapAttrsToList (
     _: n:
     let
       ip = if n.networks ? incus_bridge then n.networks.incus_bridge.ip else n.networks.mgmt.ip;
     in
-    "${ip}:9100"
+    "${ip}:${toString topology.hostPorts.node-exporter}"
   ) nixosNodes;
 
   # public vhosts on the edge Caddy, probed for availability + cert expiry
@@ -122,7 +118,7 @@ in
         scrape_interval = "15s";
         metrics_path = "/probe";
         params.module = [ "icmp" ];
-        static_configs = [ { targets = tunnelTargets; } ];
+        static_configs = [ { targets = fleet.tunnelEndpoints; } ];
         relabel_configs = [
           {
             source_labels = [ "__address__" ];

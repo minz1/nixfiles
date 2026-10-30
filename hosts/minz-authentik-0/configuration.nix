@@ -5,6 +5,7 @@
   authentik-nix,
   node,
   topology,
+  fleet,
   mkHardened,
   ...
 }:
@@ -13,10 +14,13 @@ let
   authentikIp = node.networks.incus_bridge.ip;
 
   authentikPort = 9000;
-  desktopIp = topology.nodes."minz-desktop".networks.mgmt.ip;
+  adminRanges = map (n: "${topology.nodes.${n}.networks.mgmt.ip}/32") (fleet.withRole "admin-client");
+  edgeServer = lib.findFirst (n: (n.networks.edge.role or null) == "server") null (
+    lib.attrValues topology.nodes
+  );
   authentikHttpsPort = topology.services.authentik.port;
   ldapPort = 3389;
-  ldapTlsPort = 6636;
+  ldapTlsPort = topology.services.authentik-ldaps.port;
   # +1: Caddy owns the external ports; outpost listeners must not conflict
   authentikBuiltinHttpsPort = authentikHttpsPort + 1;
   ldapOutpostTlsPort = ldapTlsPort + 1;
@@ -101,13 +105,13 @@ in
               # the edge Caddy sets X-Forwarded-For from the real peer; without this every public client is the edge's IP
               trusted_proxies = {
                 source = "static";
-                ranges = [ "${topology.nodes."minz-vultr-nix-1".networks.edge.ip}/32" ];
+                ranges = [ "${edgeServer.networks.edge.ip}/32" ];
               };
               tls_connection_policies = [
                 {
-                  # the desktop only: Tofu's authentik provider can't present a client cert. The rest of
+                  # admin clients only: Tofu's authentik provider can't present a client cert. The rest of
                   # the mgmt subnet (both Vultr hosts, unmanaged devices) goes through mTLS like everyone else.
-                  match.remote_ip.ranges = [ "${desktopIp}/32" ];
+                  match.remote_ip.ranges = adminRanges;
                   certificate_selection.any_tag = [ "authentik" ];
                 }
                 {
@@ -127,7 +131,7 @@ in
                           expression = ''{http.request.tls.client.subject} == "CN=minz-vultr-nix-1.internal" || {http.request.tls.client.subject} == "CN=minz-obs-0.internal" || {http.request.tls.client.subject} == "CN=minz-game-0.internal"'';
                         }
                         {
-                          remote_ip.ranges = [ "${desktopIp}/32" ];
+                          remote_ip.ranges = adminRanges;
                         }
                       ];
                     }
