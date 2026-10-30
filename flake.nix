@@ -3,7 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    deploy-rs.url = "github:serokell/deploy-rs";
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -16,8 +19,16 @@
       url = "github:nix-community/nixos-anywhere";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.disko.follows = "disko";
+      inputs.treefmt-nix.follows = "treefmt-nix";
     };
-    impermanence.url = "github:nix-community/impermanence";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    impermanence = {
+      url = "github:nix-community/impermanence";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     authentik-nix = {
       url = "github:nix-community/authentik-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -28,8 +39,14 @@
     };
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
     decypharr.url = "github:minz1/decypharr/minz";
-    mediafixer.url = "github:minz1/media-fixer";
-    whitelist-sync.url = "github:minz1/minecraft-whitelist-sync";
+    mediafixer = {
+      url = "github:minz1/media-fixer";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    whitelist-sync = {
+      url = "github:minz1/minecraft-whitelist-sync";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix-topology = {
       url = "github:oddlama/nix-topology";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -52,6 +69,7 @@
       mediafixer,
       whitelist-sync,
       nix-topology,
+      treefmt-nix,
     }:
     let
       system = "x86_64-linux";
@@ -329,7 +347,7 @@
         ];
       };
 
-      formatter.${system} = pkgs.nixfmt-tree;
+      formatter.${system} = (treefmt-nix.lib.evalModule pkgs ./treefmt.nix).config.build.wrapper;
 
       packages.${system} = scripts.packages // {
         inherit (pkgs) adguard-exporter;
