@@ -1,3 +1,7 @@
+locals {
+  admin_check = "user.is_superuser or ak_is_group_member(user, name__in=['${authentik_group.arr_admins.name}', '${authentik_group.grafana_admins.name}', '${authentik_group.media_fixer_admins.name}'])"
+}
+
 data "authentik_stage" "totp_setup" {
   name = "default-authenticator-totp-setup"
 }
@@ -22,7 +26,7 @@ resource "authentik_policy_expression" "admin_mfa_required" {
   execution_logging = false
   expression        = <<-EOT
     user = request.context.get("pending_user")
-    if not user or not user.pk or not user.is_superuser:
+    if not user or not user.pk or not (${local.admin_check}):
         return False
     return not (ak_user_has_authenticator(user, "totp") or ak_user_has_authenticator(user, "webauthn"))
   EOT
@@ -47,7 +51,7 @@ resource "authentik_policy_expression" "admin_static_required" {
   execution_logging = false
   expression        = <<-EOT
     user = request.context.get("pending_user")
-    if not user or not user.pk or not user.is_superuser:
+    if not user or not user.pk or not (${local.admin_check}):
         return False
     return not ak_user_has_authenticator(user, "static")
   EOT

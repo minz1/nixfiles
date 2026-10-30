@@ -97,7 +97,7 @@ resource "authentik_policy_expression" "recovery_mfa_required" {
   execution_logging = false
   expression        = <<-EOT
     user = request.context.get("pending_user")
-    return bool(user and user.pk and user.is_superuser)
+    return bool(user and user.pk and (${local.admin_check}))
   EOT
 }
 
