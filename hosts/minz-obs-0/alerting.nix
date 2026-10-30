@@ -530,6 +530,23 @@ in
               for = "10m";
               summary = "{{ $labels.host }} logged a non-multicast Incus ACL drop — check for a legitimate flow being denied";
             })
+            (mkLogCountRule {
+              uid = "game-egress-bypass";
+              title = "game-0 container egress outside the allowed ranges";
+              logql = ''
+                sum by (host) (
+                  count_over_time(
+                    {host="minz-game-0", transport="kernel"}
+                      |= "oci-egress-bypass"
+                      !~ "DST=(162\\.159\\.(12[89]|1[3-4][0-9])\\.|150\\.171\\.(109|110)\\.)"
+                    [10m]
+                  )
+                )
+              '';
+              threshold = 0;
+              for = "0s";
+              summary = "{{ $labels.host }} rootless containers opened a connection outside the Discord and Microsoft ranges — compare with the nftables egress allow-list";
+            })
           ];
         }
       ];
