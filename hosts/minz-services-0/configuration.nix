@@ -41,6 +41,7 @@ in
     # loopback only: reachable solely through Caddy's mTLS-gated admin.minz1.com route below
     addr = "127.0.0.1:${toString mediaFixerPort}";
     baseURL = "/media";
+    publicURL = "https://admin.minz1.com/media";
     environmentFile = config.sops.secrets."media-fixer-env".path;
 
     discord = {
