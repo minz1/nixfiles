@@ -106,7 +106,15 @@ let
           type = types.str;
           default = "minz1";
         };
-        binaryCache = flag;
+        roles = mkOption {
+          type = types.listOf (
+            types.enum [
+              "admin-client"
+              "ci-runner"
+            ]
+          );
+          default = [ ];
+        };
         hasConfig = mkOption {
           type = types.bool;
           default = builtins.elem name hostDirs;
@@ -141,6 +149,10 @@ in
     nodes = mkOption { type = types.attrsOf node; };
     services = mkOption {
       type = types.attrsOf service;
+      default = { };
+    };
+    hostPorts = mkOption {
+      type = types.attrsOf types.port;
       default = { };
     };
   };

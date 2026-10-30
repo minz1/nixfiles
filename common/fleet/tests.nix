@@ -31,6 +31,7 @@ let
       nodes = {
         desktop = {
           kind = "device";
+          roles = [ "admin-client" ];
           networks.mgmt = {
             ip = "10.8.0.4";
             role = "client";
@@ -169,6 +170,18 @@ in
           "edgeonly";
       expected = null;
     };
+    testWithRole = {
+      expr = f.withRole "admin-client";
+      expected = [ "desktop" ];
+    };
+    testTunnelEndpoints = {
+      expr = f.tunnelEndpoints;
+      expected = [
+        "10.8.0.1"
+        "10.8.0.6"
+        "10.9.0.1"
+      ];
+    };
     testDefaults = {
       expr = {
         inherit (f.nodes.edgevps.networks.mgmt) endpoint extraAllowedIPs;
@@ -193,6 +206,19 @@ in
             port = 80;
           };
         });
+    }
+    {
+      name = "unknown role";
+      args = with' { topology.nodes.guest.roles = [ "nope" ]; };
+    }
+    {
+      name = "service port on a hostPort";
+      args = base // {
+        services = {
+          imports = [ base.services ];
+          hostPorts.node-exporter = 443;
+        };
+      };
     }
     {
       name = "ip outside subnet";

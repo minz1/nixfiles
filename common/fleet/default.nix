@@ -99,7 +99,16 @@ let
     ) cfg.services
     ++ map (hp: "two services use ${hp}") (
       dupes (mapAttrsToList (_: v: "${v.host}:${toString v.port}") cfg.services)
-    );
+    )
+    ++ concatMap (
+      s:
+      mapAttrsToList (
+        h: p:
+        lib.optionalString (
+          cfg.services.${s}.port == p
+        ) "service ${s} uses hostPort ${h}'s port ${toString p}"
+      ) cfg.hostPorts
+    ) (attrNames cfg.services);
 
   errors = filter (e: e != "") failures;
   undeployed = map (n: n.name) (filter (n: n.kind != "device" && !n.hasConfig) nodeList);
@@ -143,6 +152,14 @@ in
   isGuest = node: node.kind == "incus-vm" || node.kind == "incus-container";
   networks = guard cfg.networks;
   services = services';
+  hostPorts = guard cfg.hostPorts;
+  withRole =
+    role: lib.sort lib.lessThan (map (n: n.name) (filter (n: lib.elem role n.roles) nodeList));
+  tunnelEndpoints = lib.sort lib.lessThan (
+    map (m: m.ip) (
+      filter (m: nodes.${m.node}.kind == "vps" && cfg.networks.${m.net}.type == "wireguard") memberships
+    )
+  );
   endpointsFor =
     host:
     lib.mapAttrs (_: s: {

@@ -54,5 +54,18 @@ with config.nodes;
       host = minz-media-0.name;
       port = 9443;
     };
+    authentik-ldaps = {
+      host = minz-authentik-0.name;
+      port = 6636;
+    };
+    minecraft-rcon = {
+      host = minz-game-0.name;
+      port = 25575;
+    };
+    game-caddy = {
+      host = minz-game-0.name;
+      port = 443;
+    };
   };
+  hostPorts.node-exporter = 9100;
 }

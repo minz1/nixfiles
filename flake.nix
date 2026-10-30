@@ -81,8 +81,22 @@
         services = ./common/services.nix;
         hostDirs = builtins.attrNames (lib.filterAttrs (_: t: t == "directory") (builtins.readDir ./hosts));
       };
-      topology = { inherit (fleet) networks nodes services; };
-      fleetArgs = { inherit (fleet) addressOf isGuest; };
+      topology = {
+        inherit (fleet)
+          networks
+          nodes
+          services
+          hostPorts
+          ;
+      };
+      fleetArgs = {
+        inherit (fleet)
+          addressOf
+          isGuest
+          withRole
+          tunnelEndpoints
+          ;
+      };
       inherit (fleet) isGuest;
 
       overlays = [
@@ -103,7 +117,7 @@
       mgmtHubName =
         (nixpkgs.lib.findFirst (n: n.networks.mgmt.role or "" == "server") null topologyList).name or null;
       incusHostName = (nixpkgs.lib.findFirst (n: n.kind == "incus-host") null topologyList).name or null;
-      binaryCacheName = (nixpkgs.lib.findFirst (n: n.binaryCache) null topologyList).name or null;
+      binaryCacheName = topology.services.attic.host or null;
 
       routingDependency =
         name: node:
@@ -140,7 +154,13 @@
       };
 
       fleetJson = {
-        inherit (fleet) nodes;
+        inherit (fleet)
+          nodes
+          networks
+          services
+          hostPorts
+          tunnelEndpoints
+          ;
         phases = deployPhases;
         addresses = lib.filterAttrs (_: a: a != null) (
           builtins.mapAttrs (name: _: fleet.addressOf "minz-desktop" name) fleet.nodes

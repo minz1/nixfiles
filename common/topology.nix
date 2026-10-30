@@ -76,6 +76,7 @@
 
     minz-desktop = {
       kind = "device";
+      roles = [ "admin-client" ];
       networks.mgmt = {
         ip = "10.8.0.4";
         role = "client";
@@ -162,7 +163,6 @@
 
     minz-attic-0 = {
       kind = "incus-vm";
-      binaryCache = true;
       incus = {
         nix_gib = 20;
         total_gib = 100;
@@ -174,6 +174,7 @@
 
     minz-runner-0 = {
       kind = "incus-vm";
+      roles = [ "ci-runner" ];
       incus = {
         nix_gib = 60;
         total_gib = 100;
