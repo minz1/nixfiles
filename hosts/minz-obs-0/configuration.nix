@@ -93,7 +93,7 @@ in
         static_configs = [ { targets = [ "127.0.0.1:${toString lokiPort}" ]; } ];
       }
       {
-        # no fleet-wide node-cert exporter: internal certs renew every 6h, so acme-renewal-failed fires long before one expires
+        # no fleet-wide node-cert exporter: internal certs renew daily, so acme-renewal-failed fires days before one expires
         job_name = "blackbox";
         metrics_path = "/probe";
         params.module = [ "http_2xx" ];

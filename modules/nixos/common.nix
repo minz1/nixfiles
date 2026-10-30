@@ -36,10 +36,10 @@ in
     group = "caddy";
     reloadServices = lib.optional config.services.caddy.enable "caddy.service";
     extraDomainNames = allHostIps;
+    validMinDays = 6;
   };
 
-  # Upstream's 24h RandomizedDelaySec+FixedRandomDelay pushes the real renewal period to 6-24h
-  # per host, against step-ca's 168h certs. Keep the jitter small and retry failed orders.
+  # renew ~daily (6 of 168h left) without upstream's 24h jitter; retry failed orders
   systemd.timers."acme-renew-${config.networking.hostName}.internal".timerConfig = {
     RandomizedDelaySec = lib.mkForce "30m";
     FixedRandomDelay = lib.mkForce false;
