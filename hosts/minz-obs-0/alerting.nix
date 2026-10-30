@@ -14,6 +14,8 @@ let
         "minz-pki-0"
       ];
   criticalRe = lib.concatStringsSep "|" criticalInstances;
+  # internet names only: home.arpa and reverse/local zones are LAN noise (Ruckus AP lookups)
+  nxdomainSelector = ''{job="adguard-querylog"} | json | Rcode="3" | QH=~".+\\..+" | QH!~".+\\.(home\\.arpa|in-addr\\.arpa|ip6\\.arpa|local|lan|invalid|internal)"'';
   nodeTargets =
     lib.concatMap (s: s.targets)
       (lib.findFirst (
@@ -478,6 +480,24 @@ in
               for = "15m";
               summary = "No AdGuard query-log lines in 30m — if router-syslog-silent also fires it is the transport, else check /etc/init.d/adguard-querylog on the router";
             })
+            (mkLogCountRule {
+              uid = "adguard-nxdomain-client";
+              title = "LAN client hammering nonexistent domains";
+              logql = "sum by (IP) (count_over_time(${nxdomainSelector} [1h]))";
+              threshold = 1000;
+              from = 3600;
+              for = "10m";
+              summary = "{{ $labels.IP }} got over 1000 NXDOMAIN answers in 1h; see its Rcode=3 names in Explore ({job=adguard-querylog})";
+            })
+            (mkLogCountRule {
+              uid = "adguard-nxdomain-names";
+              title = "LAN client looking up many nonexistent domains";
+              logql = "count by (IP) (sum by (IP, QH) (count_over_time(${nxdomainSelector} [1h])))";
+              threshold = 100;
+              from = 3600;
+              for = "10m";
+              summary = "{{ $labels.IP }} looked up over 100 distinct nonexistent names in 1h (DGA-shaped); see its Rcode=3 names in Explore ({job=adguard-querylog})";
+            })
             (mkThresholdRule {
               uid = "restic-backup-stale";
               title = "restic backup hasn't run recently";
@@ -521,7 +541,10 @@ in
         {
           orgId = 1;
           receiver = "homelab-alerts";
-          group_by = [ "alertname" ];
+          group_by = [
+            "alertname"
+            "IP"
+          ];
           group_wait = "30s";
           group_interval = "5m";
           repeat_interval = "4h";

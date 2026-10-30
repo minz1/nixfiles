@@ -196,6 +196,8 @@ in
         ];
         # retention still runs via the compactor; this only closes the delete API
         deletion_mode = "disabled";
+        # adguard-nxdomain-names groups by (client, name); the default 500 errors exactly when it should fire
+        max_query_series = 5000;
       };
       compactor = {
         working_directory = "/var/lib/loki/compactor";
