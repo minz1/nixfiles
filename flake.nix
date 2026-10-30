@@ -330,6 +330,16 @@
               else
                 "touch $out"
             );
+            internal-proxy-lib =
+              let
+                failures = (import ./modules/lib/caddy-tests.nix { inherit lib; }).failures;
+              in
+              pkgs.runCommand "internal-proxy-lib" { } (
+                if failures == [ ] then
+                  "touch $out"
+                else
+                  throw "denyUnless tests failed: ${lib.concatStringsSep ", " failures}"
+              );
             fleet-negative = pkgs.runCommand "fleet-negative" { } (
               if passedNegatives == [ ] then
                 "touch $out"
