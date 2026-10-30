@@ -23,6 +23,7 @@ in
     ./observability-agent.nix
     ./backups.nix
     ./binary-cache.nix
+    ./internal-proxy.nix
     ../../common/wireguard.nix
   ];
 
