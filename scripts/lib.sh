@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared helpers — source this file, do not execute it directly.
+# Prepended by scripts/default.nix to scripts that call find_ram_dir.
 
 # Find a writable tmpfs directory suitable for staging secrets in RAM; prints the path to stdout, exits non-zero if none found.
 find_ram_dir() {

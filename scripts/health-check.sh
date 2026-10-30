@@ -6,7 +6,7 @@ failed=()
 
 check_host() {
     local host="$1" target out
-    target=$(just admin _target "$host")
+    target=$(fleet target "$host")
     # heredoc is quoted ('REMOTE') so it runs server-side verbatim; restart_threshold is passed as $1 rather than interpolated, so no client/server escaping to track.
     out=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" bash -s -- "$restart_threshold" <<'REMOTE'
 set -uo pipefail
@@ -36,7 +36,7 @@ REMOTE
 # obs-0-specific: catches the pieces that can be "active" while functionally dead.
 check_obs0_functional() {
     local target
-    target=$(just admin _target minz-obs-0)
+    target=$(fleet target minz-obs-0)
     local out
     out=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" bash -s <<'REMOTE'
 set -uo pipefail
@@ -64,7 +64,7 @@ REMOTE
     return $rc
 }
 
-for host in $(just deploy list); do
+for host in $(fleet hosts); do
     check_host "$host" || failed+=("$host")
 done
 

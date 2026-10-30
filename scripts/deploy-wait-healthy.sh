@@ -2,7 +2,7 @@
 set -euo pipefail
 host="$1"
 timeout="${2:-120}"
-target=$(just admin _target "$host")
+target=$(fleet target "$host")
 deadline=$((SECONDS + timeout))
 until ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" true 2>/dev/null; do
     if [ "$SECONDS" -ge "$deadline" ]; then

@@ -8,7 +8,7 @@ incus_guests=(minz-obs-0 minz-authentik-0 minz-pki-0 minz-game-0 minz-services-0
 
 reboot_and_wait() {
     local host="$1" target deadline
-    target=$(just admin _target "$host")
+    target=$(fleet target "$host")
     echo "==> Rebooting $host ($target)"
     ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" 'sudo reboot' || true
 
@@ -23,7 +23,7 @@ reboot_and_wait() {
     done
 
     echo "Waiting for $host to come back..."
-    if "${ROOT_DIR}/scripts/deploy-wait-healthy.sh" "$host" 180; then
+    if deploy-wait-healthy "$host" 180; then
         echo "$host back up"
     else
         echo "$host FAILED to come back" >&2
@@ -41,7 +41,7 @@ reboot_and_wait "$incus_host" || failed+=("$incus_host")
 
 echo "==> Waiting for Incus guests to autostart on $incus_host..."
 for h in "${incus_guests[@]}"; do
-    "${ROOT_DIR}/scripts/deploy-wait-healthy.sh" "$h" 180 && echo "$h back up" || failed+=("$h")
+    deploy-wait-healthy "$h" 180 && echo "$h back up" || failed+=("$h")
 done
 
 if [ "${#failed[@]}" -gt 0 ]; then

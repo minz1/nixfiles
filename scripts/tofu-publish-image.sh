@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Publishes both bootstrap images to the S3 simplestreams registry as two products in one images.json. Prereqs: result/{nixos.qcow2,metadata.tar.xz} + result-container/{rootfs.tar.xz,metadata.tar.xz} built, incus-images bucket exists (rustfs-bucket-setup), secrets/tofu.env has AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY.
 set -euo pipefail
+repo=$(git rev-parse --show-toplevel)
 
-cd "${ROOT_DIR}"
+cd "${repo}"
 
 sha() { sha256sum "$1" | cut -d' ' -f1; }
 
@@ -100,7 +101,7 @@ endpoint="http://10.8.0.1:9000"
 if [ -n "${AWS_ACCESS_KEY_ID:-}" ]; then
   _aws() { aws --endpoint-url "$endpoint" "$@"; }
 else
-  creds="${ROOT_DIR}/secrets/tofu.env"
+  creds="${repo}/secrets/tofu.env"
   _aws() { sops exec-env "$creds" "aws --endpoint-url $endpoint $*"; }
 fi
 

@@ -2,6 +2,7 @@
 # Builds closures and records their paths for ci-attic-push.sh. Never sees the push token.
 # Assumes root in the job container (writes /etc/hosts, CA bundle).
 set -euo pipefail
+repo=$(git rev-parse --show-toplevel)
 
 hosts=("$@")
 if [ "${#hosts[@]}" -eq 0 ]; then
@@ -9,15 +10,13 @@ if [ "${#hosts[@]}" -eq 0 ]; then
     exit 0
 fi
 
-attic_ip=$(TOPO="${ROOT_DIR}/common/topology.nix" nix eval --raw --impure --expr '
-  let t = import (builtins.getEnv "TOPO");
-  in t.nodes."minz-attic-0".networks.incus_bridge.ip')
+attic_ip=$(fleet address minz-attic-0)
 
 if ! grep -q ' minz-attic-0.internal$' /etc/hosts; then
     echo "${attic_ip} minz-attic-0.internal" >> /etc/hosts
 fi
 
-cp "${ROOT_DIR}/hosts/minz-pki-0/root_ca.crt" /usr/local/share/ca-certificates/minz-pki-0-root.crt
+cp "${repo}/hosts/minz-pki-0/root_ca.crt" /usr/local/share/ca-certificates/minz-pki-0-root.crt
 update-ca-certificates
 
 attrs=()

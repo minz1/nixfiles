@@ -121,6 +121,23 @@
         inherit overlays;
       };
 
+      fleetJson = {
+        inherit (fleet) nodes;
+        phases = deployPhases;
+        addresses = lib.filterAttrs (_: a: a != null) (
+          builtins.mapAttrs (name: _: fleet.addressOf "minz-desktop" name) fleet.nodes
+        );
+        targets = builtins.mapAttrs (
+          name: node: "${node.sshUser}@${deployHostname name node}"
+        ) deployableNodes;
+      };
+
+      scripts = import ./scripts {
+        inherit pkgs lib fleetJson;
+        deploy-rs = deployPkgs.deploy-rs.deploy-rs;
+        nixos-anywhere = nixos-anywhere.packages.${system}.nixos-anywhere;
+      };
+
       # re-use deploy-rs binary from pkgs to avoid building it twice across two nixpkgs evals
       deployPkgs = import nixpkgs {
         inherit system;
@@ -249,32 +266,42 @@
 
       inherit deployPhases;
 
-      fleet = { inherit (fleet) nodes; };
+      fleet = fleetJson;
 
       checks.${system} =
-        let
-          t = import ./common/fleet/tests.nix {
-            inherit lib;
-            mkFleet = import ./common/fleet;
-          };
-          passedNegatives = builtins.filter (n: !n.failed) t.negative;
-        in
-        {
-          fleet-unit = pkgs.runCommand "fleet-unit" { } (
-            if t.unit == [ ] && t.positive then
-              "touch $out"
-            else
-              throw "fleet unit tests failed: ${builtins.toJSON t.unit}, base fixture evaluates: ${lib.boolToString t.positive}"
-          );
-          fleet-negative = pkgs.runCommand "fleet-negative" { } (
-            if passedNegatives == [ ] then
-              "touch $out"
-            else
-              throw "fleet fixtures that should fail evaluated cleanly: ${
-                lib.concatMapStringsSep ", " (n: n.name) passedNegatives
-              }"
-          );
-        };
+        scripts.packages
+        // scripts.checks
+        // (
+          let
+            t = import ./common/fleet/tests.nix {
+              inherit lib;
+              mkFleet = import ./common/fleet;
+            };
+            passedNegatives = builtins.filter (n: !n.failed) t.negative;
+          in
+          {
+            fleet-unit = pkgs.runCommand "fleet-unit" { } (
+              if t.unit == [ ] && t.positive then
+                "touch $out"
+              else
+                throw "fleet unit tests failed: ${builtins.toJSON t.unit}, base fixture evaluates: ${lib.boolToString t.positive}"
+            );
+            fleet-output = pkgs.runCommand "fleet-output" { } (
+              if self.packages.${system} ? fleet then
+                throw "packages.fleet shadows the fleet data output"
+              else
+                "touch $out"
+            );
+            fleet-negative = pkgs.runCommand "fleet-negative" { } (
+              if passedNegatives == [ ] then
+                "touch $out"
+              else
+                throw "fleet fixtures that should fail evaluated cleanly: ${
+                  lib.concatMapStringsSep ", " (n: n.name) passedNegatives
+                }"
+            );
+          }
+        );
 
       deploy.nodes = builtins.mapAttrs (name: node: {
         hostname = deployHostname name node;
@@ -292,17 +319,22 @@
           sops
           opentofu
           awscli2
-          nix-update
           jq
           curl
+          ssh-to-age
+          shellcheck
+          age
+          openssl
           deployPkgs.deploy-rs.deploy-rs
         ];
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
 
-      packages.${system} = {
+      packages.${system} = scripts.packages // {
         inherit (pkgs) adguard-exporter;
+        kexec-installer =
+          nixos-anywhere.inputs.nixos-images.packages.${system}.kexec-installer-nixos-unstable-noninteractive;
         deploy-rs = deployPkgs.deploy-rs.deploy-rs;
         nixos-anywhere = nixos-anywhere.packages.${system}.nixos-anywhere;
         incus-bootstrap-image = pkgs.runCommand "nixos-bootstrap-incus" { } ''

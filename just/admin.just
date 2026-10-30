@@ -1,12 +1,14 @@
 # /run/user/$UID, just's default tempdir for shebang recipes, is mounted noexec on many systems (e.g. WSL2) which makes every shebang recipe below fail with EACCES.
 set tempdir := "/tmp"
 
+flake := justfile_directory()
+
 # Fleet administration: disk usage reporting and Nix store GC. SSH targets are resolved via the deploy-rs flake output so IP-resolution logic is never duplicated here.
 
 # Resolve `user@host` SSH target for a node from the deploy.nodes flake output.
 [private]
 _target host:
-    @nix eval --raw ${ROOT_DIR}#deploy.nodes.{{ host }} --apply 'n: "${n.sshUser}@${n.hostname}"'
+    @nix run {{ flake }}#fleet-cli -- target {{ host }}
 
 # Show root/nix/persist disk usage, Nix store size, and system generation count on one host.
 disk-usage host:
@@ -78,39 +80,36 @@ reboot host:
     echo "==> Rebooting {{ host }} ($target)"
     ssh "$target" 'sudo reboot' || true
     echo "Waiting for {{ host }} to come back..."
-    ${ROOT_DIR}/scripts/deploy-wait-healthy.sh {{ host }} 180
+    nix run {{ flake }}#deploy-wait-healthy -- {{ host }} 180
 
 # Fleet-wide health check: failed units, crash-looping services, obs-0 functional probes. Not wired into deploy.
 health:
-    ${ROOT_DIR}/scripts/health-check.sh
+    nix run {{ flake }}#health-check
 
 # Reboot the full fleet (standalone hosts, then home-nix-0 which cascades its Incus guests).
 reboot-all:
-    ${ROOT_DIR}/scripts/reboot-fleet.sh
+    nix run {{ flake }}#reboot-fleet
 
 # Update flake inputs, then build every host closure so hash breakage (e.g. a pkgs.caddy.withPlugins vendor hash going stale) surfaces now, not at deploy time. Does not touch anything outside flake.lock.
 update:
-    nix flake update --flake "${ROOT_DIR}"
+    nix flake update --flake "{{ flake }}"
     just admin build-all
 
 # Build every host's system closure.
 build-all:
-    nix build --no-link $(just deploy list | sed "s|.*|${ROOT_DIR}#nixosConfigurations.&.config.system.build.toplevel|")
+    nix build --no-link $(just deploy list | sed "s|.*|{{ flake }}#nixosConfigurations.&.config.system.build.toplevel|")
 
 # Fail if anything tracked under secrets/ isn't sops-encrypted.
 check-secrets:
-    ${ROOT_DIR}/scripts/check-secrets-encrypted.sh
+    nix run {{ flake }}#check-secrets-encrypted
 
-# nix flake check + formatting + shellcheck on all scripts. Read-only; run before committing.
+# nix flake check (script tests and shellcheck included) + formatting. Read-only; run before committing.
 check:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "==> nix flake check"
-    nix flake check "${ROOT_DIR}"
+    nix flake check "{{ flake }}"
     echo "==> nix fmt --fail-on-change"
-    nix fmt -- --fail-on-change "${ROOT_DIR}"
-    echo "==> shellcheck scripts/*.sh scripts/router"
-    (cd "${ROOT_DIR}/scripts" && shellcheck -x ./*.sh)
-    (cd "${ROOT_DIR}/scripts/router" && shellcheck -s sh adguard-querylog && shellcheck -x ./*.sh)
+    nix fmt -- --fail-on-change "{{ flake }}"
     echo "==> secrets/ encrypted"
-    ${ROOT_DIR}/scripts/check-secrets-encrypted.sh
+    nix run {{ flake }}#check-secrets-encrypted

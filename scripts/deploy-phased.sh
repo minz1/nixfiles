@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
+repo=$(git rev-parse --show-toplevel) || exit 1
 
-phases_out=$(just deploy _phases) || exit 1
+phases_out=$(fleet phases) || exit 1
 mapfile -t phases <<< "$phases_out"
 total="${#phases[@]}"
 want=("$@")
@@ -15,7 +16,7 @@ attic_phase=-1
 for ((i = 0; i < total; i++)); do
     read -ra hs <<< "${phases[$i]}"
     for h in "${hs[@]}"; do
-        # shortcut: binary-cache host name hardcoded as in verify-attic-closure.sh, replaced by fleet data in OPS-5 B
+        # shortcut: binary-cache host name hardcoded as in verify-attic-closure.sh, replaced by the binary-cache role tag in OPS-5 A2
         [ "$h" = minz-attic-0 ] && attic_phase=$i
         if [ "${#want[@]}" -eq 0 ]; then
             selected+=("$h")
@@ -29,7 +30,7 @@ done
 
 attrs=()
 for h in "${selected[@]}"; do
-    attrs+=("${ROOT_DIR}#nixosConfigurations.${h}.config.system.build.toplevel")
+    attrs+=("${repo}#nixosConfigurations.${h}.config.system.build.toplevel")
 done
 built=$(nix build --no-link --print-out-paths "${attrs[@]}") || { echo "Build failed; nothing deployed." >&2; exit 1; }
 
@@ -57,7 +58,7 @@ pending_after() {
 attic_ok() {
     local host=$1 phase=$2 rc=0
     [ "${SKIP_ATTIC_VERIFY:-0}" = "1" ] && return 0
-    "${ROOT_DIR}/scripts/verify-attic-closure.sh" "$host" "${path_of[$host]}" || rc=$?
+    verify-attic-closure "$host" "${path_of[$host]}" || rc=$?
     [ "$rc" -eq 0 ] && return 0
     if [ "$rc" -eq 2 ] && [ "$phase" -le "$attic_phase" ]; then
         echo "${host}: Attic unreachable; deploying anyway (phase at or before the binary cache)" >&2
@@ -82,7 +83,7 @@ for ((i = 0; i < total; i++)); do
             phase_failed+=("$host (attic verify failed)")
             continue
         fi
-        if "${ROOT_DIR}/scripts/deploy-retry.sh" "$host"; then
+        if deploy-retry "$host"; then
             deployed_hosts+=("$host")
         else
             phase_failed+=("$host")
@@ -97,7 +98,7 @@ for ((i = 0; i < total; i++)); do
 
     unhealthy_hosts=()
     for host in ${deployed_hosts[@]+"${deployed_hosts[@]}"}; do
-        if ! "${ROOT_DIR}/scripts/deploy-wait-healthy.sh" "$host"; then
+        if ! deploy-wait-healthy "$host"; then
             unhealthy_hosts+=("$host")
             failed+=("$host (unreachable after deploy)")
         fi

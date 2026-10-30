@@ -18,4 +18,4 @@ token-file = "${config_dir}/token"
 CONF
 
 # --ignore-upstream-cache-filter: Attic skips storing paths it thinks are on cache.nixos.org — fatal, guests can't reach it.
-nix shell nixpkgs#attic-client --command attic push homelab --stdin --ignore-upstream-cache-filter < "$paths_file"
+attic push homelab --stdin --ignore-upstream-cache-filter < "$paths_file"

@@ -3,7 +3,7 @@
 # the directory, so without this a plaintext drop there would pass CI unnoticed.
 set -euo pipefail
 
-cd "${ROOT_DIR:-$(git rev-parse --show-toplevel)}"
+cd "$(git rev-parse --show-toplevel)"
 
 bad=()
 while IFS= read -r f; do

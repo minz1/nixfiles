@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+repo=$(git rev-parse --show-toplevel)
 
 host="${1:?usage: verify-attic-closure.sh <host> [<toplevel>]}"
 
 # IP, not the .internal DNS name — Caddy's route match and atticd's allowed-hosts both
 # accept it (hosts/minz-attic-0/configuration.nix), so this needs no DNS resolution on
 # whatever machine runs it, unlike fleet NixOS hosts which get the name via extraHosts.
-attic_ip=$(nix eval --raw "${ROOT_DIR}#deploy.nodes.minz-attic-0.hostname")
+attic_ip=$(fleet address minz-attic-0)
 attic_url="https://${attic_ip}/homelab"
 
 if nix config show substituters | grep -qF "minz-attic-0.internal"; then
@@ -19,14 +20,14 @@ if ! curl -fsS --max-time 5 "${attic_url}/nix-cache-info" > /dev/null; then
     exit 2
 fi
 
-path="${2:-$(nix build --no-link --print-out-paths "${ROOT_DIR}#nixosConfigurations.${host}.config.system.build.toplevel")}"
+path="${2:-$(nix build --no-link --print-out-paths "${repo}#nixosConfigurations.${host}.config.system.build.toplevel")}"
 
 local_json=$(nix path-info --json --json-format 1 -r "$path")
 
 # Reviewed, pinned exceptions for builds that aren't bit-reproducible across machines
 # (Rust codegen, bundled JS): "<store path> <Attic narHash>" per line. Pinning the hash means
 # Attic serving different bytes for the same path later still fails.
-allowlist="${ROOT_DIR}/scripts/attic-unreproducible.txt"
+allowlist="${repo}/scripts/attic-unreproducible.txt"
 declare -A allowed=()
 if [ -f "$allowlist" ]; then
     while read -r ap ah _; do

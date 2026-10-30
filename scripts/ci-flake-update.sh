@@ -6,5 +6,5 @@ set -euo pipefail
 
 nix flake update
 
-mapfile -t hosts < <(just deploy list)
-"${ROOT_DIR}/scripts/ci-build.sh" "${hosts[@]}"
+mapfile -t hosts < <(fleet hosts)
+ci-build "${hosts[@]}"

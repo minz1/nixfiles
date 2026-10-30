@@ -17,7 +17,7 @@ jobs:
 
       - name: Scan for secrets
         run: |
-          nix shell nixpkgs#gitleaks --command \
+          nix shell --inputs-from . nixpkgs#gitleaks --command \
             gitleaks detect --source . --redact --no-banner
 
       # gitleaks allowlists secrets/; this makes sure everything in there really is encrypted

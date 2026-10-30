@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
+repo=$(git rev-parse --show-toplevel)
 
-whitelist="${ROOT_DIR}/config/vulnix-whitelist.toml"
+whitelist="${repo}/config/vulnix-whitelist.toml"
 kev_url="https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 
 hosts=("$@")
 if [ "${#hosts[@]}" -eq 0 ]; then
-    mapfile -t hosts < <(just deploy list)
+    mapfile -t hosts < <(fleet hosts)
 fi
 
 kev_ids=$(curl -fsSL "$kev_url" | jq -c '[.vulnerabilities[].cveID]')
 
 any_kev=0
 for host in "${hosts[@]}"; do
-    drv=$(nix path-info --derivation "${ROOT_DIR}#nixosConfigurations.${host}.config.system.build.toplevel")
+    drv=$(nix path-info --derivation "${repo}#nixosConfigurations.${host}.config.system.build.toplevel")
 
-    findings=$(nix shell nixpkgs#vulnix --command vulnix --json -w "$whitelist" "$drv") || true
+    findings=$(vulnix --json -w "$whitelist" "$drv") || true
     if [ -z "$findings" ]; then
         echo "vulnix produced no output for $host" >&2
         any_kev=1

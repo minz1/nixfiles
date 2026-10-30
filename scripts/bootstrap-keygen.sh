@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-source "$(dirname "$0")/lib.sh"
 NODE="$1"
 RAM_DIR="$(find_ram_dir)"
 KEY_DIR="${RAM_DIR}/nixos-bootstrap-${NODE}/persist/etc/ssh"

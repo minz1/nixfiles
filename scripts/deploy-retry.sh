@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
+repo=$(git rev-parse --show-toplevel)
 host="$1"
 attempts="${2:-3}"
 # deploy-rs can exit while the remote activate (exec'd by activate-rs) still rolls back and holds the switch lock.
 wait_remote_idle() {
     local deadline=$((SECONDS + 600)) rc target
-    target=$(just admin _target "$host") || return 1
+    target=$(fleet target "$host") || return 1
     while :; do
         rc=0
         ssh -o BatchMode=yes -o ConnectTimeout=5 "$target" pgrep -x activate >/dev/null 2>&1 || rc=$?
@@ -19,7 +20,7 @@ wait_remote_idle() {
 }
 
 for ((i = 1; i <= attempts; i++)); do
-    if nix run "${ROOT_DIR}#deploy-rs" -- --skip-checks "${ROOT_DIR}#${host}"; then
+    if deploy --skip-checks "${repo}#${host}"; then
         exit 0
     fi
     echo "deploy of ${host} failed (attempt ${i}/${attempts})" >&2
