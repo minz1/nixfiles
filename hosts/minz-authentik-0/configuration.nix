@@ -76,118 +76,73 @@ in
     environmentFile = config.sops.templates.authentik-ldap-env.path;
   };
 
+  homelab.internalProxy.servers.authentik = {
+    port = authentikHttpsPort;
+    clientAuth = "require";
+    allowedClientNodes = [
+      "minz-vultr-nix-1"
+      "minz-obs-0"
+      "minz-game-0"
+    ];
+    # admin clients only: Tofu's authentik provider can't present a client cert. The rest of
+    # the mgmt subnet (both Vultr hosts, unmanaged devices) goes through mTLS like everyone else.
+    allowedSources = adminRanges;
+    routes = [
+      {
+        # preserve X-Forwarded-Host from edge Caddy when present; overwriting it
+        # breaks outpost proxy provider matching. Only applies when the caller
+        # actually set one — see below for direct/server-to-server callers.
+        match = [ { header.X-Forwarded-Host = [ "*" ]; } ];
+        handle = [
+          {
+            handler = "reverse_proxy";
+            upstreams = [ { dial = "localhost:${toString authentikPort}"; } ];
+            headers.request.set."X-Forwarded-Host" = [ "{http.request.header.X-Forwarded-Host}" ];
+          }
+        ];
+      }
+      {
+        # direct/server-to-server callers (Grafana's OIDC token exchange, mTLS
+        # clients) send no X-Forwarded-Host at all; don't force it to empty
+        # here — Caddy's own reverse_proxy default (the real incoming Host)
+        # is correct, and forcing empty makes Authentik 404 the request.
+        handle = [
+          {
+            handler = "reverse_proxy";
+            upstreams = [ { dial = "localhost:${toString authentikPort}"; } ];
+          }
+        ];
+      }
+    ];
+  };
+
   services.caddy = {
-    enable = true;
     package = pkgs.caddy.withPlugins {
       plugins = [ "github.com/mholt/caddy-l4@v0.1.2" ];
       hash = "sha256-Dz510teYCUvEA7MR8ERpaKsDHS5dBCDO+AjszV96si4=";
     };
 
-    settings = {
-      apps = {
-        tls = {
-          certificates = {
-            load_files = [
+    settings.apps = {
+      # the edge Caddy sets X-Forwarded-For from the real peer; without this every public client is the edge's IP
+      http.servers.authentik.trusted_proxies = {
+        source = "static";
+        ranges = [ "${edgeServer.networks.edge.ip}/32" ];
+      };
+      layer4 = {
+        servers = {
+          ldaps = {
+            listen = [ "0.0.0.0:${toString ldapTlsPort}" ];
+            routes = [
               {
-                certificate = "/var/lib/acme/minz-authentik-0.internal/cert.pem";
-                key = "/var/lib/acme/minz-authentik-0.internal/key.pem";
-                tags = [ "authentik" ];
+                handle = [
+                  { handler = "tls"; }
+                  {
+                    handler = "proxy";
+                    upstreams = [ { dial = [ "localhost:${toString ldapPort}" ]; } ];
+                  }
+                ];
               }
             ];
-          };
-        };
-        http = {
-          servers = {
-            authentik = {
-              listen = [ ":${toString authentikHttpsPort}" ];
-              automatic_https.disable = true;
-              strict_sni_host = false;
-              # the edge Caddy sets X-Forwarded-For from the real peer; without this every public client is the edge's IP
-              trusted_proxies = {
-                source = "static";
-                ranges = [ "${edgeServer.networks.edge.ip}/32" ];
-              };
-              tls_connection_policies = [
-                {
-                  # admin clients only: Tofu's authentik provider can't present a client cert. The rest of
-                  # the mgmt subnet (both Vultr hosts, unmanaged devices) goes through mTLS like everyone else.
-                  match.remote_ip.ranges = adminRanges;
-                  certificate_selection.any_tag = [ "authentik" ];
-                }
-                {
-                  certificate_selection.any_tag = [ "authentik" ];
-                  client_authentication = {
-                    trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];
-                    mode = "require_and_verify";
-                  };
-                }
-              ];
-              routes = [
-                {
-                  match = [
-                    {
-                      not = [
-                        {
-                          expression = ''{http.request.tls.client.subject} == "CN=minz-vultr-nix-1.internal" || {http.request.tls.client.subject} == "CN=minz-obs-0.internal" || {http.request.tls.client.subject} == "CN=minz-game-0.internal"'';
-                        }
-                        {
-                          remote_ip.ranges = adminRanges;
-                        }
-                      ];
-                    }
-                  ];
-                  handle = [
-                    {
-                      handler = "static_response";
-                      status_code = 403;
-                    }
-                  ];
-                }
-                {
-                  # preserve X-Forwarded-Host from edge Caddy when present; overwriting it
-                  # breaks outpost proxy provider matching. Only applies when the caller
-                  # actually set one — see below for direct/server-to-server callers.
-                  match = [ { header.X-Forwarded-Host = [ "*" ]; } ];
-                  handle = [
-                    {
-                      handler = "reverse_proxy";
-                      upstreams = [ { dial = "localhost:${toString authentikPort}"; } ];
-                      headers.request.set."X-Forwarded-Host" = [ "{http.request.header.X-Forwarded-Host}" ];
-                    }
-                  ];
-                }
-                {
-                  # direct/server-to-server callers (Grafana's OIDC token exchange, mTLS
-                  # clients) send no X-Forwarded-Host at all; don't force it to empty
-                  # here — Caddy's own reverse_proxy default (the real incoming Host)
-                  # is correct, and forcing empty makes Authentik 404 the request.
-                  handle = [
-                    {
-                      handler = "reverse_proxy";
-                      upstreams = [ { dial = "localhost:${toString authentikPort}"; } ];
-                    }
-                  ];
-                }
-              ];
-            };
-          };
-        };
-        layer4 = {
-          servers = {
-            ldaps = {
-              listen = [ "0.0.0.0:${toString ldapTlsPort}" ];
-              routes = [
-                {
-                  handle = [
-                    { handler = "tls"; }
-                    {
-                      handler = "proxy";
-                      upstreams = [ { dial = [ "localhost:${toString ldapPort}" ]; } ];
-                    }
-                  ];
-                }
-              ];
-            };
           };
         };
       };

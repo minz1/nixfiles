@@ -2,6 +2,7 @@
   hostName,
   endpoints,
   config,
+  lib,
   topology,
   node,
   ...
@@ -16,6 +17,7 @@ let
 
   mediaIp = topology.nodes.${topology.services.media-caddy.host}.networks.incus_bridge.ip;
   inherit (endpoints) loki;
+  inherit (import ../../modules/lib/caddy.nix { inherit lib topology; }) denyUnless;
 in
 {
   system.stateVersion = "25.11";
@@ -92,108 +94,68 @@ in
     environmentFile = config.sops.templates."ntfy-env".path;
   };
 
-  services.caddy = {
-    enable = true;
-    settings = {
-      apps = {
-        tls.certificates.load_files = [
+  homelab.internalProxy.servers.services = {
+    port = caddyHttpsPort;
+    # ntfy clients don't present one; the admin route below requires it
+    clientAuth = "verify_if_given";
+    routes = [
+      {
+        # media-fixer has no auth of its own (its approval endpoint gates destructive agent
+        # actions), so only the edge — which enforces Authentik forward_auth — gets through
+        match = [ { host = [ "admin.minz1.com" ]; } ];
+        handle = [
           {
-            certificate = "/var/lib/acme/minz-services-0.internal/cert.pem";
-            key = "/var/lib/acme/minz-services-0.internal/key.pem";
-            tags = [ "services" ];
+            handler = "subroute";
+            routes = [
+              (denyUnless { nodes = [ "minz-vultr-nix-1" ]; })
+              {
+                handle = [
+                  {
+                    handler = "reverse_proxy";
+                    upstreams = [ { dial = "127.0.0.1:${toString mediaFixerPort}"; } ];
+                    headers.request.set."Host" = [ "{http.request.host}" ];
+                  }
+                ];
+              }
+            ];
           }
         ];
-        http.servers.services = {
-          listen = [ ":${toString caddyHttpsPort}" ];
-          automatic_https.disable = true;
-          # the edge dials by IP (no SNI); client auth would otherwise auto-enable strict SNI and 421 every
-          # proxied Host. The admin route authorizes on the client cert CN, not SNI.
-          strict_sni_host = false;
-          tls_connection_policies = [
-            {
-              certificate_selection.any_tag = [ "services" ];
-              # ntfy clients don't present one; the admin route below requires it
-              client_authentication = {
-                trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];
-                mode = "verify_if_given";
-              };
-            }
-          ];
-          routes = [
-            {
-              # media-fixer has no auth of its own (its approval endpoint gates destructive agent
-              # actions), so only the edge — which enforces Authentik forward_auth — gets through
-              match = [ { host = [ "admin.minz1.com" ]; } ];
-              handle = [
-                {
-                  handler = "subroute";
-                  routes = [
-                    {
-                      match = [
-                        {
-                          not = [
-                            { expression = ''{http.request.tls.client.subject} == "CN=minz-vultr-nix-1.internal"''; }
-                          ];
-                        }
-                      ];
-                      handle = [
-                        {
-                          handler = "static_response";
-                          status_code = 403;
-                        }
-                      ];
-                    }
-                    {
-                      handle = [
-                        {
-                          handler = "reverse_proxy";
-                          upstreams = [ { dial = "127.0.0.1:${toString mediaFixerPort}"; } ];
-                          headers.request.set."Host" = [ "{http.request.host}" ];
-                        }
-                      ];
-                    }
-                  ];
-                }
-              ];
-            }
-            {
-              match = [
-                {
-                  host = [ "minz-services-0.internal" ];
-                  path = [ "/ingest/seerr" ];
-                  remote_ip.ranges = [ "${mediaIp}/32" ];
-                }
-              ];
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "127.0.0.1:${toString mediaFixerPort}"; } ];
-                  headers.request.set."Host" = [ "{http.request.host}" ];
-                }
-              ];
-            }
-            {
-              # .internal alias lets Grafana publish over the bridge instead of hairpinning through the edge
-              match = [
-                {
-                  host = [
-                    "ntfy.minz1.com"
-                    "minz-services-0.internal"
-                  ];
-                }
-              ];
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "localhost:${toString ntfyPort}"; } ];
-                  headers.request.set."Host" = [ "{http.request.host}" ];
-                }
-              ];
-            }
-          ];
-        };
-      };
-    };
+      }
+      {
+        match = [
+          {
+            host = [ "minz-services-0.internal" ];
+            path = [ "/ingest/seerr" ];
+            remote_ip.ranges = [ "${mediaIp}/32" ];
+          }
+        ];
+        handle = [
+          {
+            handler = "reverse_proxy";
+            upstreams = [ { dial = "127.0.0.1:${toString mediaFixerPort}"; } ];
+            headers.request.set."Host" = [ "{http.request.host}" ];
+          }
+        ];
+      }
+      {
+        # .internal alias lets Grafana publish over the bridge instead of hairpinning through the edge
+        match = [
+          {
+            host = [
+              "ntfy.minz1.com"
+              "minz-services-0.internal"
+            ];
+          }
+        ];
+        handle = [
+          {
+            handler = "reverse_proxy";
+            upstreams = [ { dial = "localhost:${toString ntfyPort}"; } ];
+            headers.request.set."Host" = [ "{http.request.host}" ];
+          }
+        ];
+      }
+    ];
   };
 
   networking.firewall.allowedTCPPorts = [

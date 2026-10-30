@@ -206,93 +206,22 @@ in
     };
   };
 
-  services.caddy = {
-    enable = true;
-    settings = {
-      apps = {
-        tls.certificates.load_files = [
-          {
-            certificate = "/var/lib/acme/minz-obs-0.internal/cert.pem";
-            key = "/var/lib/acme/minz-obs-0.internal/key.pem";
-            tags = [
-              "loki"
-              "grafana"
-            ];
-          }
-        ];
-        http.servers.grafana = {
-          listen = [ ":${toString grafanaHttpsPort}" ];
-          automatic_https.disable = true;
-          strict_sni_host = false;
-          tls_connection_policies = [
-            {
-              certificate_selection.any_tag = [ "grafana" ];
-              client_authentication = {
-                trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];
-                mode = "require_and_verify";
-              };
-            }
-          ];
-          routes = [
-            {
-              match = [
-                {
-                  not = [
-                    { expression = ''{http.request.tls.client.subject} == "CN=minz-vultr-nix-1.internal"''; }
-                  ];
-                }
-              ];
-              handle = [
-                {
-                  handler = "static_response";
-                  status_code = 403;
-                }
-              ];
-            }
-            {
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "127.0.0.1:${toString grafanaPort}"; } ];
-                  headers.request.set."Host" = [ "{http.request.host}" ];
-                }
-              ];
-            }
-          ];
-        };
-        http.servers.loki = {
-          listen = [ ":${toString lokiHttpsPort}" ];
-          automatic_https.disable = true;
-          # strict_sni_host=false: Loki accessed via IP with no SNI; mTLS provides auth.
-          # No fallback policy: a client outside these ranges or without a fleet cert fails the handshake.
-          strict_sni_host = false;
-          tls_connection_policies = [
-            {
-              match.remote_ip.ranges = [
-                topology.networks.incus_bridge.subnet
-                topology.networks.mgmt.subnet
-                topology.networks.edge.subnet
-              ];
-              certificate_selection.any_tag = [ "loki" ];
-              client_authentication = {
-                trusted_ca_certs_pem_files = [ "/etc/ssl/internal-ca.crt" ];
-                mode = "require_and_verify";
-              };
-            }
-          ];
-          routes = [
-            {
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "localhost:${toString lokiPort}"; } ];
-                  headers.request.set."Host" = [ "{http.request.host}" ];
-                }
-              ];
-            }
-          ];
-        };
-      };
+  homelab.internalProxy.servers = {
+    grafana = {
+      port = grafanaHttpsPort;
+      clientAuth = "require";
+      allowedClientNodes = [ "minz-vultr-nix-1" ];
+      upstream = grafanaPort;
+    };
+    loki = {
+      port = lokiHttpsPort;
+      clientAuth = "require";
+      handshakeSources = [
+        topology.networks.incus_bridge.subnet
+        topology.networks.mgmt.subnet
+        topology.networks.edge.subnet
+      ];
+      upstream = lokiPort;
     };
   };
 

@@ -96,6 +96,13 @@ in
     '';
   };
 
+  homelab.internalProxy.servers.webhook = {
+    address = gameIp;
+    port = webhookPort;
+    allowedSources = [ "${authentikIp}/32" ];
+    upstream = whitelistSyncPort;
+  };
+
   services.caddy = {
     enable = true;
     package = pkgs.caddy.withPlugins {
@@ -105,13 +112,6 @@ in
     settings = {
       logging.logs.default.level = "INFO";
       apps = {
-        tls.certificates.load_files = [
-          {
-            certificate = "/var/lib/acme/${hostName}.internal/cert.pem";
-            key = "/var/lib/acme/${hostName}.internal/key.pem";
-            tags = [ "game" ];
-          }
-        ];
         http.servers.forward_proxy = {
           listen = [ "${gameIp}:${toString proxyPort}" ];
           automatic_https.disable = true;
@@ -134,38 +134,6 @@ in
                       allow = false;
                     }
                   ];
-                }
-              ];
-            }
-          ];
-        };
-        http.servers.webhook = {
-          listen = [ "${gameIp}:${toString webhookPort}" ];
-          automatic_https.disable = true;
-          strict_sni_host = false;
-          tls_connection_policies = [ { certificate_selection.any_tag = [ "game" ]; } ];
-          routes = [
-            {
-              match = [
-                {
-                  not = [
-                    { remote_ip.ranges = [ "${authentikIp}/32" ]; }
-                  ];
-                }
-              ];
-              handle = [
-                {
-                  handler = "static_response";
-                  status_code = 403;
-                }
-              ];
-            }
-            {
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "127.0.0.1:${toString whitelistSyncPort}"; } ];
-                  headers.request.set."Host" = [ "{http.request.host}" ];
                 }
               ];
             }

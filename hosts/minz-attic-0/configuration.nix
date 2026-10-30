@@ -40,45 +40,27 @@ in
     };
   };
 
-  services.caddy = {
-    enable = true;
-    settings = {
-      apps = {
-        tls.certificates.load_files = [
+  homelab.internalProxy.servers.attic = {
+    port = caddyHttpsPort;
+    routes = [
+      {
+        match = [
           {
-            certificate = "/var/lib/acme/${hostName}.internal/cert.pem";
-            key = "/var/lib/acme/${hostName}.internal/key.pem";
-            tags = [ "attic" ];
+            host = [
+              "${hostName}.internal"
+              atticIp
+            ];
           }
         ];
-        http.servers.attic = {
-          listen = [ ":${toString caddyHttpsPort}" ];
-          automatic_https.disable = true;
-          tls_connection_policies = [
-            { certificate_selection.any_tag = [ "attic" ]; }
-          ];
-          routes = [
-            {
-              match = [
-                {
-                  host = [
-                    "${hostName}.internal"
-                    atticIp
-                  ];
-                }
-              ];
-              handle = [
-                {
-                  handler = "reverse_proxy";
-                  upstreams = [ { dial = "localhost:${toString atticPort}"; } ];
-                  headers.request.set."Host" = [ "{http.request.host}" ];
-                }
-              ];
-            }
-          ];
-        };
-      };
-    };
+        handle = [
+          {
+            handler = "reverse_proxy";
+            upstreams = [ { dial = "localhost:${toString atticPort}"; } ];
+            headers.request.set."Host" = [ "{http.request.host}" ];
+          }
+        ];
+      }
+    ];
   };
 
   networking.firewall.allowedTCPPorts = [
