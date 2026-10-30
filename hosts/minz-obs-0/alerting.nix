@@ -225,11 +225,11 @@ in
             (mkThresholdRule {
               uid = "node-scrape-down";
               title = "Host metrics unreachable";
-              expr = ''up{job=~"node|tunnel", instance!~"${criticalRe}"}'';
+              expr = ''up{job="node", instance!~"${criticalRe}"} or probe_success{job="tunnel"} or up{job="tunnel"}'';
               evaluatorType = "lt";
               evaluatorParams = [ 1 ];
               for = "10m";
-              summary = "{{ $labels.job }} scrape of {{ $labels.instance }} failing — host down, exporter down, or its TLS cert invalid";
+              summary = "{{ $labels.job }} check of {{ $labels.instance }} failing — host down, exporter down, its TLS cert invalid, or the WireGuard tunnel dead";
             })
             (mkThresholdRule {
               uid = "node-scrape-down-critical";
