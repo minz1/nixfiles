@@ -14,7 +14,7 @@ Anything not declared in this repo (Nix, tofu, repo scripts + just recipes) is t
 - Tofu: `just tofu ...`. Always review `plan` before `apply`.
 
 ## Deploy ordering
-`deployPhases` in flake.nix follows routing topology only. Service deps must be explicit: attic-0 (`binaryCache = true` in common/topology.nix) deploys in its own phase before its consumers via `dependsOnBinaryCache`. Phases: `[vultr-nix-0] [home-nix-0] [attic-0] [everything else + vultr-nix-1]`. Any new dep added this way must keep the old ordering transitively.
+`deployPhases` in flake.nix follows routing topology only. Service deps must be explicit: attic-0 (`services.attic.host` in common/services.nix) deploys in its own phase before its consumers via `dependsOnBinaryCache`. Phases: `[vultr-nix-0] [home-nix-0] [attic-0] [everything else + vultr-nix-1]`. Any new dep added this way must keep the old ordering transitively.
 
 ## flake.lock
 Before deploying, make sure flake.lock is not older than what the fleet runs (compare against the running systems' nixpkgs revision). Deploying a stale lock downgraded lego and broke ACME once.
