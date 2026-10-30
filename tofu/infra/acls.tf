@@ -9,11 +9,13 @@ resource "incus_network" "incusbr0" {
 }
 
 locals {
-  incus_bridge_subnet = "10.10.0.0/24"
-  mgmt_subnet         = "10.8.0.0/24"
-  edge_subnet         = "10.9.0.0/24"
-  authentik_ip        = "10.10.0.3"
-  desktop_ip          = "10.8.0.4"
+  incus_bridge_subnet = var.fleet.networks.incus_bridge.subnet
+  mgmt_subnet         = var.fleet.networks.mgmt.subnet
+  edge_subnet         = var.fleet.networks.edge.subnet
+  authentik_ip        = local.all_nodes[var.fleet.services.authentik.host].networks.incus_bridge.ip
+  services_ip         = local.all_nodes[var.fleet.services["services-caddy"].host].networks.incus_bridge.ip
+  admin_ips           = join(",", [for v in values(local.all_nodes) : v.networks.mgmt.ip if contains(v.roles, "admin-client")])
+  ports               = { for k, v in var.fleet.services : k => tostring(v.port) }
 
   # Shared ingress rules: SSH, ACME HTTP-01, node_exporter. Source empty = any.
   common_ingress = [
@@ -33,7 +35,7 @@ locals {
     },
     {
       action           = "allow"
-      destination_port = "9100"
+      destination_port = tostring(var.fleet.hostPorts["node-exporter"])
       protocol         = "tcp"
       description      = "Prometheus node_exporter"
       state            = "enabled"
@@ -72,21 +74,20 @@ locals {
     },
   ]
 
-  vm_acl_map = {
+  vm_acl_map = merge({
     "minz-pki-0"       = incus_network_acl.pki.name
     "minz-obs-0"       = incus_network_acl.obs.name
     "minz-authentik-0" = incus_network_acl.authentik.name
     "minz-services-0"  = incus_network_acl.services.name
     "minz-game-0"      = incus_network_acl.game.name
     "minz-attic-0"     = incus_network_acl.attic.name
-    "minz-runner-0"    = incus_network_acl.runner.name
-  }
+    }, {
+    for n, v in local.all_nodes : n => incus_network_acl.runner.name if contains(v.roles, "ci-runner")
+  })
 
   container_acl_map = {
     "minz-media-0" = incus_network_acl.media.name
   }
-
-  services_ip = "10.10.0.6"
 
   # IPv4 minus private/reserved ranges (0/8, 10/8, 100.64/10, 127/8, 169.254/16, 172.16/12,
   # 192.168/16, 224/4, 240/4). Incus evaluates reject before allow, so "internet but not internal"
@@ -154,7 +155,7 @@ resource "incus_network_acl" "pki" {
   ingress = concat(local.common_ingress, [
     {
       action           = "allow"
-      destination_port = "9443"
+      destination_port = local.ports["step-ca"]
       protocol         = "tcp"
       description      = "step-ca ACME directory"
       state            = "enabled"
@@ -173,7 +174,7 @@ resource "incus_network_acl" "pki" {
     {
       action           = "allow"
       destination      = local.mgmt_subnet
-      destination_port = "9000"
+      destination_port = local.ports.rustfs
       protocol         = "tcp"
       description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
@@ -189,7 +190,7 @@ resource "incus_network_acl" "services" {
   ingress = concat(local.common_ingress, [
     {
       action           = "allow"
-      destination_port = "443"
+      destination_port = local.ports["services-caddy"]
       protocol         = "tcp"
       description      = "Caddy HTTPS"
       state            = "enabled"
@@ -208,7 +209,7 @@ resource "incus_network_acl" "services" {
     {
       action           = "allow"
       destination      = local.mgmt_subnet
-      destination_port = "9000"
+      destination_port = local.ports.rustfs
       protocol         = "tcp"
       description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
@@ -225,14 +226,14 @@ resource "incus_network_acl" "obs" {
     {
       action           = "allow"
       source           = local.edge_subnet
-      destination_port = "3443"
+      destination_port = local.ports.grafana
       protocol         = "tcp"
       description      = "Grafana HTTPS+mTLS (proxied by edge Caddy)"
       state            = "enabled"
     },
     {
       action           = "allow"
-      destination_port = "3101"
+      destination_port = local.ports.loki
       protocol         = "tcp"
       description      = "Loki HTTPS push from fleet Alloy agents"
       state            = "enabled"
@@ -243,7 +244,7 @@ resource "incus_network_acl" "obs" {
     {
       action           = "allow"
       destination      = local.mgmt_subnet
-      destination_port = "9100"
+      destination_port = tostring(var.fleet.hostPorts["node-exporter"])
       protocol         = "tcp"
       description      = "node_exporter scraping of WG hosts"
       state            = "enabled"
@@ -265,12 +266,8 @@ resource "incus_network_acl" "obs" {
       state            = "enabled"
     },
     {
-      action = "allow"
-      destination = join(",", [
-        local.all_nodes["minz-vultr-nix-0"].networks.mgmt.ip,
-        local.all_nodes["minz-vultr-nix-1"].networks.mgmt.ip,
-        local.all_nodes["minz-vultr-nix-1"].networks.edge.ip,
-      ])
+      action      = "allow"
+      destination = join(",", var.fleet.tunnelEndpoints)
       protocol    = "icmp4"
       icmp_type   = "8"
       description = "Tunnel loss probe: ICMP echo to the WireGuard tunnel endpoints"
@@ -288,7 +285,7 @@ resource "incus_network_acl" "game" {
     {
       action           = "allow"
       source           = local.edge_subnet
-      destination_port = "25565"
+      destination_port = local.ports.minecraft
       protocol         = "tcp"
       description      = "Minecraft from Velocity (wg1 edge)"
       state            = "enabled"
@@ -296,7 +293,7 @@ resource "incus_network_acl" "game" {
     {
       action           = "allow"
       source           = local.mgmt_subnet
-      destination_port = "25565"
+      destination_port = local.ports.minecraft
       protocol         = "tcp"
       description      = "Minecraft direct access from mgmt WireGuard"
       state            = "enabled"
@@ -304,7 +301,7 @@ resource "incus_network_acl" "game" {
     {
       action           = "allow"
       source           = local.mgmt_subnet
-      destination_port = "25575"
+      destination_port = local.ports["minecraft-rcon"]
       protocol         = "tcp"
       description      = "RCON admin access from mgmt WireGuard"
       state            = "enabled"
@@ -312,7 +309,7 @@ resource "incus_network_acl" "game" {
     {
       action           = "allow"
       source           = local.authentik_ip
-      destination_port = "443"
+      destination_port = local.ports["game-caddy"]
       protocol         = "tcp"
       description      = "whitelist-sync webhook from Authentik"
       state            = "enabled"
@@ -338,7 +335,7 @@ resource "incus_network_acl" "game" {
     {
       action           = "allow"
       destination      = local.mgmt_subnet
-      destination_port = "9000"
+      destination_port = local.ports.rustfs
       protocol         = "tcp"
       description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
@@ -357,7 +354,7 @@ resource "incus_network_acl" "runner" {
     {
       action           = "allow"
       destination      = local.mgmt_subnet
-      destination_port = "3000"
+      destination_port = local.ports.forgejo
       protocol         = "tcp"
       description      = "Forgejo API (job reporting, task polling)"
       state            = "enabled"
@@ -389,7 +386,7 @@ resource "incus_network_acl" "attic" {
   ingress = concat(local.common_ingress, [
     {
       action           = "allow"
-      destination_port = "443"
+      destination_port = local.ports.attic
       protocol         = "tcp"
       description      = "Caddy HTTPS (Attic cache)"
       state            = "enabled"
@@ -408,14 +405,14 @@ resource "incus_network_acl" "authentik" {
   ingress = concat(local.common_ingress, [
     {
       action           = "allow"
-      destination_port = "9443"
+      destination_port = local.ports.authentik
       protocol         = "tcp"
       description      = "Authentik HTTPS"
       state            = "enabled"
     },
     {
       action           = "allow"
-      destination_port = "6636"
+      destination_port = local.ports["authentik-ldaps"]
       protocol         = "tcp"
       description      = "Authentik LDAPS"
       state            = "enabled"
@@ -442,7 +439,7 @@ resource "incus_network_acl" "authentik" {
     {
       action           = "allow"
       destination      = local.mgmt_subnet
-      destination_port = "9000"
+      destination_port = local.ports.rustfs
       protocol         = "tcp"
       description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
@@ -459,7 +456,7 @@ resource "incus_network_acl" "media" {
   ingress = concat(local.common_ingress, [
     {
       action           = "allow"
-      destination_port = "443"
+      destination_port = local.ports["media-caddy"]
       protocol         = "tcp"
       description      = "Caddy HTTPS"
       state            = "enabled"
@@ -467,15 +464,15 @@ resource "incus_network_acl" "media" {
     {
       action           = "allow"
       source           = local.services_ip
-      destination_port = "8443,8920,9443"
+      destination_port = join(",", [local.ports["decypharr-ui"], local.ports["jellyfin-api"], local.ports["media-agent"]])
       protocol         = "tcp"
       description      = "media-fixer on services-0 via Caddy: decypharr, jellyfin, media-agent"
       state            = "enabled"
     },
     {
       action           = "allow"
-      source           = local.desktop_ip
-      destination_port = "8443"
+      source           = local.admin_ips
+      destination_port = local.ports["decypharr-ui"]
       protocol         = "tcp"
       description      = "decypharr UI via Caddy, desktop over WireGuard only"
       state            = "enabled"
@@ -486,7 +483,7 @@ resource "incus_network_acl" "media" {
     {
       action           = "allow"
       destination      = local.mgmt_subnet
-      destination_port = "9000"
+      destination_port = local.ports.rustfs
       protocol         = "tcp"
       description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
