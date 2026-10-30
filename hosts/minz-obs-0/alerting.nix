@@ -1,6 +1,22 @@
-{ ... }:
+{
+  config,
+  lib,
+  fleet,
+  ...
+}:
 
 let
+  criticalInstances = map (n: "${fleet.addressOf "minz-obs-0" n}:9100") [
+    "minz-vultr-nix-0"
+    "minz-pki-0"
+  ];
+  criticalRe = lib.concatStringsSep "|" criticalInstances;
+  nodeTargets =
+    lib.concatMap (s: s.targets)
+      (lib.findFirst (
+        j: j.job_name == "node"
+      ) null config.services.victoriametrics.prometheusConfig.scrape_configs).static_configs;
+
   # alert rule shape: query A -> threshold expression C -> condition = C (Grafana's current UI-exported shape)
   mkRule =
     {
@@ -9,6 +25,7 @@ let
       for ? "5m",
       summary,
       noDataState ? "OK",
+      severity ? "warning",
       query,
       evaluatorType,
       evaluatorParams,
@@ -23,7 +40,7 @@ let
       condition = "C";
       execErrState = "Error";
       annotations.summary = summary;
-      labels.severity = "warning";
+      labels.severity = severity;
       data = [
         (query // { refId = "A"; })
         {
@@ -100,6 +117,13 @@ let
     );
 in
 {
+  assertions = [
+    {
+      assertion = lib.all (i: lib.elem i nodeTargets) criticalInstances;
+      message = "alerting.nix: critical instances ${criticalRe} are not all node scrape targets";
+    }
+  ];
+
   services.grafana.provision = {
     # alerting provisioning only interpolates $VAR from the process env, not $__file{}
     alerting.contactPoints.settings = {
@@ -196,11 +220,63 @@ in
             (mkThresholdRule {
               uid = "node-scrape-down";
               title = "Host metrics unreachable";
-              expr = ''up{job=~"node|tunnel"}'';
+              expr = ''up{job=~"node|tunnel", instance!~"${criticalRe}"}'';
               evaluatorType = "lt";
               evaluatorParams = [ 1 ];
               for = "10m";
               summary = "{{ $labels.job }} scrape of {{ $labels.instance }} failing — host down, exporter down, or its TLS cert invalid";
+            })
+            (mkThresholdRule {
+              uid = "node-scrape-down-critical";
+              title = "Hub/PKI metrics unreachable";
+              expr = ''up{job="node", instance=~"${criticalRe}"}'';
+              evaluatorType = "lt";
+              evaluatorParams = [ 1 ];
+              for = "10m";
+              severity = "critical";
+              summary = "{{ $labels.instance }} (WireGuard hub or step-ca) scrape failing — host down, exporter down, or its TLS cert invalid";
+            })
+            (mkThresholdRule {
+              uid = "memory-low";
+              title = "Available memory low";
+              expr = "node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100";
+              evaluatorType = "lt";
+              evaluatorParams = [ 5 ];
+              for = "15m";
+              summary = "{{ $labels.instance }} has under 5% memory available";
+            })
+            (mkThresholdRule {
+              uid = "zfs-pool-unhealthy";
+              title = "ZFS pool not online";
+              # LXC guests export the host's pool too; max by collapses the duplicates
+              expr = ''max by (zpool, state) (node_zfs_zpool_state{state!="online"})'';
+              evaluatorType = "gt";
+              evaluatorParams = [ 0 ];
+              summary = "ZFS pool {{ $labels.zpool }} is {{ $labels.state }}";
+            })
+            (mkThresholdRule {
+              uid = "disk-decypharr-cache";
+              title = "Decypharr cache volume nearly full";
+              expr = ''100 - (node_filesystem_avail_bytes{mountpoint="/var/cache/decypharr"} / node_filesystem_size_bytes{mountpoint="/var/cache/decypharr"} * 100)'';
+              evaluatorType = "gt";
+              evaluatorParams = [ 90 ];
+              for = "30m";
+              summary = "{{ $labels.instance }} decypharr cache volume above 90% — eviction isn't keeping up with diskCacheSize";
+            })
+            (mkLogCountRule {
+              uid = "oom-kill";
+              title = "Kernel OOM kill";
+              logql = ''sum by (host, memcg, task) (count_over_time({transport="kernel"} |= "oom-kill:" | regexp "task_memcg=(?P<memcg>[^,]+),task=(?P<task>[^,]+)" [10m]))'';
+              threshold = 0;
+              summary = "{{ $labels.host }}: kernel OOM-killed {{ $labels.task }} in {{ $labels.memcg }}";
+            })
+            (mkLogCountRule {
+              uid = "crash-loop";
+              title = "Service crash loop";
+              logql = ''sum by (host, svc) (count_over_time({syslog_identifier="systemd"} |= "Scheduled restart job" | regexp "^(?P<svc>[^:]+): Scheduled restart" [30m]))'';
+              threshold = 3;
+              from = 1800;
+              summary = "{{ $labels.svc }} on {{ $labels.host }} restarted more than 3 times in 30m";
             })
             (mkThresholdRule {
               uid = "service-down";
@@ -446,6 +522,18 @@ in
           group_wait = "30s";
           group_interval = "5m";
           repeat_interval = "4h";
+          routes = [
+            {
+              object_matchers = [
+                [
+                  "severity"
+                  "="
+                  "critical"
+                ]
+              ];
+              repeat_interval = "1h";
+            }
+          ];
         }
       ];
     };
