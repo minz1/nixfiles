@@ -10,10 +10,11 @@ if [ "${#hosts[@]}" -eq 0 ]; then
     exit 0
 fi
 
-attic_ip=$(fleet address minz-attic-0)
+attic_host=$(fleet host attic)
+attic_ip=$(fleet address "$attic_host")
 
-if ! grep -q ' minz-attic-0.internal$' /etc/hosts; then
-    echo "${attic_ip} minz-attic-0.internal" >> /etc/hosts
+if ! grep -q " ${attic_host}.internal\$" /etc/hosts; then
+    echo "${attic_ip} ${attic_host}.internal" >> /etc/hosts
 fi
 
 cp "${repo}/hosts/minz-pki-0/root_ca.crt" /usr/local/share/ca-certificates/minz-pki-0-root.crt
@@ -26,7 +27,7 @@ done
 
 paths=$(nix build \
     --no-update-lock-file \
-    --extra-substituters https://minz-attic-0.internal/homelab \
+    --extra-substituters "https://${attic_host}.internal/homelab" \
     --extra-trusted-public-keys "homelab:/832u4B/jZREiimqBzchHGyXQZaUVKoG4TlO/nUJh10=" \
     --no-link --print-out-paths "${attrs[@]}")
 echo "$paths" > "${RUNNER_TEMP:-/tmp}/attic-paths.txt"

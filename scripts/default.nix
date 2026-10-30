@@ -102,6 +102,7 @@ let
       runtimeInputs = [
         attic-client
         coreutils
+        p.fleet-cli
       ];
     };
     ci-build = mkScript "ci-build" {

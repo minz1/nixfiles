@@ -26,7 +26,12 @@ rm -f err
 [ "$(bash "$fleet" hosts --kind vps)" = a ] || fail "7: hosts --kind vps"
 [ -z "$(bash "$fleet" hosts --kind device)" ] || fail "7: --kind device lists an undeployable node"
 
-for args in "" bogus "target" "target a b" "hosts --kind" "hosts --bogus vps"; do
+[ "$(bash "$fleet" host cache)" = c ] || fail "8: host cache"
+rc=0
+bash "$fleet" host nope > /dev/null 2>&1 || rc=$?
+[ "$rc" -eq 1 ] || fail "8: unknown service exit $rc, want 1"
+
+for args in "" bogus "target" "target a b" "hosts --kind" "hosts --bogus vps" "host" "host a b"; do
     rc=0
     read -ra argv <<< "$args"
     bash "$fleet" "${argv[@]}" > /dev/null 2>&1 || rc=$?

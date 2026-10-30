@@ -7,10 +7,11 @@ host="${1:?usage: verify-attic-closure.sh <host> [<toplevel>]}"
 # IP, not the .internal DNS name — Caddy's route match and atticd's allowed-hosts both
 # accept it (hosts/minz-attic-0/configuration.nix), so this needs no DNS resolution on
 # whatever machine runs it, unlike fleet NixOS hosts which get the name via extraHosts.
-attic_ip=$(fleet address minz-attic-0)
+attic_host=$(fleet host attic)
+attic_ip=$(fleet address "$attic_host")
 attic_url="https://${attic_ip}/homelab"
 
-if nix config show substituters | grep -qF "minz-attic-0.internal"; then
+if nix config show substituters | grep -qF "${attic_host}.internal"; then
     echo "refusing to run: local substituters already include the Attic cache — this check is circular" >&2
     exit 1
 fi

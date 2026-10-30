@@ -4,6 +4,7 @@ set -euo pipefail
 
 : "${ATTIC_PUSH_TOKEN:?ATTIC_PUSH_TOKEN not set}"
 paths_file="${RUNNER_TEMP:-/tmp}/attic-paths.txt"
+attic_host=$(fleet host attic)
 
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/attic"
 mkdir -p "$config_dir"
@@ -13,7 +14,7 @@ cat > "${config_dir}/config.toml" << CONF
 default-server = "homelab"
 
 [servers.homelab]
-endpoint = "https://minz-attic-0.internal/"
+endpoint = "https://${attic_host}.internal/"
 token-file = "${config_dir}/token"
 CONF
 

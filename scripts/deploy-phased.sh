@@ -13,14 +13,14 @@ for w in "$@"; do
     }
 done
 failed=()
+attic_host=$(fleet host attic) || exit 1
 
 selected=()
 attic_phase=-1
 for ((i = 0; i < total; i++)); do
     read -ra hs <<< "${phases[$i]}"
     for h in "${hs[@]}"; do
-        # shortcut: binary-cache host name hardcoded as in verify-attic-closure.sh, replaced by the binary-cache role tag in OPS-5 A2
-        [ "$h" = minz-attic-0 ] && attic_phase=$i
+        [ "$h" = "$attic_host" ] && attic_phase=$i
         if [ "${#want[@]}" -eq 0 ]; then
             selected+=("$h")
         else

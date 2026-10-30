@@ -2,12 +2,12 @@
 set -euo pipefail
 
 usage() {
-    echo "usage: fleet hosts [--kind <kind>] | phases | target <host> | address <node>" >&2
+    echo "usage: fleet hosts [--kind <kind>] | phases | target <host> | address <node> | host <service>" >&2
     exit 2
 }
 
 lookup() {
-    jq -er --arg k "$2" ".${1}[\$k] // empty" "$FLEET_JSON" || {
+    jq -er --arg k "$2" ".${1}[\$k]${3:-} // empty" "$FLEET_JSON" || {
         echo "fleet: unknown host $2" >&2
         exit 1
     }
@@ -32,6 +32,10 @@ case "${1:-}" in
     address)
         [ "$#" -eq 2 ] || usage
         lookup addresses "$2"
+        ;;
+    host)
+        [ "$#" -eq 2 ] || usage
+        lookup services "$2" .host
         ;;
     *) usage ;;
 esac
