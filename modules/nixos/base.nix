@@ -46,7 +46,6 @@ in
   networking.useDHCP = false;
 
   boot.tmp.cleanOnBoot = true;
-  services.logrotate.checkConfig = false;
 
   boot.kernel.sysctl = {
     "kernel.dmesg_restrict" = 1;

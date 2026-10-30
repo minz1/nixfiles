@@ -74,9 +74,6 @@ in
     wants = [ "step-ca.service" ];
   };
 
-  # backupPrepareCommand/backupCleanupCommand need systemctl on PATH — not there by default.
-  systemd.services."restic-backups-step-ca-db".path = [ pkgs.systemd ];
-
   environment.persistence."/persist".directories = [
     {
       directory = "/var/lib/private/step-ca";

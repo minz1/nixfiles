@@ -20,7 +20,7 @@ terraform {
     }
     sops = {
       source  = "carlpett/sops"
-      version = ">= 0.7"
+      version = "~> 1.4"
     }
     seerr = {
       source = "josh-archer/seerr"

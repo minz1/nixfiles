@@ -97,12 +97,6 @@ in
         loki.process "scrub" {
           forward_to = [loki.write.default.receiver]
 
-          // obs-0 Loki logs this on every query because log deletion is disabled on purpose
-          stage.drop {
-            expression          = "error loading cache generation numbers.*deletion is not available for this tenant"
-            drop_counter_reason = "loki_cache_gen_noise"
-          }
-
           stage.replace {
             expression = "(?:ma_username|ma_password|apikey|api_key|passwd)=([^&[:space:]]+)"
             replace    = "REDACTED"

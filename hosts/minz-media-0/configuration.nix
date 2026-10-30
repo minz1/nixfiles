@@ -140,6 +140,7 @@ in
     owner = "oci";
   };
   sops.templates.seadexerr-env = {
+    restartUnits = [ "seadexerr.service" ];
     content = ''
       SONARR_API_KEY=${config.sops.placeholder.sonarr_api_key}
       RADARR_API_KEY=${config.sops.placeholder.radarr_api_key}
@@ -731,35 +732,6 @@ in
             { certificate_selection.any_tag = [ "media" ]; }
           ];
           routes = [
-            # Temporary (remove after 2026-10-27): flush browsers' heuristically cached pre-plugin web chunks.
-            {
-              match = [
-                {
-                  host = [ "jellyfin.minz1.com" ];
-                  path = [
-                    "/web/"
-                    "/web/index.html"
-                  ];
-                }
-              ];
-              handle = [
-                (
-                  jellyfinProxy
-                  // {
-                    headers = {
-                      request.delete = [
-                        "If-None-Match"
-                        "If-Modified-Since"
-                      ];
-                      response.set = {
-                        "Cache-Control" = [ "no-cache" ];
-                        "Clear-Site-Data" = [ ''"cache"'' ];
-                      };
-                    };
-                  }
-                )
-              ];
-            }
             # Nix store files are dated 1970, so without this browsers cache /web/ for years.
             {
               match = [
@@ -869,7 +841,6 @@ in
   # The apps keep live SQLite DBs in WAL mode, so they're stopped for the ~30s snapshot; decypharr
   # stays up since it backs the streaming mounts, and its small DB is the one hot copy. Its usenet metadata is
   # its own target so the arrs' stop window doesn't grow with it.
-  systemd.services."restic-backups-media-configs".path = [ pkgs.systemd ];
   homelab.backups.targets.media-configs = {
     paths = [
       "/var/lib/sonarr"

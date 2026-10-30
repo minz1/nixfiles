@@ -3,15 +3,16 @@ terraform {
 
   required_providers {
     incus = {
-      source = "lxc/incus"
+      source  = "lxc/incus"
+      version = "~> 1.2"
     }
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.0"
+      version = "~> 6.70"
     }
     sops = {
       source  = "carlpett/sops"
-      version = ">= 0.7"
+      version = "~> 1.4"
     }
   }
 
