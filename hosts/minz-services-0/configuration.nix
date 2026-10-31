@@ -4,13 +4,10 @@
   config,
   lib,
   topology,
-  node,
   ...
 }:
 
 let
-  servicesIp = node.networks.incus_bridge.ip;
-
   caddyHttpsPort = topology.services.services-caddy.port;
   mediaFixerPort = 8081;
   ntfyPort = 2586; # module default listen-http = "127.0.0.1:2586"

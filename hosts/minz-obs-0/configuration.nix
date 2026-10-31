@@ -4,14 +4,11 @@
   pkgs,
   topology,
   fleet,
-  node,
   mkHardened,
   ...
 }:
 
 let
-  obsIp = node.networks.incus_bridge.ip;
-
   victoriaPort = 9090;
   lokiPort = 3100;
   lokiHttpsPort = topology.services.loki.port;

@@ -3,7 +3,6 @@
   pkgs,
   lib,
   authentik-nix,
-  node,
   topology,
   fleet,
   mkHardened,
@@ -11,8 +10,6 @@
 }:
 
 let
-  authentikIp = node.networks.incus_bridge.ip;
-
   authentikPort = 9000;
   adminRanges = map (n: "${topology.nodes.${n}.networks.mgmt.ip}/32") (fleet.withRole "admin-client");
   edgeServer = lib.findFirst (n: (n.networks.edge.role or null) == "server") null (
