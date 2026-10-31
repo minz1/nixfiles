@@ -32,9 +32,8 @@ in
           uuid = "c0787101-0b04-4fc2-8abd-1c28262828ad";
         };
         cache.enabled = false;
-        container = {
-          docker_host = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
-        };
+        # "-": job containers get no podman socket; the daemon finds it via DOCKER_HOST.
+        container.docker_host = "-";
       };
       secrets.server.connections.default.token_url = config.sops.secrets.forgejo_runner_token.path;
       # Rootless podman under a dedicated user — same reasoning as the pre-migration setup on vultr-nix-0.
@@ -76,6 +75,7 @@ in
   systemd.services."forgejo-runner-minz_forgejo" = {
     after = [ "user@${toString config.users.users.podman-runner.uid}.service" ];
     wants = [ "user@${toString config.users.users.podman-runner.uid}.service" ];
+    environment.DOCKER_HOST = "unix:///run/user/${toString config.users.users.podman-runner.uid}/podman/podman.sock";
     serviceConfig = {
       DynamicUser = lib.mkForce false;
       User = lib.mkForce "podman-runner";
