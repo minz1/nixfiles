@@ -348,6 +348,36 @@
                   lib.concatMapStringsSep ", " (n: n.name) passedNegatives
                 }"
             );
+            internal-proxy-assertions =
+              let
+                fixtures = {
+                  "needs clientAuth" = {
+                    homelab.internalProxy.servers.t.allowedClientNodes = [ "minz-services-0" ];
+                  };
+                  "admits every fleet cert" = {
+                    homelab.internalProxy.servers.t.clientAuth = "require";
+                  };
+                  "set outside the module" = {
+                    services.caddy.settings.apps.http.servers.t.routes = lib.mkBefore [ { } ];
+                  };
+                };
+                fires =
+                  msg: m:
+                  lib.any (a: !a.assertion && lib.hasInfix msg a.message)
+                    (nixosConfigurations.minz-media-0.extendModules {
+                      modules = [
+                        { homelab.internalProxy.servers.t.port = 1; }
+                        m
+                      ];
+                    }).config.assertions;
+                missed = lib.attrNames (lib.filterAttrs (msg: m: !fires msg m) fixtures);
+              in
+              pkgs.runCommand "internal-proxy-assertions" { } (
+                if missed == [ ] then
+                  "touch $out"
+                else
+                  throw "internalProxy assertions did not fire: ${lib.concatStringsSep ", " missed}"
+              );
           }
         );
 
