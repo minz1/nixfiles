@@ -176,6 +176,13 @@ in
   services = services';
   hostPorts = guard cfg.hostPorts;
   withRole = role: map (n: n.name) (filter (n: lib.elem role n.roles) nodeList);
+  fleetSourcesFor =
+    host:
+    filter (ip: ip != null) (
+      map (n: addressOf host n.name) (
+        filter (n: n.name != host && (n.kind != "device" || lib.elem "admin-client" n.roles)) nodeList
+      )
+    );
   tunnelEndpoints = lib.sort lib.lessThan (
     map (m: m.ip) (
       filter (m: nodes.${m.node}.kind == "vps" && cfg.networks.${m.net}.type == "wireguard") memberships

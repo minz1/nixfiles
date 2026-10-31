@@ -31,9 +31,7 @@ in
       '';
     };
 
-    networking.firewall.interfaces = lib.mkIf scrapedViaMgmt {
-      ${topology.networks.mgmt.interface}.allowedTCPPorts = [ topology.hostPorts.node-exporter ];
-    };
+    homelab.wireguard.fleetTCPPorts = lib.mkIf scrapedViaMgmt [ topology.hostPorts.node-exporter ];
 
     services.prometheus.exporters.node = {
       enable = true;

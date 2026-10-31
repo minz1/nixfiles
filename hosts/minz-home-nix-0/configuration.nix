@@ -75,10 +75,8 @@ in
 
   networking.nftables.enable = true;
   networking.firewall.trustedInterfaces = [ incusNetwork.interface ];
-  networking.firewall.interfaces.${topology.networks.mgmt.interface}.allowedTCPPorts = [
-    22
-    incusApiPort
-  ];
+  networking.firewall.interfaces.${topology.networks.mgmt.interface}.allowedTCPPorts = [ 22 ];
+  homelab.wireguard.fleetTCPPorts = [ incusApiPort ];
   networking.firewall.interfaces.${lanNetwork.interface}.allowedTCPPorts = [ 22 ];
 
   systemd.network = {

@@ -95,6 +95,7 @@
           isGuest
           withRole
           tunnelEndpoints
+          fleetSourcesFor
           ;
       };
       inherit (fleet) isGuest;
@@ -377,6 +378,54 @@
                   "touch $out"
                 else
                   throw "internalProxy assertions did not fire: ${lib.concatStringsSep ", " missed}"
+              );
+
+            wg-sources-assertions =
+              let
+                failing =
+                  m:
+                  map (a: a.message) (
+                    lib.filter (a: !a.assertion)
+                      (nixosConfigurations.minz-vultr-nix-0.extendModules {
+                        modules = [
+                          { homelab.wireguard.fleetTCPPorts = [ 1 ]; }
+                          m
+                        ];
+                      }).config.assertions
+                  );
+                fixtures = {
+                  iptables = {
+                    msg = "needs networking.firewall.backend";
+                    m.networking.nftables.enable = lib.mkForce false;
+                  };
+                  trusted = {
+                    msg = "WireGuard interface in trustedInterfaces";
+                    m.networking.firewall.trustedInterfaces = [ "wg0" ];
+                  };
+                  "global port" = {
+                    msg = "also open to every source";
+                    m.networking.firewall.allowedTCPPorts = [ 1 ];
+                  };
+                  "wg0 range" = {
+                    msg = "also open to every source";
+                    m.networking.firewall.interfaces.wg0.allowedTCPPortRanges = [
+                      {
+                        from = 0;
+                        to = 2;
+                      }
+                    ];
+                  };
+                };
+                hits = msg: m: lib.any (lib.hasInfix msg) (failing m);
+                missed = lib.attrNames (lib.filterAttrs (_: f: !hits f.msg f.m) fixtures);
+                base = failing { };
+                spurious = lib.attrNames (lib.filterAttrs (_: f: lib.any (lib.hasInfix f.msg) base) fixtures);
+              in
+              pkgs.runCommand "wg-sources-assertions" { } (
+                if missed == [ ] && spurious == [ ] then
+                  "touch $out"
+                else
+                  throw "wg sources assertions: missed ${lib.concatStringsSep ", " missed}; fired on the base ${lib.concatStringsSep ", " spurious}"
               );
           }
         );

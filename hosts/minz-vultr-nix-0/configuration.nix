@@ -124,7 +124,8 @@ in
     };
   };
 
-  networking.firewall.interfaces.${topology.networks.mgmt.interface}.allowedTCPPorts = [
+  networking.nftables.enable = true;
+  homelab.wireguard.fleetTCPPorts = [
     forgejoPort
     topology.services.rustfs.port
   ];

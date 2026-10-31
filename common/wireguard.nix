@@ -3,6 +3,7 @@
   config,
   lib,
   topology,
+  fleet,
   ...
 }:
 
@@ -84,42 +85,80 @@ let
       };
     };
 
+  fw = config.networking.firewall;
+  fleetPorts = config.homelab.wireguard.fleetTCPPorts;
+  csv = lib.concatMapStringsSep ", " toString;
+  wgInterfaces = lib.mapAttrsToList (_: n: n.interface) wireguardNetworks;
+  opens =
+    c: port:
+    lib.elem port (c.allowedTCPPorts or [ ])
+    || lib.any (r: r.from <= port && port <= r.to) (c.allowedTCPPortRanges or [ ]);
+  openToAll = lib.filter (
+    port: lib.any (c: opens c port) ([ fw ] ++ map (i: fw.interfaces.${i} or { }) wgInterfaces)
+  ) fleetPorts;
 in
 {
-  networking.wireguard.interfaces = builtins.listToAttrs (
-    lib.mapAttrsToList generateInterface wireguardNetworks
-  );
-
-  # Servers route packets between peers — requires IP forwarding at the kernel level.
-  boot.kernel.sysctl = lib.optionalAttrs isAnyServer {
-    "net.ipv4.ip_forward" = 1;
+  options.homelab.wireguard.fleetTCPPorts = lib.mkOption {
+    type = lib.types.listOf lib.types.port;
+    default = [ ];
+    description = "TCP ports on the mgmt WireGuard interface open only to fleet hosts and admin-client nodes.";
   };
 
-  # Declare a sops secret for each WG network this host participates in.
-  sops.secrets = builtins.listToAttrs (
-    lib.mapAttrsToList (networkName: _: {
-      name = "wg_private_${networkName}";
-      value = { };
-    }) wireguardNetworks
-  );
+  config = {
+    networking.wireguard.interfaces = builtins.listToAttrs (
+      lib.mapAttrsToList generateInterface wireguardNetworks
+    );
 
-  # Open the listen port for each network where this host is a server.
-  networking.firewall.allowedUDPPorts = lib.flatten (
-    lib.mapAttrsToList (
-      networkName: networkConfig:
-      let
-        currentNetCfg = currentNode.networks.${networkName};
-      in
-      lib.optional (currentNetCfg.role == "server") (networkConfig.listenPort)
-    ) wireguardNetworks
-  );
+    # Servers route packets between peers — requires IP forwarding at the kernel level.
+    boot.kernel.sysctl = lib.optionalAttrs isAnyServer {
+      "net.ipv4.ip_forward" = 1;
+    };
 
-  # sshd binds a WG IP; networking.wireguard runs on networkd here, so wait for the link's address, not a wireguard-wgN unit
-  systemd.services.sshd.after = sshdWaitOnline;
-  systemd.services.sshd.wants = sshdWaitOnline;
+    # Declare a sops secret for each WG network this host participates in.
+    sops.secrets = builtins.listToAttrs (
+      lib.mapAttrsToList (networkName: _: {
+        name = "wg_private_${networkName}";
+        value = { };
+      }) wireguardNetworks
+    );
 
-  # default RestartSec=100ms + StartLimitBurst=5/10s burns the whole retry budget in ~0.5s
-  systemd.services.sshd.serviceConfig.RestartSec = lib.mkIf (wireguardNetworks != { }) 5;
-  systemd.services.sshd.startLimitBurst = lib.mkIf (wireguardNetworks != { }) 20;
-  systemd.services.sshd.startLimitIntervalSec = lib.mkIf (wireguardNetworks != { }) 300;
+    # Open the listen port for each network where this host is a server.
+    networking.firewall.allowedUDPPorts = lib.flatten (
+      lib.mapAttrsToList (
+        networkName: networkConfig:
+        let
+          currentNetCfg = currentNode.networks.${networkName};
+        in
+        lib.optional (currentNetCfg.role == "server") (networkConfig.listenPort)
+      ) wireguardNetworks
+    );
+
+    # sshd binds a WG IP; networking.wireguard runs on networkd here, so wait for the link's address, not a wireguard-wgN unit
+    systemd.services.sshd.after = sshdWaitOnline;
+    systemd.services.sshd.wants = sshdWaitOnline;
+
+    # default RestartSec=100ms + StartLimitBurst=5/10s burns the whole retry budget in ~0.5s
+    systemd.services.sshd.serviceConfig.RestartSec = lib.mkIf (wireguardNetworks != { }) 5;
+    systemd.services.sshd.startLimitBurst = lib.mkIf (wireguardNetworks != { }) 20;
+    systemd.services.sshd.startLimitIntervalSec = lib.mkIf (wireguardNetworks != { }) 300;
+
+    networking.firewall.extraInputRules = lib.mkIf (fleetPorts != [ ]) ''
+      iifname "${topology.networks.mgmt.interface}" ip saddr { ${csv (fleet.fleetSourcesFor hostName)} } tcp dport { ${csv fleetPorts} } accept
+    '';
+
+    assertions = [
+      {
+        assertion = fleetPorts == [ ] || fw.backend == "nftables";
+        message = "homelab.wireguard.fleetTCPPorts needs networking.firewall.backend = \"nftables\" (extraInputRules renders only there).";
+      }
+      {
+        assertion = !lib.any (i: lib.elem i fw.trustedInterfaces) wgInterfaces;
+        message = "common/wireguard.nix: a WireGuard interface in trustedInterfaces opens every port to every peer.";
+      }
+      {
+        assertion = openToAll == [ ];
+        message = "homelab.wireguard.fleetTCPPorts ${csv openToAll} also open to every source via allowedTCPPorts/allowedTCPPortRanges (global or WireGuard interface).";
+      }
+    ];
+  };
 }

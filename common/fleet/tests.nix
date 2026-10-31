@@ -179,6 +179,25 @@ in
       expr = f.withRole "admin-client";
       expected = [ "desktop" ];
     };
+    testFleetSourcesFor = {
+      expr =
+        (mkFleet (with' {
+          topology.nodes.phone = {
+            kind = "device";
+            networks.mgmt = {
+              ip = "10.8.0.2";
+              role = "client";
+            };
+          };
+        })).fleetSourcesFor
+          "hub";
+      expected = [
+        "10.8.0.4"
+        "10.8.0.6"
+        "10.10.0.2"
+        "10.8.0.5"
+      ];
+    };
     testTunnelEndpoints = {
       expr = f.tunnelEndpoints;
       expected = [
