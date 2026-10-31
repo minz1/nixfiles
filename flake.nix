@@ -317,6 +317,32 @@
               mkFleet = import ./common/fleet;
             };
             passedNegatives = builtins.filter (n: !n.failed) t.negative;
+            assertionCheck =
+              name: host: base: fixtures:
+              let
+                failing =
+                  m:
+                  map (a: a.message) (
+                    lib.filter (a: !a.assertion)
+                      (host.extendModules {
+                        modules = [
+                          base
+                          m
+                        ];
+                      }).config.assertions
+                  );
+                hits = msg: m: lib.any (lib.hasInfix msg) (failing m);
+                missed = lib.attrNames (lib.filterAttrs (msg: m: !hits msg m) fixtures);
+                spurious = lib.attrNames (
+                  lib.filterAttrs (msg: _: lib.any (lib.hasInfix msg) (failing { })) fixtures
+                );
+              in
+              pkgs.runCommand name { } (
+                if missed == [ ] && spurious == [ ] then
+                  "touch $out"
+                else
+                  throw "${name}: did not fire: ${lib.concatStringsSep ", " missed}; fired on the base: ${lib.concatStringsSep ", " spurious}"
+              );
           in
           {
             fleet-unit = pkgs.runCommand "fleet-unit" { } (
@@ -350,83 +376,21 @@
                 }"
             );
             internal-proxy-assertions =
-              let
-                fixtures = {
-                  "needs clientAuth" = {
-                    homelab.internalProxy.servers.t.allowedClientNodes = [ "minz-services-0" ];
-                  };
-                  "admits every fleet cert" = {
-                    homelab.internalProxy.servers.t.clientAuth = "require";
-                  };
-                  "set outside the module" = {
-                    services.caddy.settings.apps.http.servers.t.routes = lib.mkBefore [ { } ];
-                  };
+              assertionCheck "internal-proxy-assertions" nixosConfigurations.minz-media-0
+                { homelab.internalProxy.servers.t.port = 1; }
+                {
+                  "needs clientAuth".homelab.internalProxy.servers.t.allowedClientNodes = [ "minz-services-0" ];
+                  "admits every fleet cert".homelab.internalProxy.servers.t.clientAuth = "require";
+                  "set outside the module".services.caddy.settings.apps.http.servers.t.routes = lib.mkBefore [ { } ];
                 };
-                fires =
-                  msg: m:
-                  lib.any (a: !a.assertion && lib.hasInfix msg a.message)
-                    (nixosConfigurations.minz-media-0.extendModules {
-                      modules = [
-                        { homelab.internalProxy.servers.t.port = 1; }
-                        m
-                      ];
-                    }).config.assertions;
-                missed = lib.attrNames (lib.filterAttrs (msg: m: !fires msg m) fixtures);
-              in
-              pkgs.runCommand "internal-proxy-assertions" { } (
-                if missed == [ ] then
-                  "touch $out"
-                else
-                  throw "internalProxy assertions did not fire: ${lib.concatStringsSep ", " missed}"
-              );
-
             wg-sources-assertions =
-              let
-                failing =
-                  m:
-                  map (a: a.message) (
-                    lib.filter (a: !a.assertion)
-                      (nixosConfigurations.minz-vultr-nix-0.extendModules {
-                        modules = [
-                          { homelab.wireguard.fleetTCPPorts = [ 1 ]; }
-                          m
-                        ];
-                      }).config.assertions
-                  );
-                fixtures = {
-                  iptables = {
-                    msg = "needs networking.firewall.backend";
-                    m.networking.nftables.enable = lib.mkForce false;
-                  };
-                  trusted = {
-                    msg = "WireGuard interface in trustedInterfaces";
-                    m.networking.firewall.trustedInterfaces = [ "wg0" ];
-                  };
-                  "global port" = {
-                    msg = "also open to every source";
-                    m.networking.firewall.allowedTCPPorts = [ 1 ];
-                  };
-                  "wg0 range" = {
-                    msg = "also open to every source";
-                    m.networking.firewall.interfaces.wg0.allowedTCPPortRanges = [
-                      {
-                        from = 0;
-                        to = 2;
-                      }
-                    ];
-                  };
+              assertionCheck "wg-sources-assertions" nixosConfigurations.minz-vultr-nix-0
+                { homelab.wireguard.fleetTCPPorts = [ 1 ]; }
+                {
+                  "needs networking.firewall.backend".networking.nftables.enable = lib.mkForce false;
+                  "WireGuard interface in trustedInterfaces".networking.firewall.trustedInterfaces = [ "wg0" ];
+                  "also open to every source".networking.firewall.allowedTCPPorts = [ 1 ];
                 };
-                hits = msg: m: lib.any (lib.hasInfix msg) (failing m);
-                missed = lib.attrNames (lib.filterAttrs (_: f: !hits f.msg f.m) fixtures);
-                base = failing { };
-                spurious = lib.attrNames (lib.filterAttrs (_: f: lib.any (lib.hasInfix f.msg) base) fixtures);
-              in
-              pkgs.runCommand "wg-sources-assertions" { } (
-                if missed == [ ] && spurious == [ ] then
-                  "touch $out"
-                else
-                  throw "wg sources assertions: missed ${lib.concatStringsSep ", " missed}; fired on the base ${lib.concatStringsSep ", " spurious}"
-              );
           }
         );
 

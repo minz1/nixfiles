@@ -89,10 +89,7 @@ let
   fleetPorts = config.homelab.wireguard.fleetTCPPorts;
   csv = lib.concatMapStringsSep ", " toString;
   wgInterfaces = lib.mapAttrsToList (_: n: n.interface) wireguardNetworks;
-  opens =
-    c: port:
-    lib.elem port (c.allowedTCPPorts or [ ])
-    || lib.any (r: r.from <= port && port <= r.to) (c.allowedTCPPortRanges or [ ]);
+  opens = c: port: lib.elem port (c.allowedTCPPorts or [ ]);
   openToAll = lib.filter (
     port: lib.any (c: opens c port) ([ fw ] ++ map (i: fw.interfaces.${i} or { }) wgInterfaces)
   ) fleetPorts;
@@ -157,7 +154,7 @@ in
       }
       {
         assertion = openToAll == [ ];
-        message = "homelab.wireguard.fleetTCPPorts ${csv openToAll} also open to every source via allowedTCPPorts/allowedTCPPortRanges (global or WireGuard interface).";
+        message = "homelab.wireguard.fleetTCPPorts ${csv openToAll} also open to every source via allowedTCPPorts (global or WireGuard interface).";
       }
     ];
   };
