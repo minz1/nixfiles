@@ -116,7 +116,7 @@ resource "authentik_property_mapping_notification" "minecraft_whitelist_headers"
 resource "authentik_event_transport" "minecraft_whitelist" {
   name                    = "minecraft-whitelist-webhook"
   mode                    = "webhook"
-  webhook_url             = "https://minz-game-0.internal/whitelist/notify"
+  webhook_url             = "https://${var.fleet.services["game-caddy"].host}.internal/whitelist/notify"
   webhook_ca              = authentik_certificate_key_pair.internal_ca.id
   webhook_mapping_headers = authentik_property_mapping_notification.minecraft_whitelist_headers.id
   send_once               = true

@@ -46,28 +46,28 @@ terraform {
 
 # Token sourced from AUTHENTIK_TOKEN in secrets/tofu.env.
 provider "authentik" {
-  url = "https://10.10.0.3:9443"
+  url = local.authentik_url
 }
 
 variable "nzbgeek_api_key" { sensitive = true }
 variable "torrentio_debrid_key" { sensitive = true }
 
 provider "sonarr" {
-  url     = "https://10.10.0.7/sonarr"
+  url     = "${local.media_url}/sonarr"
   api_key = data.sops_file.arr.data["sonarr_api_key"]
 }
 
 provider "radarr" {
-  url     = "https://10.10.0.7/radarr"
+  url     = "${local.media_url}/radarr"
   api_key = data.sops_file.arr.data["radarr_api_key"]
 }
 
 provider "prowlarr" {
-  url     = "https://10.10.0.7/prowlarr"
+  url     = "${local.media_url}/prowlarr"
   api_key = ephemeral.sops_file.prowlarr.data["prowlarr_api_key"]
 }
 
 provider "seerr" {
-  url     = "https://10.10.0.7"
+  url     = local.media_url
   api_key = ephemeral.sops_file.seerr_api.data["seerr_api_key"]
 }

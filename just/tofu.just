@@ -38,7 +38,7 @@ app-init flags="":
     sops exec-env {{ flake }}/secrets/tofu.env 'tofu -chdir={{ flake }}/tofu/app init {{ flags }}'
 
 app-plan:
-    sops exec-env {{ flake }}/secrets/tofu.env 'tofu -chdir={{ flake }}/tofu/app plan -out={{ flake }}/tofu/app/tofu.plan'
+    @fleet="$(nix eval --json {{ flake }}#fleet)" && TF_VAR_fleet="$fleet" sops exec-env {{ flake }}/secrets/tofu.env 'tofu -chdir={{ flake }}/tofu/app plan -out={{ flake }}/tofu/app/tofu.plan'
 
 app-apply:
     sops exec-env {{ flake }}/secrets/tofu.env 'tofu -chdir={{ flake }}/tofu/app apply {{ flake }}/tofu/app/tofu.plan'

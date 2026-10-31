@@ -17,3 +17,15 @@ variable "seerr_discord_webhook" {
 }
 
 variable "jellyfin_api_key" { sensitive = true }
+
+# The checked fleet data (`nix eval --json .#fleet`); `just tofu app-plan` sets TF_VAR_fleet.
+variable "fleet" {
+  type = any
+}
+
+locals {
+  authentik_url = "https://${var.fleet.addresses[var.fleet.services.authentik.host]}:${var.fleet.services.authentik.port}"
+  media_caddy   = var.fleet.services["media-caddy"]
+  media_ip      = var.fleet.addresses[local.media_caddy.host]
+  media_url     = "https://${local.media_ip}:${local.media_caddy.port}"
+}

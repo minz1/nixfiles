@@ -25,8 +25,8 @@ resource "seerr_network_settings" "main" {
 
 resource "seerr_sonarr_server" "default" {
   name                   = "Sonarr"
-  hostname               = "10.10.0.7"
-  port                   = 443
+  hostname               = local.media_ip
+  port                   = local.media_caddy.port
   base_url               = "/sonarr"
   use_ssl                = true
   api_key                = data.sops_file.arr.data["sonarr_api_key"]
@@ -44,8 +44,8 @@ resource "seerr_sonarr_server" "default" {
 
 resource "seerr_radarr_server" "default" {
   name               = "Radarr"
-  hostname           = "10.10.0.7"
-  port               = 443
+  hostname           = local.media_ip
+  port               = local.media_caddy.port
   base_url           = "/radarr"
   use_ssl            = true
   api_key            = data.sops_file.arr.data["radarr_api_key"]
@@ -132,7 +132,7 @@ resource "seerr_notification_webhook" "media_fixer" {
     "ISSUE_REOPENED",
   ]
   webhook = {
-    webhook_url = "https://minz-services-0.internal/ingest/seerr"
+    webhook_url = "https://${var.fleet.services["services-caddy"].host}.internal/ingest/seerr"
     auth_header = "Bearer ${data.sops_file.seerr.data["seerr_webhook_secret"]}"
     json_payload = jsonencode({
       notification_type     = "{{notification_type}}"
