@@ -238,6 +238,14 @@ resource "incus_network_acl" "obs" {
       description      = "Loki HTTPS push from fleet Alloy agents"
       state            = "enabled"
     },
+    {
+      action           = "allow"
+      source           = local.edge_subnet
+      destination_port = local.ports["metrics-write"]
+      protocol         = "tcp"
+      description      = "VictoriaMetrics remote_write from edge Alloy (mTLS)"
+      state            = "enabled"
+    },
   ])
 
   egress = concat(local.common_egress, [

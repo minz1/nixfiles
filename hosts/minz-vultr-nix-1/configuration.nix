@@ -172,7 +172,45 @@ in
     };
   };
 
-  services.crowdsec-firewall-bouncer.enable = true;
+  services.crowdsec-firewall-bouncer = {
+    enable = true;
+    settings.prometheus = {
+      enabled = true;
+      listen_addr = "127.0.0.1";
+      listen_port = "60601";
+    };
+  };
+
+  # CrowdSec's metrics endpoint is plain HTTP, so it stays on loopback and Alloy pushes over mTLS
+  environment.etc."alloy/crowdsec.alloy".text =
+    let
+      certDir = "/var/lib/acme/${hostName}.internal";
+      write = endpoints.metrics-write;
+    in
+    ''
+      prometheus.scrape "crowdsec" {
+        job_name   = "crowdsec"
+        targets    = [{"__address__" = "127.0.0.1:6060", "instance" = "${hostName}"}]
+        forward_to = [prometheus.remote_write.obs.receiver]
+      }
+
+      prometheus.scrape "crowdsec_firewall_bouncer" {
+        job_name   = "crowdsec-firewall-bouncer"
+        targets    = [{"__address__" = "127.0.0.1:60601", "instance" = "${hostName}"}]
+        forward_to = [prometheus.remote_write.obs.receiver]
+      }
+
+      prometheus.remote_write "obs" {
+        endpoint {
+          url = "https://${write.ip}:${toString write.port}/api/v1/write"
+          tls_config {
+            ca_file   = "/etc/ssl/internal-ca.crt"
+            cert_file = "${certDir}/fullchain.pem"
+            key_file  = "${certDir}/key.pem"
+          }
+        }
+      }
+    '';
 
   systemd.services.crowdsec-firewall-bouncer-register.unitConfig.RequiresMountsFor = [
     "/var/lib/crowdsec-firewall-bouncer-register"

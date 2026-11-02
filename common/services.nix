@@ -18,6 +18,10 @@ with config.nodes;
       host = minz-obs-0.name;
       port = 3101;
     };
+    metrics-write = {
+      host = minz-obs-0.name;
+      port = 9091;
+    };
     media-caddy = {
       host = minz-media-0.name;
       port = 443;

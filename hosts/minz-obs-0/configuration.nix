@@ -218,6 +218,23 @@ in
       ];
       upstream = lokiPort;
     };
+    metrics-write = {
+      port = topology.services.metrics-write.port;
+      clientAuth = "require";
+      allowedClientNodes = [ "minz-vultr-nix-1" ];
+      upstream = victoriaPort;
+      routes = [
+        {
+          match = [ { not = [ { path = [ "/api/v1/write" ]; } ]; } ];
+          handle = [
+            {
+              handler = "static_response";
+              status_code = 404;
+            }
+          ];
+        }
+      ];
+    };
   };
 
   security.acme.certs."minz-obs-0.internal".reloadServices = [ "grafana.service" ];
@@ -232,6 +249,7 @@ in
   networking.firewall.allowedTCPPorts = [
     lokiHttpsPort
     grafanaHttpsPort
+    topology.services.metrics-write.port
   ];
 
   systemd.services.loki.serviceConfig = mkHardened {
