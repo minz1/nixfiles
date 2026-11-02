@@ -12,6 +12,10 @@ let
   runner = import ../../modules/lib/forgejo-runner.nix { inherit lib; };
   edgeIp = topology.nodes.minz-vultr-nix-1.networks.edge.ip;
   forgejoPort = 3000;
+  # loopback-only sshd for git; HAProxy on endpoints.git-ssh.port hands it connections with the client's IP
+  gitSshdPort = 2223;
+  # route-table for replies to spoofed client sources: delivered back over lo to HAProxy
+  tproxyTable = 123;
 
   bootstrap = pkgs.writeShellApplication {
     name = "forgejo-bootstrap";
@@ -43,7 +47,6 @@ in
   sops.secrets = {
     forgejo_oidc_client_secret = forgejoSecret;
     forgejo_smtp_password = forgejoSecret;
-    forgejo_ssh_host_key = forgejoSecret;
     runner_token = forgejoSecret // {
       sopsFile = ../../secrets/shared/forgejo.yaml;
     };
@@ -54,12 +57,25 @@ in
 
   services.postgresql.package = pkgs.postgresql_18;
 
+  # sshd runs `forgejo serv` as this user, so it is Forgejo's run user and the git@ in clone URLs
+  users.users.git = {
+    isSystemUser = true;
+    group = "git";
+    home = cfg.stateDir;
+    shell = pkgs.bashInteractive;
+  };
+  users.groups.git = { };
+
   services.forgejo = {
     enable = true;
     package = pkgs.forgejo;
+    user = "git";
+    group = "git";
     database = {
       type = "postgres";
       createDatabase = true;
+      user = "git";
+      name = "git";
     };
     secrets.mailer.PASSWD = config.sops.secrets.forgejo_smtp_password.path;
     settings = {
@@ -68,11 +84,6 @@ in
         ROOT_URL = "https://git.minz1.com/";
         HTTP_ADDR = "127.0.0.1";
         HTTP_PORT = forgejoPort;
-        START_SSH_SERVER = true;
-        SSH_LISTEN_PORT = endpoints.git-ssh.port;
-        SSH_SERVER_USE_PROXY_PROTOCOL = true;
-        BUILTIN_SSH_SERVER_USER = "git";
-        SSH_SERVER_HOST_KEYS = config.sops.secrets.forgejo_ssh_host_key.path;
       };
       service = {
         DISABLE_REGISTRATION = false;
@@ -119,6 +130,79 @@ in
     ranges = [ "${edgeIp}/32" ];
   };
 
+  # Forgejo's OpenSSH setup: its authorized_keys (regenerated every start) forces `forgejo serv` per key
+  services.openssh = {
+    # appended to vm.nix's 0.0.0.0:22
+    listenAddresses = [
+      {
+        addr = "127.0.0.1";
+        port = gitSshdPort;
+      }
+    ];
+    settings.PerSourceMaxStartups = 3;
+    extraConfig = ''
+      Match User git
+        AuthorizedKeysFile %h/.ssh/authorized_keys
+        AuthenticationMethods publickey
+        KbdInteractiveAuthentication no
+        PermitTTY no
+        PermitUserRC no
+        DisableForwarding yes
+      Match LocalPort ${toString gitSshdPort}
+        AllowUsers git
+      Match LocalPort 22
+        DenyUsers git
+    '';
+  };
+
+  # caddy-l4 on the edge sends PROXY v2; HAProxy connects to sshd with the client's address as source
+  services.haproxy = {
+    enable = true;
+    config = ''
+      defaults
+        mode tcp
+        timeout connect 5s
+        timeout client 1h
+        timeout server 1h
+
+      frontend git_ssh
+        bind :${toString endpoints.git-ssh.port}
+        tcp-request connection reject unless { src ${edgeIp} }
+        tcp-request connection expect-proxy layer4
+        default_backend sshd
+
+      backend sshd
+        source 0.0.0.0 usesrc clientip
+        server sshd 127.0.0.1:${toString gitSshdPort}
+    '';
+  };
+  systemd.services.haproxy.serviceConfig = {
+    # usesrc needs IP_TRANSPARENT; CAP_NET_RAW suffices and can't touch nft/routes like CAP_NET_ADMIN
+    AmbientCapabilities = lib.mkForce [ "CAP_NET_RAW" ];
+    CapabilityBoundingSet = [ "CAP_NET_RAW" ];
+  };
+  systemd.network.networks."05-lo" = {
+    matchConfig.Name = "lo";
+    linkConfig.RequiredForOnline = "no";
+    routingPolicyRules = [
+      {
+        From = "127.0.0.1/32";
+        IncomingInterface = "lo";
+        IPProtocol = "tcp";
+        SourcePort = gitSshdPort;
+        Table = tproxyTable;
+        Priority = 100;
+      }
+    ];
+    routes = [
+      {
+        Destination = "0.0.0.0/0";
+        Type = "local";
+        Table = tproxyTable;
+      }
+    ];
+  };
+
   networking.firewall.allowedTCPPorts = [
     endpoints.git.port
     endpoints.git-ssh.port
@@ -127,8 +211,8 @@ in
   environment.persistence."/persist".directories = [
     {
       directory = "/var/lib/forgejo";
-      user = "forgejo";
-      group = "forgejo";
+      user = "git";
+      group = "git";
       mode = "0750";
     }
     {

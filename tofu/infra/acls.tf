@@ -489,7 +489,48 @@ resource "incus_network_acl" "forgejo" {
     },
   ])
 
-  egress = concat(local.common_egress, [
+  # No bridge-wide rule: git-0 serves the internet and runs CI-facing code, so it reaches only what it needs.
+  # DNS/DHCP/RA to the bridge gateway are allowed implicitly by Incus.
+  egress = [
+    {
+      action      = "reject"
+      protocol    = "icmp6"
+      icmp_type   = "143"
+      description = "Suppress MLDv2 multicast listener reports (unlogged)"
+      state       = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = local.all_nodes["minz-home-nix-0"].networks.incus_bridge.ip
+      destination_port = "123"
+      protocol         = "udp"
+      description      = "NTP from the Incus host"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = local.all_nodes[var.fleet.services["step-ca"].host].networks.incus_bridge.ip
+      destination_port = local.ports["step-ca"]
+      protocol         = "tcp"
+      description      = "ACME for the internal cert (step-ca)"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = local.all_nodes[var.fleet.services.loki.host].networks.incus_bridge.ip
+      destination_port = local.ports.loki
+      protocol         = "tcp"
+      description      = "Alloy log push to Loki"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = local.all_nodes[var.fleet.services.attic.host].networks.incus_bridge.ip
+      destination_port = local.ports.attic
+      protocol         = "tcp"
+      description      = "Nix substituter (Attic)"
+      state            = "enabled"
+    },
     {
       action           = "allow"
       destination      = "${local.edge_public_ip}/32"
@@ -514,7 +555,7 @@ resource "incus_network_acl" "forgejo" {
       description      = "restic backups to RustFS on vultr-nix-0"
       state            = "enabled"
     },
-  ])
+  ]
 }
 
 # media-0: broad internet egress (debrid, indexers, metadata) but no reach into the fleet beyond

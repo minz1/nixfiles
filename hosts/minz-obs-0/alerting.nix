@@ -406,7 +406,7 @@ in
             (mkLogCountRule {
               uid = "svc-exec-shell";
               title = "Shell/interpreter spawned by service user";
-              # excluded: pg_dumpall's sh, Forgejo's bash git hooks, CI job containers
+              # excluded: pg_dumpall's sh, Forgejo's bash (git hooks, sshd running forgejo serv as git), CI job containers
               logql = ''
                 sum by (host) (
                   count_over_time(
@@ -415,7 +415,7 @@ in
                       |= "key=\"svc-exec\""
                       |~ "comm=\"(sh|bash|dash|ash|zsh|ksh|python[0-9.]*|perl|ruby|php|node|lua[0-9.]*)\""
                       !~ "comm=\"sh\".*UID=\"postgres\""
-                      !~ "comm=\"bash\".*UID=\"forgejo\""
+                      !~ "comm=\"bash\".*UID=\"(forgejo|git)\""
                       !~ "UID=\"podman-runner\""
                     [10m]
                   )
@@ -428,12 +428,14 @@ in
               uid = "ssh-unexpected-source";
               title = "SSH login from unexpected source";
               # SSH is WG/bridge-only plus home-nix-0's LAN break-glass; anything outside these prefixes is anomalous.
+              # Public git pushes on minz-git-0 (user git, forced `forgejo serv`) are expected.
               logql = ''
                 sum by (host) (
                   count_over_time(
                     {unit="sshd.service"}
                       |= "Accepted"
                       !~ " from (10\\.8\\.0\\.|10\\.10\\.0\\.|192\\.168\\.)"
+                      !~ "Accepted publickey for git from "
                     [10m]
                   )
                 )
