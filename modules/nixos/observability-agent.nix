@@ -105,6 +105,17 @@ in
         loki.process "scrub" {
           forward_to = [loki.write.default.receiver]
 
+          // query strings carry tokens; Caddy access lines keep only the path. Runs first: the api_key stage below can eat past a closing quote
+          stage.replace {
+            expression = `"uri":"(?:[^"?\\]|\\.)*([?](?:[^"\\]|\\.)*)"`
+            replace    = ""
+          }
+
+          stage.replace {
+            expression = `"Referer":\["(?:[^"?\\]|\\.)*([?](?:[^"\\]|\\.)*)"`
+            replace    = ""
+          }
+
           stage.replace {
             expression = "(?:ma_username|ma_password|apikey|api_key|passwd)=([^&[:space:]]+)"
             replace    = "REDACTED"
@@ -113,17 +124,6 @@ in
           stage.replace {
             expression = "(eyJ[A-Za-z0-9_-]+[.]eyJ[A-Za-z0-9_-]+[.][A-Za-z0-9_-]+)"
             replace    = "REDACTED_JWT"
-          }
-
-          // query strings carry tokens; Caddy access lines keep only the path
-          stage.replace {
-            expression = `"uri":"[^"?]*([?][^"]*)"`
-            replace    = ""
-          }
-
-          stage.replace {
-            expression = `"Referer":\["[^"?]*([?][^"]*)"`
-            replace    = ""
           }
         }
 

@@ -233,6 +233,15 @@ in
             }
           ];
         }
+        # tag every pushed series so the internet-facing edge can't write into scraped series
+        {
+          handle = [
+            {
+              handler = "rewrite";
+              uri = "/api/v1/write?extra_label=pushed_by=minz-vultr-nix-1";
+            }
+          ];
+        }
       ];
     };
   };

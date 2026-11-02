@@ -35,8 +35,9 @@ let
       evaluatorType,
       evaluatorParams,
     }:
-    # Grafana refuses to start provisioning (and crash-loops) on a UID over 40 chars
-    assert lib.assertMsg (lib.stringLength uid <= 40) "alert rule uid '${uid}' is over Grafana's 40-char limit";
+    assert lib.assertMsg (
+      lib.stringLength uid <= 40
+    ) "alert rule uid '${uid}' is over Grafana's 40-char limit (Grafana crash-loops on it)";
     {
       inherit
         uid
@@ -332,7 +333,7 @@ in
               evaluatorParams = [ 1 ];
               # no data means Alloy's push from the edge stopped, which hides everything below
               noDataState = "Alerting";
-              summary = "{{ $labels.job }} on the edge is down or its metrics stopped arriving";
+              summary = "CrowdSec {{ $labels.job }} on the edge is down or its metrics stopped arriving (no job name: the push from the edge stopped)";
             })
             # rejected pulls (bad key) aren't counted, so a stalled counter catches the 2026-10-24 failure mode
             (mkThresholdRule {

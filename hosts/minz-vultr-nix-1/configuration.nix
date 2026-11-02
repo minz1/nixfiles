@@ -212,10 +212,6 @@ in
       }
     '';
 
-  systemd.services.crowdsec-firewall-bouncer-register.unitConfig.RequiresMountsFor = [
-    "/var/lib/crowdsec-firewall-bouncer-register"
-  ];
-
   # the register unit rotates the key when its file is missing; a running bouncer keeps the dead key unless restarted
   systemd.paths.crowdsec-firewall-bouncer-key = {
     wantedBy = [ "multi-user.target" ];
