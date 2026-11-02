@@ -13,8 +13,10 @@ in
 
   system.stateVersion = "25.11";
 
-  sops.secrets.runner_token = {
-    sopsFile = ../../secrets/shared/forgejo.yaml;
+  sops.secrets.runner_token.sopsFile = ../../secrets/shared/forgejo.yaml;
+  # the runner's token is the whole registration secret (id + runner_token), same as minz-git-0 registers
+  sops.templates.forgejo_runner_secret = {
+    content = "${runner.id}${config.sops.placeholder.runner_token}";
     restartUnits = [ "forgejo-runner-minz_forgejo.service" ];
   };
 
@@ -34,7 +36,7 @@ in
         # "-": job containers get no podman socket; the daemon finds it via DOCKER_HOST.
         container.docker_host = "-";
       };
-      secrets.server.connections.default.token_url = config.sops.secrets.runner_token.path;
+      secrets.server.connections.default.token_url = config.sops.templates.forgejo_runner_secret.path;
       # Rootless podman under a dedicated user — same reasoning as the pre-migration setup on vultr-nix-0.
       runtimes.podman = false;
     };

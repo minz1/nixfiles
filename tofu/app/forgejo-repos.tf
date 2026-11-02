@@ -23,6 +23,8 @@ resource "forgejo_repository" "repo" {
   # no owner: the token's own user (minz1); with owner set the provider probes orgs/admin APIs
   name           = each.key
   default_branch = "main"
+  # showcase instance: these repos are public on purpose (also public on GitHub/Codeberg)
+  private = false
 
   lifecycle {
     prevent_destroy = true
