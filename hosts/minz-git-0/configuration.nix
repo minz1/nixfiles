@@ -18,6 +18,7 @@ let
     runtimeInputs = [
       cfg.package
       config.services.postgresql.package
+      pkgs.coreutils
       pkgs.gawk
     ];
     runtimeEnv = {

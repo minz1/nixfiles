@@ -7,11 +7,12 @@ src=(--name authentik --provider openidConnect --key forgejo
     --scopes openid --scopes email --scopes profile
     --group-claim-name groups --admin-group forgejo-admins --skip-local-2fa)
 id=$(forgejo admin auth list | awk '$2 == "authentik" { print $1 }')
-# add/update-oauth fetch discovery and exit 1 if authentik is unreachable; Forgejo itself copes
+# add/update-oauth fetch discovery and fail (or hang ~60s) if authentik is unreachable; Forgejo itself
+# copes, and the unit's 90s start timeout must not be spent here
 if [ -z "$id" ]; then
-    forgejo admin auth add-oauth "${src[@]}" || echo "forgejo-bootstrap: auth source not created"
+    timeout -k 5 20 forgejo admin auth add-oauth "${src[@]}" || echo "forgejo-bootstrap: auth source not created"
 else
-    forgejo admin auth update-oauth --id "$id" "${src[@]}" || echo "forgejo-bootstrap: auth source not updated"
+    timeout -k 5 20 forgejo admin auth update-oauth --id "$id" "${src[@]}" || echo "forgejo-bootstrap: auth source not updated"
 fi
 
 OIDC_SECRET=$(< "$OIDC_SECRET_FILE") psql -v ON_ERROR_STOP=1 -q -d "$FORGEJO_DB" << 'SQL'

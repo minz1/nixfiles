@@ -65,7 +65,7 @@ run() { bash -euo pipefail "$script" > "$work/out" 2>&1 || fail "$1: exit $? $(c
 stub_up
 printf '%s' "s3cret 1'x" > "$OIDC_SECRET_FILE"
 run "1"
-[ "$(q "select count(*) from login_source where name = 'authentik'")" = 1 ] || fail "1: source count"
+[ "$(q "select count(*) from login_source where name = 'authentik'")" = 1 ] || fail "1: source count; script said: $(cat "$work/out")"
 [ "$(cfg ClientSecret)" = "s3cret 1'x" ] || fail "1: client secret = $(cfg ClientSecret)"
 [ "$(cfg AdminGroup)" = forgejo-admins ] || fail "1: admin group"
 [ "$(cfg GroupClaimName)" = groups ] || fail "1: group claim"
@@ -84,6 +84,17 @@ grep -q "auth source not updated" "$work/out" || fail "3: no discovery failure l
 [ "$(q "select count(*) from login_source where name = 'authentik'")" = 1 ] || fail "3: source count"
 [ "$(cfg AdminGroup)" = forgejo-admins ] || fail "3: admin group changed"
 [ "$(cfg ClientSecret)" = s3cret-3 ] || fail "3: secret not written while discovery down"
+# discovery that accepts but never answers: the step gives up well inside the unit's start timeout
+sleep 120 | busybox nc -l -p 18081 > /dev/null 2>&1 &
+hang_pid=$!
+start=$(date +%s)
+OIDC_DISCOVERY_URL="http://127.0.0.1:18081/.well-known/openid-configuration" run "3b"
+took=$(($(date +%s) - start))
+kill "$hang_pid" 2> /dev/null || true
+grep -q "auth source not updated" "$work/out" || fail "3b: no discovery failure line"
+[ "$took" -lt 40 ] || fail "3b: hung discovery took ${took}s"
+[ "$(cfg AdminGroup)" = forgejo-admins ] || fail "3b: admin group changed"
+
 stub_up
 
 forgejo admin user create --username minz1 --email t@example.invalid --random-password > /dev/null 2>&1 \
