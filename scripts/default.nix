@@ -236,9 +236,27 @@ in
           touch $out
         '';
 
+    forgejo-bootstrap-test =
+      pkgs.runCommand "forgejo-bootstrap-test"
+        {
+          nativeBuildInputs = with pkgs; [
+            busybox
+            coreutils
+            forgejo
+            gawk
+            gnugrep
+            postgresql_18
+          ];
+        }
+        ''
+          cp -r ${./.} scripts
+          bash scripts/forgejo-bootstrap.test.sh
+          touch $out
+        '';
+
     shellcheck = pkgs.runCommand "scripts-shellcheck" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
       cd ${./.}
-      shellcheck -x -P . ./*.test.sh secrets-copy.sh secrets-same.sh
+      shellcheck -x -P . ./*.test.sh secrets-copy.sh secrets-same.sh forgejo-bootstrap.sh
       cd router
       shellcheck -s sh adguard-querylog
       shellcheck -x ./*.sh
