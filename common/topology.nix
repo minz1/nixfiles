@@ -184,9 +184,20 @@
         nix_gib = 60;
         total_gib = 100;
         cpus = 4;
-        memory_gib = 16;
+        memory_gib = 14;
       };
       networks.incus_bridge.ip = "10.10.0.13";
+    };
+
+    minz-git-0 = {
+      kind = "incus-vm";
+      incus = {
+        nix_gib = 20;
+        total_gib = 40;
+        cpus = 2;
+        memory_gib = 2;
+      };
+      networks.incus_bridge.ip = "10.10.0.14";
     };
 
     minz-home-nix-0 = {

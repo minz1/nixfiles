@@ -42,6 +42,14 @@ with config.nodes;
       host = minz-vultr-nix-0.name;
       port = 3000;
     };
+    git = {
+      host = minz-git-0.name;
+      port = 3443;
+    };
+    git-ssh = {
+      host = minz-git-0.name;
+      port = 2222;
+    };
     minecraft = {
       host = minz-game-0.name;
       port = 25565;
