@@ -22,6 +22,10 @@ terraform {
       source  = "carlpett/sops"
       version = "~> 1.4"
     }
+    forgejo = {
+      source  = "svalabs/forgejo"
+      version = "~> 1.7"
+    }
     seerr = {
       source = "josh-archer/seerr"
       # Exact pin: upgrades are reviewed by hand (0.19.3 -> 2.2.1 on 2026-10-19; the upstream signing key is fixed since 2.x).
