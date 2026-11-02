@@ -1,5 +1,5 @@
 locals {
-  admin_check = "user.is_superuser or ak_is_group_member(user, name__in=['${authentik_group.arr_admins.name}', '${authentik_group.grafana_admins.name}', '${authentik_group.media_fixer_admins.name}'])"
+  admin_check = "user.is_superuser or ak_is_group_member(user, name__in=['${authentik_group.arr_admins.name}', '${authentik_group.grafana_admins.name}', '${authentik_group.media_fixer_admins.name}', '${authentik_group.forgejo_admins.name}'])"
 }
 
 data "authentik_stage" "totp_setup" {
