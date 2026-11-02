@@ -37,6 +37,7 @@ let
     "https://ntfy.minz1.com"
     "https://admin.minz1.com/media"
     "https://arr.minz1.com/sonarr"
+    "https://git.minz1.com"
   ];
 
   blackboxConfig = pkgs.writeText "blackbox.yml" (
@@ -49,6 +50,15 @@ let
         preferred_ip_protocol = "ip4";
       };
       # unprivileged ICMP via net.ipv4.ping_group_range; the hardened unit has no CAP_NET_RAW
+      # Forgejo's public SSH: the banner proves edge caddy-l4 -> PROXY v2 -> Forgejo works end to end
+      modules.ssh_banner = {
+        prober = "tcp";
+        timeout = "5s";
+        tcp = {
+          preferred_ip_protocol = "ip4";
+          query_response = [ { expect = "^SSH-2.0-"; } ];
+        };
+      };
       modules.icmp = {
         prober = "icmp";
         timeout = "2s";
@@ -91,6 +101,26 @@ in
         metrics_path = "/probe";
         params.module = [ "http_2xx" ];
         static_configs = [ { targets = publicVhosts; } ];
+        relabel_configs = [
+          {
+            source_labels = [ "__address__" ];
+            target_label = "__param_target";
+          }
+          {
+            source_labels = [ "__param_target" ];
+            target_label = "instance";
+          }
+          {
+            target_label = "__address__";
+            replacement = "127.0.0.1:${toString blackboxPort}";
+          }
+        ];
+      }
+      {
+        job_name = "blackbox-ssh";
+        metrics_path = "/probe";
+        params.module = [ "ssh_banner" ];
+        static_configs = [ { targets = [ "git.minz1.com:22" ]; } ];
         relabel_configs = [
           {
             source_labels = [ "__address__" ];

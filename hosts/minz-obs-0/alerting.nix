@@ -320,7 +320,7 @@ in
             (mkThresholdRule {
               uid = "public-endpoint-down";
               title = "Public endpoint down";
-              expr = ''probe_success{job="blackbox"}'';
+              expr = ''probe_success{job=~"blackbox|blackbox-ssh"}'';
               evaluatorType = "lt";
               evaluatorParams = [ 1 ];
               summary = "{{ $labels.instance }} failed its blackbox probe";
