@@ -2,22 +2,21 @@
   config,
   lib,
   pkgs,
-  endpoints,
   ...
 }:
 
 let
-  forgejoAddr = endpoints.forgejo.ip;
-  forgejoPort = endpoints.forgejo.port;
+  runner = import ../../modules/lib/forgejo-runner.nix { inherit lib; };
 in
 {
   imports = [ ../../modules/nixos/rootless-podman.nix ];
 
   system.stateVersion = "25.11";
 
-  sops.secrets.forgejo_runner_token.restartUnits = [
-    "forgejo-runner-minz_forgejo.service"
-  ];
+  sops.secrets.runner_token = {
+    sopsFile = ../../secrets/shared/forgejo.yaml;
+    restartUnits = [ "forgejo-runner-minz_forgejo.service" ];
+  };
 
   services.forgejo-runner = {
     package = pkgs.forgejo-runner;
@@ -28,14 +27,14 @@ in
           "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:62d572b92f9f32d3427b6d220ad1f9dca9c7b6ffad37d295425037dbff78abaf"
         ];
         server.connections.default = {
-          url = "http://${forgejoAddr}:${toString forgejoPort}";
-          uuid = "c0787101-0b04-4fc2-8abd-1c28262828ad";
+          url = "https://git.minz1.com";
+          uuid = runner.uuidOf runner.id;
         };
         cache.enabled = false;
         # "-": job containers get no podman socket; the daemon finds it via DOCKER_HOST.
         container.docker_host = "-";
       };
-      secrets.server.connections.default.token_url = config.sops.secrets.forgejo_runner_token.path;
+      secrets.server.connections.default.token_url = config.sops.secrets.runner_token.path;
       # Rootless podman under a dedicated user — same reasoning as the pre-migration setup on vultr-nix-0.
       runtimes.podman = false;
     };
