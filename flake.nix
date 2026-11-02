@@ -17,7 +17,8 @@
     };
     nixos-anywhere = {
       url = "github:nix-community/nixos-anywhere";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # shortcut: own nixpkgs, locked at 713b207 (2026-10-18) because nixos-images still sets the removed
+      # boot.initrd.systemd.enable; a flake update re-breaks bootstrap-install*; unpin once nixos-images drops it (OPS-18)
       inputs.disko.follows = "disko";
       inputs.treefmt-nix.follows = "treefmt-nix";
     };

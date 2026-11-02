@@ -415,9 +415,7 @@
         "nix-vm-test": "nix-vm-test",
         "nixos-images": "nixos-images",
         "nixos-stable": "nixos-stable",
-        "nixpkgs": [
-          "nixpkgs"
-        ],
+        "nixpkgs": "nixpkgs_2",
         "treefmt-nix": [
           "treefmt-nix"
         ]
@@ -555,6 +553,22 @@
     },
     "nixpkgs_2": {
       "locked": {
+        "lastModified": 1792291545,
+        "narHash": "sha256-LW33+dSrpSw4Xpz3cDKqNARm84z0+bRNsv+7m6exF84=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "713b2077af0de16b3a02fc1760d233cf55e7dc4e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable-small",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
         "lastModified": 1793540411,
         "narHash": "sha256-fiPJ88izTVucjeo2EQ3jk4aWmLg03I1D4vxnX2QjEgE=",
         "owner": "NixOS",
@@ -667,7 +681,7 @@
         "mediafixer": "mediafixer",
         "nix-topology": "nix-topology",
         "nixos-anywhere": "nixos-anywhere",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs_3",
         "quadlet-nix": "quadlet-nix",
         "sops-nix": "sops-nix",
         "treefmt-nix": "treefmt-nix",
