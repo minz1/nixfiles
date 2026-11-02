@@ -14,6 +14,9 @@ let
   wgAddr = node.networks.mgmt.ip;
 
   inherit (endpoints) authentik grafana;
+  forgejo = endpoints.git;
+  forgejoSsh = endpoints.git-ssh;
+  publicIp = lib.head (lib.splitString ":" node.networks.edge.endpoint);
   media = endpoints.media-caddy;
   servicesCaddy = endpoints.services-caddy;
 
@@ -240,8 +243,9 @@ in
       (pkgs.caddy.withPlugins {
         plugins = [
           "github.com/hslatman/caddy-crowdsec-bouncer/http@v0.14.1"
+          "github.com/mholt/caddy-l4@v0.1.2"
         ];
-        hash = "sha256-3zj9JZnjagY2AQfgcMSDLMSmUxQdZE8OSp8e50o1fiQ=";
+        hash = "sha256-Av5Vu5TwsMOOLHkpO3H1PCO5Mk+JmwuD7Y8EsLWrlR4=";
       }).overrideAttrs
         (_: {
           doInstallCheck = false;
@@ -256,6 +260,18 @@ in
         api_url http://127.0.0.1:8080
         api_key {$CROWDSEC_API_KEY}
         ticker_interval 15s
+      }
+
+      # public SSH for Forgejo; sshd itself only listens on the WG address
+      layer4 {
+        ${publicIp}:22 {
+          route {
+            proxy {
+              proxy_protocol v2
+              upstream ${forgejoSsh.ip}:${toString forgejoSsh.port}
+            }
+          }
+        }
       }
     '';
 
@@ -288,6 +304,11 @@ in
 
       "grafana.minz1.com" = mkProxyVhost {
         endpoint = grafana;
+        clientAuth = true;
+      };
+
+      "git.minz1.com" = mkProxyVhost {
+        endpoint = forgejo;
         clientAuth = true;
       };
 
