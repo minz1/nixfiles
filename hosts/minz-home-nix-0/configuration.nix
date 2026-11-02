@@ -238,6 +238,7 @@ in
     linkConfig = {
       Name = "eno1";
       TCPSegmentationOffload = false;
+      TCP6SegmentationOffload = false;
       GenericSegmentationOffload = false;
     };
   };
