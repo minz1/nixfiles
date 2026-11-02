@@ -158,6 +158,21 @@ in
 
   services.crowdsec-firewall-bouncer.enable = true;
 
+  systemd.services.crowdsec-firewall-bouncer-register.unitConfig.RequiresMountsFor = [
+    "/var/lib/crowdsec-firewall-bouncer-register"
+  ];
+
+  # the register unit rotates the key when its file is missing; a running bouncer keeps the dead key unless restarted
+  systemd.paths.crowdsec-firewall-bouncer-key = {
+    wantedBy = [ "multi-user.target" ];
+    before = [ "crowdsec-firewall-bouncer-register.service" ];
+    pathConfig.PathChanged = "/var/lib/crowdsec-firewall-bouncer-register/api-key.cred";
+  };
+  systemd.services.crowdsec-firewall-bouncer-key.serviceConfig = {
+    Type = "oneshot";
+    ExecStart = "${config.systemd.package}/bin/systemctl try-restart crowdsec-firewall-bouncer.service";
+  };
+
   networking.nftables.enable = true;
 
   # Caddy already owns :80 for its own public ACME; lego listens locally and Caddy relays the challenge
@@ -349,6 +364,12 @@ in
   environment.persistence."/persist".directories = [
     {
       directory = "/var/lib/crowdsec";
+      user = "crowdsec";
+      group = "crowdsec";
+      mode = "0750";
+    }
+    {
+      directory = "/var/lib/crowdsec-firewall-bouncer-register";
       user = "crowdsec";
       group = "crowdsec";
       mode = "0750";
