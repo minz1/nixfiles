@@ -16,6 +16,7 @@ locals {
   services_ip         = local.all_nodes[var.fleet.services["services-caddy"].host].networks.incus_bridge.ip
   admin_ips           = join(",", [for v in values(local.all_nodes) : v.networks.mgmt.ip if contains(v.roles, "admin-client")])
   ports               = { for k, v in var.fleet.services : k => tostring(v.port) }
+  edge_public_ip      = split(":", local.all_nodes["minz-vultr-nix-1"].networks.edge.endpoint)[0]
 
   # Shared ingress rules: SSH, ACME HTTP-01, node_exporter. Source empty = any.
   common_ingress = [
@@ -81,6 +82,7 @@ locals {
     "minz-services-0"  = incus_network_acl.services.name
     "minz-game-0"      = incus_network_acl.game.name
     "minz-attic-0"     = incus_network_acl.attic.name
+    "minz-git-0"       = incus_network_acl.forgejo.name
     }, {
     for n, v in local.all_nodes : n => incus_network_acl.runner.name if contains(v.roles, "ci-runner")
   })
@@ -249,6 +251,14 @@ resource "incus_network_acl" "obs" {
   ])
 
   egress = concat(local.common_egress, [
+    {
+      action           = "allow"
+      destination      = "${local.edge_public_ip}/32"
+      destination_port = "22"
+      protocol         = "tcp"
+      description      = "Blackbox SSH banner probe of git.minz1.com via the edge"
+      state            = "enabled"
+    },
     {
       action           = "allow"
       destination      = local.mgmt_subnet
@@ -434,6 +444,58 @@ resource "incus_network_acl" "authentik" {
       destination_port = "443"
       protocol         = "tcp"
       description      = "HTTPS egress for external APIs (Mojang UUID lookup, OAuth JWKS)"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = "0.0.0.0/0,::/0"
+      destination_port = "465,587"
+      protocol         = "tcp"
+      description      = "SMTP egress for Resend email delivery"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      destination      = local.mgmt_subnet
+      destination_port = local.ports.rustfs
+      protocol         = "tcp"
+      description      = "restic backups to RustFS on vultr-nix-0"
+      state            = "enabled"
+    },
+  ])
+}
+
+# git-0: public Forgejo, reached only through the edge (HTTPS mTLS + SSH with PROXY v2, which trusts its peer).
+resource "incus_network_acl" "forgejo" {
+  name        = "forgejo"
+  description = "minz-git-0: Forgejo HTTPS + SSH from the edge only"
+
+  ingress = concat(local.common_ingress, [
+    {
+      action           = "allow"
+      source           = local.edge_subnet
+      destination_port = local.ports.git
+      protocol         = "tcp"
+      description      = "Forgejo HTTPS+mTLS (proxied by edge Caddy)"
+      state            = "enabled"
+    },
+    {
+      action           = "allow"
+      source           = local.edge_subnet
+      destination_port = local.ports["git-ssh"]
+      protocol         = "tcp"
+      description      = "Forgejo SSH with PROXY v2 (edge caddy-l4)"
+      state            = "enabled"
+    },
+  ])
+
+  egress = concat(local.common_egress, [
+    {
+      action           = "allow"
+      destination      = "${local.edge_public_ip}/32"
+      destination_port = "443"
+      protocol         = "tcp"
+      description      = "OIDC to auth.minz1.com through the edge"
       state            = "enabled"
     },
     {
