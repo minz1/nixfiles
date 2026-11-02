@@ -35,6 +35,8 @@ let
       evaluatorType,
       evaluatorParams,
     }:
+    # Grafana refuses to start provisioning (and crash-loops) on a UID over 40 chars
+    assert lib.assertMsg (lib.stringLength uid <= 40) "alert rule uid '${uid}' is over Grafana's 40-char limit";
     {
       inherit
         uid
@@ -187,6 +189,10 @@ in
           orgId = 1;
           uid = "adguard-nxdomain-spike";
         }
+        {
+          orgId = 1;
+          uid = "crowdsec-bouncer-stalled-caddy-bouncer";
+        }
       ];
       groups = [
         {
@@ -317,6 +323,33 @@ in
               evaluatorType = "lt";
               evaluatorParams = [ 1 ];
               summary = "{{ $labels.instance }} failed its blackbox probe";
+            })
+            (mkThresholdRule {
+              uid = "crowdsec-down";
+              title = "CrowdSec metrics missing on edge";
+              expr = ''up{job=~"crowdsec|crowdsec-firewall-bouncer"}'';
+              evaluatorType = "lt";
+              evaluatorParams = [ 1 ];
+              # no data means Alloy's push from the edge stopped, which hides everything below
+              noDataState = "Alerting";
+              summary = "{{ $labels.job }} on the edge is down or its metrics stopped arriving";
+            })
+            # rejected pulls (bad key) aren't counted, so a stalled counter catches the 2026-10-24 failure mode
+            (mkThresholdRule {
+              uid = "crowdsec-stalled-caddy";
+              title = "CrowdSec bouncer caddy-bouncer not pulling";
+              expr = ''sum(increase(cs_lapi_bouncer_requests_total{bouncer="caddy-bouncer",route="/v1/decisions/stream"}[10m])) or vector(0)'';
+              evaluatorType = "lt";
+              evaluatorParams = [ 1 ];
+              summary = "caddy-bouncer has made no successful decision pulls in 10 minutes";
+            })
+            (mkThresholdRule {
+              uid = "crowdsec-stalled-firewall";
+              title = "CrowdSec bouncer crowdsec-firewall-bouncer not pulling";
+              expr = ''sum(increase(cs_lapi_bouncer_requests_total{bouncer="crowdsec-firewall-bouncer",route="/v1/decisions/stream"}[10m])) or vector(0)'';
+              evaluatorType = "lt";
+              evaluatorParams = [ 1 ];
+              summary = "crowdsec-firewall-bouncer has made no successful decision pulls in 10 minutes";
             })
             (mkThresholdRule {
               uid = "tunnel-packet-loss";
