@@ -38,10 +38,6 @@ with config.nodes;
       host = minz-vultr-nix-0.name;
       port = 9000;
     };
-    forgejo = {
-      host = minz-vultr-nix-0.name;
-      port = 3000;
-    };
     git = {
       host = minz-git-0.name;
       port = 3443;

@@ -9,7 +9,6 @@
 
 let
   wgAddr = node.networks.mgmt.ip;
-  forgejoPort = topology.services.forgejo.port;
   rustfsPort = toString topology.services.rustfs.port;
 in
 {
@@ -92,26 +91,6 @@ in
     };
   };
 
-  environment.persistence."/persist".directories = [
-    "/var/lib/forgejo"
-    "/var/lib/postgresql"
-  ];
-
-  services.forgejo = {
-    enable = true;
-    database.type = "postgres";
-    settings = {
-      server = {
-        HTTP_ADDR = wgAddr;
-        HTTP_PORT = forgejoPort;
-        DOMAIN = wgAddr;
-        ROOT_URL = "http://${wgAddr}:${toString forgejoPort}/";
-      };
-      service.DISABLE_REGISTRATION = true;
-      security.GLOBAL_TWO_FACTOR_REQUIREMENT = "admin";
-    };
-  };
-
   services.rustfs = {
     enable = true;
     environmentFile = config.sops.templates.rustfs-env.path;
@@ -126,7 +105,6 @@ in
 
   networking.nftables.enable = true;
   homelab.wireguard.fleetTCPPorts = [
-    forgejoPort
     topology.services.rustfs.port
   ];
 
@@ -163,35 +141,6 @@ in
     '';
   };
 
-  # repos/LFS backed up hot; setpriv privilege drop matches minz-authentik-0's target.
-  homelab.backups.targets.forgejo = {
-    paths = [
-      "/var/lib/forgejo"
-      "/var/backup/forgejo-db.sql"
-    ];
-    wants = [ "postgresql.service" ];
-    prepareCommand = ''
-      mkdir -p /var/backup
-      ${pkgs.util-linux}/bin/setpriv --reuid postgres --regid postgres --init-groups -- ${config.services.postgresql.package}/bin/pg_dumpall --clean --if-exists > /var/backup/forgejo-db.sql
-    '';
-    extraCapabilities = [
-      "CAP_SETUID"
-      "CAP_SETGID"
-    ];
-    extraSystemCallFilter = [
-      "setuid"
-      "setgid"
-      "setresuid"
-      "setresgid"
-      "setreuid"
-      "setregid"
-      "setgroups"
-      "setfsuid"
-      "setfsgid"
-      "capset"
-    ];
-  };
-
   # rclone (not restic copy, which would need every host's repo password); no hard-delete.
   systemd.services.b2-mirror = {
     description = "Mirror RustFS backups + Tofu state buckets to Backblaze B2";
@@ -219,17 +168,4 @@ in
       Persistent = true;
     };
   };
-
-  environment.systemPackages =
-    let
-      cfg = config.services.forgejo;
-      forgejo-cli = pkgs.writeShellScriptBin "forgejo-cli" ''
-        exec /run/wrappers/bin/sudo -u ${cfg.user} \
-          env GITEA_WORK_DIR="${cfg.stateDir}" GITEA_CUSTOM="${cfg.customDir}" \
-          ${pkgs.lib.getExe cfg.package} "$@"
-      '';
-    in
-    [
-      forgejo-cli
-    ];
 }

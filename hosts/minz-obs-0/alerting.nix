@@ -415,7 +415,7 @@ in
                       |= "key=\"svc-exec\""
                       |~ "comm=\"(sh|bash|dash|ash|zsh|ksh|python[0-9.]*|perl|ruby|php|node|lua[0-9.]*)\""
                       !~ "comm=\"sh\".*UID=\"postgres\""
-                      !~ "comm=\"bash\".*UID=\"(forgejo|git)\""
+                      !~ "comm=\"bash\".*UID=\"git\""
                       !~ "UID=\"podman-runner\""
                     [10m]
                   )
