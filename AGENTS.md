@@ -60,7 +60,7 @@ Each section applies when working on the paths in its heading.
 #### Networking and TLS
 - `security.acme` with `listenHTTP = ":80"` doesn't open port 80; `modules/nixos/common.nix` adds it. Don't remove it. A cert issued by minica instead of step-ca means the HTTP-01 challenge couldn't reach port 80.
 - After changing `security.pki.certificates`, fully restart Go services (Caddy, alloy); reload keeps the old cert pool.
-- forgejo-runner cache: `settings.cache.host = wgAddr` (10.8.0.1). The rootful podman bridge 10.88.0.1 never exists here.
+- forgejo-runner cache (off today): if enabled, `settings.cache.host` must be an address job containers can reach. The rootful podman bridge 10.88.0.1 never exists here.
 - Quadlet containers (rootless, `oci` user) are system units: manage them with `sudo systemctl restart|status <name>.service`, never `podman restart` (systemd kills and recreates the container behind it) or `systemctl --user`. Use podman only to inspect (`exec`, `ps`, `inspect`).
 - Rootless podman containers (pasta) share the host IP, so `mediaIp` inside a container is the container itself. Reach host services via `host.containers.internal:<port>`. Debug distroless containers with `nsenter -t <pid> -n curl ...`.
 
@@ -71,6 +71,12 @@ Each section applies when working on the paths in its heading.
 - Adding `client_authentication` to a server's TLS policy turns on `strict_sni_host`. The edge (vultr-nix-1) dials internal Caddies by IP, so every vhost then returns 421. Set `strict_sni_host = false` and authorize on `{http.request.tls.client.subject}` in the route. After any internal TLS policy change, curl every public vhost through the edge, not only the one changed.
 - IP connections carry no SNI. Tag the cert in `load_files` (`tags = [ "x" ]`) and pin it with `certificate_selection.any_tag`; the cert needs an IP SAN via `security.acme.certs.<n>.extraDomainNames`. Avoid `default_sni`.
 - A TLS server using `load_files` on a host that also runs lego needs `automatic_https.disable_redirects = true`, or Caddy grabs port 80.
+
+### Forgejo and CI (`hosts/minz-git-0/**`, `hosts/minz-runner-0/**`, `.forgejo/**`, `scripts/forgejo-bootstrap*`)
+
+- Workflows never use `pull_request_target`: Forgejo gives it repo secrets and a write token on fork PRs.
+- The authentik auth source, its client secret and the runner registration come from `scripts/forgejo-bootstrap.sh` in `forgejo.service` `preStart`, on every start. Don't change them in the admin UI; it gets overwritten.
+- Nothing on minz-git-0 may pass a secret as a command argument (the `svc-exec` audit rule ships argv to Loki) or spawn `sh` as uid forgejo (fires `svc-exec-shell`). The bootstrap test enforces both for its script.
 
 ### Scripts and justfiles (`scripts/**`, `pkgs/**`, `justfile`, `just/**`)
 

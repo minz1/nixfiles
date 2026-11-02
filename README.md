@@ -15,6 +15,7 @@
 | `minz-game-0` | Minecraft server: Fabric 26.3, vanilla-compatible (rootless Podman, oci user) | `10.10.0.9` |
 | `minz-attic-0` | Attic binary cache (CI push target, fleet substituter) | `10.10.0.12` |
 | `minz-runner-0` | Forgejo Actions runner (rootless Podman job containers) | `10.10.0.13` |
+| `minz-git-0` | Public Forgejo at git.minz1.com + Postgres (SSH :22 via the edge) | `10.10.0.14` |
 
 Incus VMs/containers run on `minz-home-nix-0` bridged at `10.10.0.0/24`.
 
