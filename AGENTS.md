@@ -76,7 +76,7 @@ Each section applies when working on the paths in its heading.
 
 - Workflows never use `pull_request_target`: Forgejo gives it repo secrets and a write token on fork PRs.
 - The authentik auth source, its client secret and the runner registration come from `scripts/forgejo-bootstrap.sh` in `forgejo.service` `preStart`, on every start. Don't change them in the admin UI; it gets overwritten.
-- Nothing on minz-git-0 may pass a secret as a command argument (the `svc-exec` audit rule ships argv to Loki) or spawn `sh` as uid forgejo (fires `svc-exec-shell`). The bootstrap test enforces both for its script.
+- Nothing on minz-git-0 may pass a secret as a command argument (the `svc-exec` audit rule ships argv to Loki) or spawn `sh` as uid git (fires `svc-exec-shell`). The bootstrap test enforces both for its script.
 
 ### Scripts and justfiles (`scripts/**`, `pkgs/**`, `justfile`, `just/**`)
 

@@ -361,7 +361,7 @@ resource "incus_network_acl" "game" {
   ])
 }
 
-# runner-0: CI job runner — needs real internet (nix builds, gitleaks) plus Forgejo's API on mgmt.
+# runner-0: CI job runner — needs real internet (nix builds, gitleaks, git.minz1.com).
 resource "incus_network_acl" "runner" {
   name        = "runner"
   description = "minz-runner-0: bridge-internal egress + full HTTP/HTTPS egress (git.minz1.com, nix builds, apt)"

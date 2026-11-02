@@ -431,7 +431,11 @@ in
       };
   };
 
-  networking.firewall.allowedTCPPorts = [ velocityPort ];
+  # 22: Forgejo git SSH via caddy-l4 (sshd itself is WG-only; don't rely on openssh.openFirewall)
+  networking.firewall.allowedTCPPorts = [
+    velocityPort
+    22
+  ];
 
   environment.persistence."/persist".directories = [
     {

@@ -47,9 +47,7 @@ in
   sops.secrets = {
     forgejo_oidc_client_secret = forgejoSecret;
     forgejo_smtp_password = forgejoSecret;
-    runner_token = forgejoSecret // {
-      sopsFile = ../../secrets/shared/forgejo.yaml;
-    };
+    runner_token.sopsFile = ../../secrets/shared/forgejo.yaml;
   };
   sops.templates.forgejo_runner_secret = forgejoSecret // {
     content = "${runner.id}${config.sops.placeholder.runner_token}";

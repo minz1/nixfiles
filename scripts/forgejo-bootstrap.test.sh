@@ -48,7 +48,7 @@ JSON
 stub_up() {
     busybox httpd -f -p "127.0.0.1:$port" -h "$work/www" &
     stub_pid=$!
-    sleep 0.5
+    until (exec 3<> "/dev/tcp/127.0.0.1/$port") 2> /dev/null; do sleep 0.1; done
 }
 stub_down() {
     kill "$stub_pid"

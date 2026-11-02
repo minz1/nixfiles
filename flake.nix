@@ -17,8 +17,9 @@
     };
     nixos-anywhere = {
       url = "github:nix-community/nixos-anywhere";
-      # shortcut: own nixpkgs, locked at 713b207 (2026-10-18) because nixos-images still sets the removed
-      # boot.initrd.systemd.enable; a flake update re-breaks bootstrap-install*; unpin once nixos-images drops it (OPS-18)
+      # shortcut: own nixpkgs pinned at 713b207 (2026-10-18) because nixos-images still sets the removed
+      # boot.initrd.systemd.enable; drop this pin once nixos-images fixes it (OPS-18)
+      inputs.nixpkgs.url = "github:NixOS/nixpkgs/713b2077af0de16b3a02fc1760d233cf55e7dc4e";
       inputs.disko.follows = "disko";
       inputs.treefmt-nix.follows = "treefmt-nix";
     };
