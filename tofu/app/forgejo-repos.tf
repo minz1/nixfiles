@@ -25,9 +25,13 @@ resource "forgejo_repository" "repo" {
   default_branch = "main"
   # showcase instance: these repos are public on purpose (also public on GitHub/Codeberg)
   private = false
+  # repos are filled by pushing; the provider's default auto_init adds a README commit that blocks the first push
+  auto_init = false
 
   lifecycle {
     prevent_destroy = true
+    # auto_init forces replacement; nixfiles was created with the default before it was set
+    ignore_changes = [auto_init]
   }
 }
 
