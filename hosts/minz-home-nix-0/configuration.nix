@@ -231,10 +231,16 @@ in
     extraConfig = "allow ${incusNetwork.subnet}";
   };
 
-  # Intel I219 (e1000e) hardware unit hang fix — TSO/GSO cause tx ring stalls.
-  services.udev.extraRules = ''
-    ACTION=="add", SUBSYSTEM=="net", KERNEL=="eno1", RUN+="${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off"
-  '';
+  # Intel I219 (e1000e) hardware unit hang: TSO/GSO stall the tx ring (eno1 dead 3h43m on 2026-11-02).
+  # Only the first matching .link applies, so this one must also keep the eno1 name from 99-default.link.
+  systemd.network.links."10-eno1" = {
+    matchConfig.PermanentMACAddress = "e0:be:03:50:e4:4b";
+    linkConfig = {
+      Name = "eno1";
+      TCPSegmentationOffload = false;
+      GenericSegmentationOffload = false;
+    };
+  };
 
   # syslog_format = rfc3164 is a best guess for the real logread output — no parse errors seen, but confirm live in Grafana Explore.
   environment.etc."alloy/router.alloy".text = ''
