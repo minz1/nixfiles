@@ -64,6 +64,18 @@ let
         }
       '';
     };
+
+  # Caddy only redacts Cookie/Authorization; Jellyfin and arr tokens travel in these headers
+  accessLog = ''
+    output stderr
+    format filter {
+      wrap json
+      request>headers>X-Api-Key delete
+      request>headers>X-Emby-Token delete
+      request>headers>X-Mediabrowser-Token delete
+      request>headers>X-Emby-Authorization delete
+    }
+  '';
 in
 {
   imports = [ ./hardware-configuration.nix ];
@@ -123,15 +135,19 @@ in
       {
         source = "journalctl";
         journalctl_filter = [ "_SYSTEMD_UNIT=caddy.service" ];
-        labels.type = "caddy";
-      }
-      {
-        source = "journalctl";
-        journalctl_filter = [ "_SYSTEMD_UNIT=sshd.service" ];
+        # journalctl lines carry a syslog prefix; syslog-logs strips it and hands the JSON to caddy-logs
         labels.type = "syslog";
       }
     ];
+    # local decisions recorded but not enforced until a day of alerts is reviewed (OBS-13); CAPI bans still apply
+    settings.simulation.simulation = true;
   };
+
+  # the module rewrites these files via tmpfiles but never tells the running crowdsec; reload (-t, then HUP) avoids restarting caddy, which requires crowdsec
+  systemd.services.crowdsec.reloadTriggers = [
+    (builtins.toJSON config.services.crowdsec.settings.acquisitions)
+    (builtins.toJSON config.services.crowdsec.settings.simulation)
+  ];
 
   # the caddy bouncer's key is fixed in sops, so it is registered with that key rather than via cscli's generated one
   systemd.services.crowdsec.serviceConfig.ExecStartPre = [
@@ -229,7 +245,8 @@ in
       }
     '';
 
-    virtualHosts = {
+    # every vhost logs to the journal (CrowdSec + Alloy read it); add new vhosts inside this set
+    virtualHosts = lib.mapAttrs (_: v: v // { logFormat = accessLog; }) {
       "auth.minz1.com" = mkProxyVhost {
         endpoint = authentik;
         clientAuth = true;
