@@ -357,6 +357,16 @@
               else
                 "touch $out"
             );
+            forgejo-runner-uuid =
+              let
+                got = (import ./modules/lib/forgejo-runner.nix { inherit lib; }).uuidOf "7c31591e8b67225a";
+              in
+              pkgs.runCommand "forgejo-runner-uuid" { } (
+                if got == "37633331-3539-3165-3862-363732323561" then
+                  "touch $out"
+                else
+                  throw "forgejo-runner uuidOf: got ${got}"
+              );
             internal-proxy-lib =
               let
                 failures = (import ./modules/lib/caddy-tests.nix { inherit lib; }).failures;
