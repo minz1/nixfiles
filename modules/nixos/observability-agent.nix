@@ -114,6 +114,17 @@ in
             expression = "(eyJ[A-Za-z0-9_-]+[.]eyJ[A-Za-z0-9_-]+[.][A-Za-z0-9_-]+)"
             replace    = "REDACTED_JWT"
           }
+
+          // query strings carry tokens; Caddy access lines keep only the path
+          stage.replace {
+            expression = `"uri":"[^"?]*([?][^"]*)"`
+            replace    = ""
+          }
+
+          stage.replace {
+            expression = `"Referer":\["[^"?]*([?][^"]*)"`
+            replace    = ""
+          }
         }
 
         loki.write "default" {
