@@ -69,6 +69,15 @@ in
     };
     provision = {
       enable = true;
+      dashboards.settings = {
+        apiVersion = 1;
+        providers = [
+          {
+            name = "homelab";
+            options.path = ./dashboards;
+          }
+        ];
+      };
       # uid pinned for alert rules; deleteDatasources avoids the update-path crash
       datasources.settings = {
         deleteDatasources = [
