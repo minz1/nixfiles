@@ -105,7 +105,7 @@ in
     enable = true;
     package = pkgs.caddy.withPlugins {
       plugins = [ "github.com/caddyserver/forwardproxy@${forwardproxyVersion}" ];
-      hash = "sha256-LFZCrm1pkiROzOxk61w9fVXlxaZdf4GcrRa0y/oi8TY=";
+      hash = "sha256-hot8lNUba69833QKE22u0IDMzmMps/z5WtDPRCHgPHc=";
     };
     settings = {
       logging.logs.default.level = "INFO";
