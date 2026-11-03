@@ -85,7 +85,7 @@
       networks.mgmt = {
         ip = "10.8.0.4";
         role = "client";
-        publicKey = "E/ptYaj0yogTCFlHuvnYV88NLErGdOL5F8p/PeW6JXM=";
+        publicKey = "2TsSYIS2fQMNCI1cXfRHGYF6F7B8DAw5eMtdbJfQoDA=";
       };
     };
 
