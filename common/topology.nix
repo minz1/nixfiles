@@ -61,24 +61,6 @@
       };
     };
 
-    device-2 = {
-      kind = "device";
-      networks.mgmt = {
-        ip = "10.8.0.2";
-        role = "client";
-        publicKey = "kvjC79ivkCmFXBUiJm2wt4SLoyFrlxyiZvOffSraJCc=";
-      };
-    };
-
-    device-3 = {
-      kind = "device";
-      networks.mgmt = {
-        ip = "10.8.0.3";
-        role = "client";
-        publicKey = "t/NvyVClqspHWixGJzjWBOnbfm4AyZNEdF9NGT1hWw4=";
-      };
-    };
-
     minz-desktop = {
       kind = "device";
       roles = [ "admin-client" ];
