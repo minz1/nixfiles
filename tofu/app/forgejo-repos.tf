@@ -40,5 +40,5 @@ resource "forgejo_repository_action_secret" "attic_push_token" {
   name          = "ATTIC_PUSH_TOKEN"
   data_wo       = ephemeral.sops_file.forgejo.data["attic_push_token"]
   # bump whenever attic_push_token is rotated in sops; write-only values aren't diffed
-  data_wo_version = 1
+  data_wo_version = 2
 }
