@@ -6,7 +6,9 @@ resource "authentik_group" "jellyfin_users" {
   name = "jellyfin-users"
 }
 
-# Jellyfin LDAP plugin bind/search account; password is TF_VAR_ldap_bind_password in secrets/tofu.env; rotate via `tofu taint authentik_user.ldap_bind`.
+# Jellyfin LDAP plugin bind/search account; password is TF_VAR_ldap_bind_password in secrets/tofu.env.
+# Rotate: an in-place password change reports success but never reaches authentik. Taint the user, or
+# POST /api/v3/core/users/<pk>/set_password/ with the new value; then update LDAP-Auth.xml on media-0.
 
 # Role granting search_full_directory on the jellyfin LDAP provider — without it, CanSearch=false and the bind user can only see itself.
 resource "authentik_rbac_role" "ldap_searcher" {

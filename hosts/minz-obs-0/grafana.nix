@@ -121,6 +121,7 @@ in
       ]
       (_: {
         owner = "grafana";
+        restartUnits = [ "grafana.service" ];
       });
 
   sops.templates."grafana-alerting-env" = {

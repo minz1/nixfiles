@@ -62,6 +62,7 @@ resource "authentik_provider_oauth2" "seerr" {
   name               = "seerr"
   client_id          = "seerr"
   client_type        = "confidential"
+  grant_types        = ["authorization_code", "refresh_token"]
   authorization_flow = data.authentik_flow.default_authorization.id
   invalidation_flow  = data.authentik_flow.default_invalidation.id
   property_mappings  = data.authentik_property_mapping_provider_scope.oidc.ids
