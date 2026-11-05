@@ -113,7 +113,7 @@ in
     restartUnits = [ "crowdsec.service" ];
   };
 
-  sops.secrets.minecraft_velocity_forwarding_secret = { };
+  sops.secrets.minecraft_velocity_forwarding_secret.restartUnits = [ "velocity.service" ];
 
   sops.templates.crowdsec-caddy-env = {
     # consumed by caddy's environmentFile (the bouncer plugin), not crowdsec itself
