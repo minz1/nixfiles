@@ -352,11 +352,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794134416,
-        "narHash": "sha256-7Vad2mZRz5zTlH519+d8F5WDfUJq7rANKBV+Ney5Acs=",
+        "lastModified": 1794153125,
+        "narHash": "sha256-kKK5QbS3sPJgRAv2k3RW079fVV+u0MSY8sE5W8UpGPQ=",
         "owner": "minz1",
         "repo": "media-fixer",
-        "rev": "1fc81b07871a87953e9277748381ea1b65ac0576",
+        "rev": "92074fd46c335ce2a1b00917af8e2294dd8b9ea0",
         "type": "github"
       },
       "original": {
