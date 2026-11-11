@@ -36,7 +36,9 @@ resource "sonarr_media_management" "sonarr" {
   recycle_bin_days            = 0
   chmod_folder                = "755"
   chown_group                 = "media"
-  download_propers_repacks    = "preferAndUpgrade"
+  # doNotPrefer: the recyclarr Repack/Proper CFs score repacks. preferAndUpgrade let a
+  # "Bad Dual Groups" v2 (score 109) replace AnoZu (507) on Overgeared S01E06.
+  download_propers_repacks    = "doNotPrefer"
   episode_title_required      = "always"
   extra_file_extensions       = "srt"
   file_date                   = "none"
@@ -101,7 +103,7 @@ resource "radarr_media_management" "radarr" {
   recycle_bin_cleanup_days                    = 0
   chmod_folder                                = "755"
   chown_group                                 = "media"
-  download_propers_and_repacks                = "preferAndUpgrade"
+  download_propers_and_repacks                = "doNotPrefer" # see sonarr_media_management
   extra_file_extensions                       = "srt"
   file_date                                   = "none"
   recycle_bin                                 = ""
