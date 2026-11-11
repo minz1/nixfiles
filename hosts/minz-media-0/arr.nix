@@ -86,10 +86,160 @@ in
       '';
     };
 
-  services.bazarr.enable = true;
+  # Bazarr: settings via DYNACONF_* env (services.bazarr.settings + bazarr-env), which override
+  # config.yaml. config.yaml is deleted on every start, so UI edits don't survive a restart.
+  # Language profiles live in Bazarr's DB; bazarr-languages re-posts them after every start.
+  sops.secrets.bazarr_api_key.sopsFile = ../../secrets/shared/bazarr-api.yaml;
+  sops.secrets.opensubtitlescom_username.sopsFile = ../../secrets/shared/bazarr.yaml;
+  sops.secrets.opensubtitlescom_password.sopsFile = ../../secrets/shared/bazarr.yaml;
+  sops.secrets.subdl_api_key.sopsFile = ../../secrets/shared/bazarr.yaml;
+  sops.secrets.subsource_api_key.sopsFile = ../../secrets/shared/bazarr.yaml;
+  sops.secrets.anidb_api_client.sopsFile = ../../secrets/shared/bazarr.yaml;
+
+  # root:root 0400, read by systemd. Values are single-quoted, so they must not contain '.
+  sops.templates.bazarr-env = {
+    restartUnits = [ "bazarr.service" ];
+    content =
+      let
+        ph = config.sops.placeholder;
+      in
+      ''
+        DYNACONF_AUTH__APIKEY='@str ${ph.bazarr_api_key}'
+        DYNACONF_SONARR__APIKEY='@str ${ph.sonarr_api_key}'
+        DYNACONF_RADARR__APIKEY='@str ${ph.radarr_api_key}'
+        DYNACONF_OPENSUBTITLESCOM__USERNAME='@str ${ph.opensubtitlescom_username}'
+        DYNACONF_OPENSUBTITLESCOM__PASSWORD='@str ${ph.opensubtitlescom_password}'
+        DYNACONF_SUBDL__API_KEY='@str ${ph.subdl_api_key}'
+        DYNACONF_SUBSOURCE__APIKEY='@str ${ph.subsource_api_key}'
+        DYNACONF_ANIDB__API_CLIENT='@str ${ph.anidb_api_client}'
+      '';
+  };
+  # Header file so the API key never lands in curl's argv.
+  sops.templates.bazarr-api-header = {
+    restartUnits = [ "bazarr-languages.service" ];
+    content = "X-API-KEY: ${config.sops.placeholder.bazarr_api_key}";
+  };
+
+  services.bazarr = {
+    enable = true;
+    # shortcut: tracks upstream 1.6.3 betas (owner, 2026-11-10); bump tag + both hashes per beta,
+    # drop this once nixpkgs ships a stable release at or past the pinned beta.
+    package = pkgs.bazarr.overrideAttrs (
+      finalAttrs: old: {
+        version = "1.6.3-beta.29";
+        src = pkgs.fetchFromGitHub {
+          owner = "morpheus65535";
+          repo = "bazarr";
+          tag = "v${finalAttrs.version}";
+          hash = "sha256-flAQXHCJ3Y1ShkIXvftx15rviMCvAZvPFWZFsNSxYdU=";
+        };
+        passthru = old.passthru // {
+          frontend = old.passthru.frontend.overrideAttrs (
+            _: oldFrontend: {
+              inherit (finalAttrs) src version;
+              # npmDepsHash alone doesn't reach the already-built npmDeps
+              npmDeps = oldFrontend.npmDeps.overrideAttrs {
+                outputHash = "sha256-inCqUS7G7AJecguKyh77x9B1cMQsLfVIQELOj36kDCY=";
+              };
+            }
+          );
+        };
+      }
+    );
+    settings = {
+      general = {
+        ip = "127.0.0.1";
+        base_url = "/bazarr";
+        use_sonarr = true;
+        use_radarr = true;
+        # Bazarr scores every enabled provider; order is irrelevant.
+        enabled_providers = [
+          "animetosho_net"
+          "opensubtitlescom"
+          "subdl"
+          "subsource"
+          "subvault"
+        ];
+        serie_default_enabled = true;
+        serie_default_profile = 1;
+        movie_default_enabled = true;
+        movie_default_profile = 1;
+        use_embedded_subs = true;
+        ignore_pgs_subs = true;
+        ignore_vobsub_subs = true;
+        # anime typesetting lives in embedded ASS
+        ignore_ass_subs = false;
+        adaptive_searching = true;
+        upgrade_subs = true;
+        minimum_score = 85;
+        minimum_score_movie = 75;
+      };
+      sonarr = {
+        ip = "127.0.0.1";
+        port = 8989;
+        base_url = "/sonarr";
+        ssl = false;
+      };
+      radarr = {
+        ip = "127.0.0.1";
+        port = 7878;
+        base_url = "/radarr";
+        ssl = false;
+      };
+      # reads the whole audio track over the debrid mount
+      subsync.use_subsync = false;
+      opensubtitlescom.use_hash = true;
+      anidb.api_client_ver = 1;
+    };
+  };
 
   systemd.services.bazarr = {
     environment.TZ = "UTC";
+    serviceConfig.EnvironmentFile = config.sops.templates.bazarr-env.path;
+    preStart = "rm -f /var/lib/bazarr/config/config.yaml";
+  };
+
+  systemd.services.bazarr-languages = {
+    description = "Apply Bazarr language profiles";
+    after = [ "bazarr.service" ];
+    requires = [ "bazarr.service" ];
+    wantedBy = [ "bazarr.service" ];
+    partOf = [ "bazarr.service" ];
+    path = [ pkgs.curl ];
+    serviceConfig.Type = "oneshot";
+    script =
+      let
+        profiles = builtins.toJSON [
+          {
+            profileId = 1;
+            name = "English";
+            profileType = "basic";
+            cutoff = null;
+            items = [
+              {
+                id = 1;
+                language = "en";
+                forced = "False";
+                # "False" = normal or HI accepted
+                hi = "False";
+                audio_exclude = "False";
+                audio_only_include = "False";
+              }
+            ];
+            mustContain = [ ];
+            mustNotContain = [ ];
+            originalFormat = null;
+            tag = null;
+          }
+        ];
+      in
+      ''
+        curl -fsS --retry 30 --retry-all-errors --retry-delay 2 -o /dev/null \
+          -H @${config.sops.templates.bazarr-api-header.path} \
+          --data-urlencode languages-enabled=en \
+          --data-urlencode languages-profiles=${lib.escapeShellArg profiles} \
+          http://127.0.0.1:6767/bazarr/api/system/settings
+      '';
   };
 
   services.recyclarr.enable = true;

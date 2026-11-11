@@ -167,3 +167,16 @@ creation_rules:
       - age:
           - *minz-services-0
           - *minz-desktop
+
+  - path_regex: secrets/shared/bazarr-api\.yaml$
+    key_groups:
+      - age:
+          - *minz-media-0
+          - *minz-services-0
+          - *minz-desktop
+
+  - path_regex: secrets/shared/bazarr\.yaml$
+    key_groups:
+      - age:
+          - *minz-media-0
+          - *minz-desktop
