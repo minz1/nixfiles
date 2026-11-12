@@ -73,6 +73,11 @@ local_json '["homelab:z"]'
 run || fail "4: all from Attic exit $? $(cat "$work/out")"
 grep -q "0 of 2 closure paths cross-checked.*2 substituted from Attic" "$work/out" || fail "4: $(cat "$work/out")"
 
+local_json null
+rc=0
+run || rc=$?
+[ "$rc" = 1 ] || fail "4b: path with null signatures must be cross-checked, exit $rc"
+
 rc=0
 STUB_CURL_RC=7 run || rc=$?
 [ "$rc" = 2 ] || fail "5: unreachable exit $rc"

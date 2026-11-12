@@ -196,7 +196,6 @@ let
       runtimeInputs = [
         curl
         git
-        gnugrep
         jq
         p.fleet-cli
       ];

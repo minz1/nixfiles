@@ -12,7 +12,7 @@ attic_ip=$(fleet address "$attic_host")
 attic_url="https://${attic_ip}/homelab"
 
 if ! curl -fsS --max-time 5 "${attic_url}/nix-cache-info" > /dev/null \
-    || ! nix store info --store "$attic_url" > /dev/null 2>&1; then
+    || ! nix store info --option narinfo-cache-meta-ttl 0 --store "$attic_url" > /dev/null 2>&1; then
     echo "Attic cache unreachable at $attic_url — use SKIP_ATTIC_VERIFY=1 if that's expected" >&2
     exit 2
 fi
@@ -65,4 +65,4 @@ fi
 
 total=$(echo "$local_json" | jq 'keys | length')
 
-echo "verify-attic-closure: $host OK ($checked of $total closure paths cross-checked against Attic, $allowlisted allowlisted, $from_attic substituted from Attic and trusted by its signature, not cross-checked)"
+echo "verify-attic-closure: $host OK ($checked of $total closure paths cross-checked against Attic, $allowlisted allowlisted, $from_attic substituted from Attic and NOT verified, the check is circular for them)"
