@@ -162,6 +162,12 @@ creation_rules:
           - *minz-media-0
           - *minz-desktop
 
+  - path_regex: secrets/shared/sonarr-webhook\.yaml$
+    key_groups:
+      - age:
+          - *minz-services-0
+          - *minz-desktop
+
   - path_regex: secrets/shared/seerr-api\.yaml$
     key_groups:
       - age:

@@ -116,6 +116,7 @@ let
     contracts.contracts = {
       mediaFixerPath = "/m";
       seerrIngestPath = "/i";
+      sonarrIngestPath = "/s";
     };
   };
 

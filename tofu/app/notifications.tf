@@ -99,3 +99,27 @@ resource "radarr_notification_webhook" "decypharr_import" {
   username = "arr"
   password = data.sops_file.decypharr.data["decypharr_api_token"]
 }
+
+resource "sonarr_notification_webhook" "media_fixer" {
+  name   = "media-fixer"
+  url    = "https://${var.fleet.services["services-caddy"].host}.internal${local.contracts.sonarrIngestPath}"
+  method = 1
+
+  on_grab                            = true
+  on_download                        = true
+  on_upgrade                         = false
+  on_import_complete                 = false
+  on_rename                          = false
+  on_series_add                      = false
+  on_series_delete                   = false
+  on_episode_file_delete             = false
+  on_episode_file_delete_for_upgrade = false
+  on_health_issue                    = false
+  on_health_restored                 = false
+  on_application_update              = false
+  on_manual_interaction_required     = true
+  include_health_warnings            = false
+
+  username = "sonarr"
+  password = data.sops_file.sonarr_webhook.data["sonarr_webhook_secret"]
+}

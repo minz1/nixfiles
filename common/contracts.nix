@@ -24,6 +24,7 @@ in
     };
     mediaFixerPath = "/media";
     seerrIngestPath = "/ingest/seerr";
+    sonarrIngestPath = "/ingest/sonarr";
     localPorts.minz-media-0 = {
       sonarr = {
         port = 8989;

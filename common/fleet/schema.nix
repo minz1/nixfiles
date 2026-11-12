@@ -192,6 +192,7 @@ let
       };
       mediaFixerPath = mkOption { type = types.str; };
       seerrIngestPath = mkOption { type = types.str; };
+      sonarrIngestPath = mkOption { type = types.str; };
       localPorts = mkOption {
         type = types.attrsOf (types.attrsOf localPort);
         default = { };

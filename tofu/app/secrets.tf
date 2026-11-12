@@ -21,3 +21,7 @@ ephemeral "sops_file" "prowlarr" {
 ephemeral "sops_file" "seerr_api" {
   source_file = "${path.root}/../../secrets/shared/seerr-api.yaml"
 }
+
+data "sops_file" "sonarr_webhook" {
+  source_file = "${path.root}/../../secrets/shared/sonarr-webhook.yaml"
+}

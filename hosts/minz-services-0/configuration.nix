@@ -28,11 +28,13 @@ in
   ];
   sops.secrets.seerr_webhook_secret.sopsFile = ../../secrets/shared/seerr.yaml;
   sops.secrets.seerr_api_key.sopsFile = ../../secrets/shared/seerr-api.yaml;
+  sops.secrets.sonarr_webhook_secret.sopsFile = ../../secrets/shared/sonarr-webhook.yaml;
   sops.templates."media-fixer-seerr-env" = {
     restartUnits = [ "media-fixer.service" ];
     content = ''
       MEDIA_FIXER_SEERR_WEBHOOK_SECRET=${config.sops.placeholder.seerr_webhook_secret}
       MEDIA_FIXER_SEERR_API_KEY=${config.sops.placeholder.seerr_api_key}
+      MEDIA_FIXER_SONARR_WEBHOOK_SECRET=${config.sops.placeholder.sonarr_webhook_secret}
     '';
   };
 
@@ -123,7 +125,10 @@ in
         match = [
           {
             host = [ "minz-services-0.internal" ];
-            path = [ contracts.seerrIngestPath ];
+            path = [
+              contracts.seerrIngestPath
+              contracts.sonarrIngestPath
+            ];
             remote_ip.ranges = [ "${mediaIp}/32" ];
           }
         ];
