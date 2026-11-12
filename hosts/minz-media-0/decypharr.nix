@@ -1,13 +1,15 @@
 {
   config,
   lib,
+  topology,
   pkgs,
   ...
 }:
 
 let
-  mediaAgentPort = 9191;
-  decypharrPort = 8282;
+  lp = topology.contracts.localPorts.minz-media-0;
+  mediaAgentPort = lp.media-agent.port;
+  decypharrPort = lp.decypharr.port;
 in
 {
   sops.secrets."media-agent-env".restartUnits = [
@@ -140,13 +142,13 @@ in
       arrs = [
         {
           name = "sonarr";
-          host = "http://127.0.0.1:8989/sonarr";
+          host = "http://127.0.0.1:${toString lp.sonarr.port}${lp.sonarr.urlBase}";
           download_uncached = true;
           import_webhook = true;
         }
         {
           name = "radarr";
-          host = "http://127.0.0.1:7878/radarr";
+          host = "http://127.0.0.1:${toString lp.radarr.port}${lp.radarr.urlBase}";
           download_uncached = true;
           import_webhook = true;
         }

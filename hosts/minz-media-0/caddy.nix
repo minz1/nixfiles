@@ -9,14 +9,16 @@
 let
   mediaIp = node.networks.incus_bridge.ip;
   caddyHttpsPort = topology.services.media-caddy.port;
-  jellyfinPort = 8096;
-  mediaAgentPort = 9191;
+  lp = topology.contracts.localPorts.minz-media-0;
+  hosts = topology.contracts.publicHosts;
+  jellyfinPort = lp.jellyfin.port;
+  mediaAgentPort = lp.media-agent.port;
   seerrPort = 5055;
-  sonarrPort = 8989;
-  radarrPort = 7878;
-  prowlarrPort = 9696;
+  sonarrPort = lp.sonarr.port;
+  radarrPort = lp.radarr.port;
+  prowlarrPort = lp.prowlarr.port;
   bazarrPort = 6767;
-  decypharrPort = 8282;
+  decypharrPort = lp.decypharr.port;
   decypharrUiPort = topology.services.decypharr-ui.port;
   jellyfinApiPort = topology.services.jellyfin-api.port;
   jellyfinProxy = {
@@ -67,14 +69,14 @@ in
           {
             match = [
               {
-                host = [ "jellyfin.minz1.com" ];
+                host = [ hosts.jellyfin ];
                 path = [ "/web/*" ];
               }
             ];
             handle = [ (jellyfinProxy // { headers.response.set."Cache-Control" = [ "no-cache" ]; }) ];
           }
           {
-            match = [ { host = [ "jellyfin.minz1.com" ]; } ];
+            match = [ { host = [ hosts.jellyfin ]; } ];
             handle = [ jellyfinProxy ];
           }
           # Path-specific routes before the seerr catch-all; mediaIp allows direct WireGuard access (e.g. from the Tofu runner at https://10.10.0.7/sonarr).
@@ -85,10 +87,10 @@ in
               match = [
                 {
                   host = [
-                    "arr.minz1.com"
+                    hosts.arr
                     mediaIp
                   ];
-                  path = [ "/${app.name}*" ];
+                  path = [ "${lp.${app.name}.urlBase or "/${app.name}"}*" ];
                 }
               ];
               handle = [
@@ -137,7 +139,7 @@ in
             match = [
               {
                 host = [
-                  "seerr.minz1.com"
+                  hosts.seerr
                   mediaIp
                 ];
               }

@@ -1,5 +1,6 @@
 {
   config,
+  topology,
   pkgs,
   ...
 }:
@@ -34,7 +35,7 @@
     ];
 
     script = ''
-      url="http://127.0.0.1:8096"
+      url="http://127.0.0.1:${toString topology.contracts.localPorts.minz-media-0.jellyfin.port}"
 
       echo "jellyfin-init: waiting for Jellyfin to be ready..."
       for i in {1..60}; do

@@ -1,12 +1,14 @@
 {
   config,
+  topology,
   pkgs,
   ...
 }:
 
 let
-  sonarrPort = 8989;
-  radarrPort = 7878;
+  lp = topology.contracts.localPorts.minz-media-0;
+  sonarrPort = lp.sonarr.port;
+  radarrPort = lp.radarr.port;
 in
 {
   sops.secrets.zilean_db_password = { };
@@ -45,7 +47,7 @@ in
     {
       pods.zilean = {
         rootlessConfig.uid = 902;
-        podConfig.publishPorts = [ "127.0.0.1:8181:8181" ];
+        podConfig.publishPorts = [ "127.0.0.1:${toString lp.zilean.port}:8181" ];
         podConfig.shmSize = "256m";
       };
 
@@ -89,7 +91,7 @@ in
           rootlessConfig.uid = 902;
           containerConfig = {
             image = "ghcr.io/flaresolverr/flaresolverr:latest@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767";
-            publishPorts = [ "127.0.0.1:8191:8191" ];
+            publishPorts = [ "127.0.0.1:${toString lp.flaresolverr.port}:8191" ];
             environments.LOG_LEVEL = "info";
           };
         };
@@ -98,14 +100,14 @@ in
           rootlessConfig.uid = 902;
           containerConfig = {
             image = "ghcr.io/ryder-c/seadexerr:v3.2.0@sha256:a4ae04b9eb29120d16a6adaf9520c810cd3d24e2fddcd72209ba24b2971d0483";
-            publishPorts = [ "127.0.0.1:6868:2071" ];
+            publishPorts = [ "127.0.0.1:${toString lp.seadexerr.port}:2071" ];
             volumes = [
               "${pkgs.writeText "seadexerr-scoring.toml" "dual_audio = 150\n"}:/data/scoring.toml:ro"
             ];
             environments = {
-              SONARR_BASE_URL = "http://host.containers.internal:${toString sonarrPort}/sonarr/";
-              RADARR_BASE_URL = "http://host.containers.internal:${toString radarrPort}/radarr/";
-              SEADEXERR_PUBLIC_BASE_URL = "http://127.0.0.1:6868";
+              SONARR_BASE_URL = "http://host.containers.internal:${toString sonarrPort}${lp.sonarr.urlBase}/";
+              RADARR_BASE_URL = "http://host.containers.internal:${toString radarrPort}${lp.radarr.urlBase}/";
+              SEADEXERR_PUBLIC_BASE_URL = "http://127.0.0.1:${toString lp.seadexerr.port}";
             };
             environmentFiles = [ config.sops.templates.seadexerr-env.path ];
           };
@@ -115,7 +117,7 @@ in
           rootlessConfig.uid = 902;
           containerConfig = {
             image = "ghcr.io/g0ldyy/comet:latest@sha256:dca62133336e02784d02aaad861381820674d1c8e3e98a03797610b81ee4defe";
-            publishPorts = [ "127.0.0.1:8000:8000" ];
+            publishPorts = [ "127.0.0.1:${toString lp.comet.port}:8000" ];
             # minz1/comet fixes (DMM lists/<id>.txt, animetosho.net) over identical upstream files; drop once upstream merges
             volumes = [
               "/var/lib/comet:/app/data"

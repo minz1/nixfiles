@@ -3,12 +3,15 @@
   lib,
   pkgs,
   node,
+  topology,
   mkHardened,
   ...
 }:
 
 let
   mediaIp = node.networks.incus_bridge.ip;
+  lp = topology.contracts.localPorts.minz-media-0;
+  arrHost = topology.contracts.publicHosts.arr;
 in
 {
   sops.secrets.sonarr_api_key.sopsFile = ../../secrets/shared/arr.yaml;
@@ -54,23 +57,26 @@ in
 
   services.sonarr = {
     enable = true;
-    settings.server.urlBase = "/sonarr";
-    settings.server.allowedHosts = "arr.minz1.com,${mediaIp},host.containers.internal";
+    settings.server.port = lp.sonarr.port;
+    settings.server.urlBase = lp.sonarr.urlBase;
+    settings.server.allowedHosts = "${arrHost},${mediaIp},host.containers.internal";
     environmentFiles = [ config.sops.templates.sonarr-env.path ];
   };
   systemd.services.sonarr.serviceConfig.UMask = lib.mkForce "0002";
 
   services.radarr = {
     enable = true;
-    settings.server.urlBase = "/radarr";
-    settings.server.allowedHosts = "arr.minz1.com,${mediaIp},host.containers.internal";
+    settings.server.port = lp.radarr.port;
+    settings.server.urlBase = lp.radarr.urlBase;
+    settings.server.allowedHosts = "${arrHost},${mediaIp},host.containers.internal";
     environmentFiles = [ config.sops.templates.radarr-env.path ];
   };
   systemd.services.radarr.serviceConfig.UMask = lib.mkForce "0002";
 
   services.prowlarr = {
     enable = true;
-    settings.server.urlBase = "/prowlarr";
+    settings.server.port = lp.prowlarr.port;
+    settings.server.urlBase = lp.prowlarr.urlBase;
     environmentFiles = [ config.sops.templates.prowlarr-env.path ];
   };
   systemd.services.prowlarr.serviceConfig =
@@ -166,14 +172,14 @@ in
       };
       sonarr = {
         ip = "127.0.0.1";
-        port = 8989;
-        base_url = "/sonarr";
+        inherit (lp.sonarr) port;
+        base_url = lp.sonarr.urlBase;
         ssl = false;
       };
       radarr = {
         ip = "127.0.0.1";
-        port = 7878;
-        base_url = "/radarr";
+        inherit (lp.radarr) port;
+        base_url = lp.radarr.urlBase;
         ssl = false;
       };
       subsync.use_subsync = false;
