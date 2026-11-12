@@ -17,7 +17,7 @@ in
       "/var/lib/sonarr"
       "/var/lib/radarr"
       "/var/lib/private/prowlarr"
-      "/var/lib/private/jellyseerr"
+      "/var/lib/private/seerr"
       "/var/lib/bazarr"
       "/var/lib/jellyfin"
       "/var/lib/decypharr/db"

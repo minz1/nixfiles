@@ -49,6 +49,7 @@ in
   };
 
   services.seerr.enable = true;
+  services.seerr.stateRevision = 1;
   systemd.services.seerr.environment.NODE_EXTRA_CA_CERTS = "/etc/ssl/certs/ca-bundle.crt";
 
   users.users.sonarr.extraGroups = [ "media" ];
