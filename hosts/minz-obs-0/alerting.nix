@@ -8,7 +8,7 @@
 
 let
   criticalInstances =
-    map (n: "${fleet.addressOf "minz-obs-0" n}:${toString topology.hostPorts.node-exporter}")
+    map (n: "${fleet.addressOf topology.services.loki.host n}:${toString topology.hostPorts.node-exporter}")
       [
         "minz-vultr-nix-0"
         "minz-pki-0"

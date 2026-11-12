@@ -318,14 +318,6 @@ resource "incus_network_acl" "game" {
     },
     {
       action           = "allow"
-      source           = local.mgmt_subnet
-      destination_port = local.ports["minecraft-rcon"]
-      protocol         = "tcp"
-      description      = "RCON admin access from mgmt WireGuard"
-      state            = "enabled"
-    },
-    {
-      action           = "allow"
       source           = local.authentik_ip
       destination_port = local.ports["game-caddy"]
       protocol         = "tcp"
@@ -577,7 +569,7 @@ resource "incus_network_acl" "media" {
       source           = local.admin_ips
       destination_port = local.ports["decypharr-ui"]
       protocol         = "tcp"
-      description      = "decypharr UI via Caddy, desktop over WireGuard only"
+      description      = "decypharr UI via Caddy, admin clients over WireGuard only"
       state            = "enabled"
     },
   ])

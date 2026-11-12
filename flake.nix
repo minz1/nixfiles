@@ -111,7 +111,9 @@
 
       configurableNodes = nixpkgs.lib.filterAttrs (_: n: n.hasConfig) nixosNodes;
 
-      deployHostname = name: _: fleet.addressOf "minz-desktop" name;
+      adminClient = nixpkgs.lib.head (fleet.withRole "admin-client");
+
+      deployHostname = name: _: fleet.addressOf adminClient name;
 
       deployableNodes = configurableNodes;
 
@@ -166,7 +168,7 @@
           ;
         phases = deployPhases;
         addresses = lib.filterAttrs (_: a: a != null) (
-          builtins.mapAttrs (name: _: fleet.addressOf "minz-desktop" name) fleet.nodes
+          builtins.mapAttrs (name: _: fleet.addressOf adminClient name) fleet.nodes
         );
         targets = builtins.mapAttrs (
           name: node: "${node.sshUser}@${deployHostname name node}"

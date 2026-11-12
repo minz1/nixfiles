@@ -4,7 +4,6 @@
   pkgs,
   lib,
   endpoints,
-  topology,
   node,
   mkHardened,
   ...

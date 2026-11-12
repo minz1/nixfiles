@@ -26,7 +26,7 @@ infra-plan:
     @fleet="$(nix eval --json {{ flake }}#fleet)" && TF_VAR_fleet="$fleet" just tofu _with-incus "sops exec-env {{ flake }}/secrets/tofu.env 'tofu -chdir={{ flake }}/tofu/infra plan -out={{ flake }}/tofu/infra/tofu.plan'"
 
 infra-apply:
-    @fleet="$(nix eval --json {{ flake }}#fleet)" && TF_VAR_fleet="$fleet" just tofu _with-incus "sops exec-env {{ flake }}/secrets/tofu.env 'tofu -chdir={{ flake }}/tofu/infra apply {{ flake }}/tofu/infra/tofu.plan'"
+    @just tofu _with-incus "sops exec-env {{ flake }}/secrets/tofu.env 'tofu -chdir={{ flake }}/tofu/infra apply {{ flake }}/tofu/infra/tofu.plan'"
 
 # Destroys exactly one host's Incus instance + persist volume, via -target= (never a bare destroy).
 infra-destroy-host hostname:

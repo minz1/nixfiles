@@ -77,7 +77,7 @@ in
     port = authentikHttpsPort;
     clientAuth = "require";
     allowedClientNodes = [
-      "minz-vultr-nix-1"
+      edgeServer.name
       "minz-obs-0"
       "minz-game-0"
     ];

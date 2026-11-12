@@ -15,7 +15,7 @@ let
   certName = "${config.networking.hostName}.internal";
   certDir = "/var/lib/acme/${certName}";
   scrapedViaMgmt =
-    fleet.addressOf "minz-obs-0" config.networking.hostName == (node.networks.mgmt.ip or null);
+    fleet.addressOf topology.services.loki.host config.networking.hostName == (node.networks.mgmt.ip or null);
 in
 {
   # Host-specific Alloy components go in their own environment.etc."alloy/<name>.alloy":
