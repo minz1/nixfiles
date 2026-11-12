@@ -168,7 +168,7 @@ in
                     "priority" (or (and (eq .Status "firing") 4) 3)
                     "tags" (coll.Slice (or (and (eq .Status "firing") "warning") "white_check_mark") (or .CommonLabels.host .CommonLabels.instance "homelab"))
                     "markdown" true
-                    "click" (or (and (gt (len .Alerts) 0) (index .Alerts 0).GeneratorURL) "https://grafana.minz1.com/alerting/list")
+                    "click" (or (and (gt (len .Alerts) 0) (index .Alerts 0).GeneratorURL) "https://${topology.contracts.publicHosts.grafana}/alerting/list")
                     | data.ToJSON }}
                 '';
               };

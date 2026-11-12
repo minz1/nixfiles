@@ -13,6 +13,8 @@ let
   grafanaPort = 3000;
   certDir = "/var/lib/acme/minz-obs-0.internal";
   authentikHttpsPort = endpoints.authentik.port;
+  ph = topology.contracts.publicHosts;
+  oidc = topology.contracts.oidc.grafana;
 in
 {
   services.grafana = {
@@ -20,8 +22,8 @@ in
     settings = {
       server = {
         http_port = grafanaPort;
-        domain = "grafana.minz1.com";
-        root_url = "https://grafana.minz1.com/";
+        domain = ph.grafana;
+        root_url = "https://${ph.grafana}/";
       };
       security = {
         # $__file{} is expanded by Grafana's file provider at runtime.
@@ -36,19 +38,19 @@ in
         check_for_updates = false;
       };
       live = {
-        allowed_origins = "https://grafana.minz1.com";
+        allowed_origins = "https://${ph.grafana}";
       };
       "auth.generic_oauth" = {
         enabled = true;
         name = "Authentik";
         icon = "signin";
-        client_id = "grafana";
+        client_id = oidc.clientId;
         client_secret = "$__file{${config.sops.secrets.grafana_oauth_client_secret.path}}";
         scopes = "openid email profile";
-        auth_url = "https://auth.minz1.com/application/o/authorize/";
+        auth_url = "https://${ph.auth}/application/o/authorize/";
         token_url = "https://${topology.services.authentik.host}.internal:${toString authentikHttpsPort}/application/o/token/";
         api_url = "https://${topology.services.authentik.host}.internal:${toString authentikHttpsPort}/application/o/userinfo/";
-        role_attribute_path = "contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'";
+        role_attribute_path = "contains(groups[*], '${oidc.adminGroup}') && 'Admin' || 'Viewer'";
         allow_sign_up = true;
         tls_client_cert = "${certDir}/cert.pem";
         tls_client_key = "${certDir}/key.pem";

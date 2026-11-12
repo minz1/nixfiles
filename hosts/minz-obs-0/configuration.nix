@@ -29,14 +29,15 @@ let
   ) nixosNodes;
 
   # public vhosts on the edge Caddy, probed for availability + cert expiry
+  ph = topology.contracts.publicHosts;
   publicVhosts = [
-    "https://auth.minz1.com"
-    "https://grafana.minz1.com"
-    "https://jellyfin.minz1.com"
-    "https://seerr.minz1.com"
-    "https://ntfy.minz1.com"
-    "https://admin.minz1.com/media"
-    "https://arr.minz1.com/sonarr"
+    "https://${ph.auth}"
+    "https://${ph.grafana}"
+    "https://${ph.jellyfin}"
+    "https://${ph.seerr}"
+    "https://${ph.ntfy}"
+    "https://${ph.admin}${topology.contracts.mediaFixerPath}"
+    "https://${ph.arr}${topology.contracts.localPorts.minz-media-0.sonarr.urlBase}"
     "https://git.minz1.com"
   ];
 
