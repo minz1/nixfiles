@@ -268,6 +268,8 @@ in
     ];
   };
 
+  systemd.services.media-agent.path = [ pkgs.jellyfin-ffmpeg ];
+
   systemd.services.decypharr.stopIfChanged = false;
 
   # The cache volume root is root:root after creation; fix ownership before decypharr starts.
