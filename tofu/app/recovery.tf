@@ -110,7 +110,8 @@ resource "authentik_flow_stage_binding" "recovery_mfa" {
 }
 
 resource "authentik_policy_binding" "recovery_mfa" {
-  policy = authentik_policy_expression.recovery_mfa_required.id
-  target = authentik_flow_stage_binding.recovery_mfa.id
-  order  = 0
+  policy         = authentik_policy_expression.recovery_mfa_required.id
+  target         = authentik_flow_stage_binding.recovery_mfa.id
+  order          = 0
+  failure_result = true
 }

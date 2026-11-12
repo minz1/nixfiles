@@ -41,9 +41,10 @@ resource "authentik_flow_stage_binding" "admin_mfa_enforce" {
 }
 
 resource "authentik_policy_binding" "admin_mfa_enforce" {
-  policy = authentik_policy_expression.admin_mfa_required.id
-  target = authentik_flow_stage_binding.admin_mfa_enforce.id
-  order  = 0
+  policy         = authentik_policy_expression.admin_mfa_required.id
+  target         = authentik_flow_stage_binding.admin_mfa_enforce.id
+  order          = 0
+  failure_result = true
 }
 
 resource "authentik_policy_expression" "admin_static_required" {
@@ -66,7 +67,8 @@ resource "authentik_flow_stage_binding" "admin_static_setup" {
 }
 
 resource "authentik_policy_binding" "admin_static_setup" {
-  policy = authentik_policy_expression.admin_static_required.id
-  target = authentik_flow_stage_binding.admin_static_setup.id
-  order  = 0
+  policy         = authentik_policy_expression.admin_static_required.id
+  target         = authentik_flow_stage_binding.admin_static_setup.id
+  order          = 0
+  failure_result = true
 }
