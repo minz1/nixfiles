@@ -32,6 +32,11 @@ reboot-all:
 update:
     nix flake update --flake "{{ flake }}"
     just admin build-all
+    just admin caddy-pins
+
+# Rebuild every host's caddy.withPlugins source FOD and fail if a pin no longer reproduces under the current Go.
+caddy-pins:
+    nix run {{ flake }}#caddy-pins-check
 
 # Build every host's system closure.
 build-all:

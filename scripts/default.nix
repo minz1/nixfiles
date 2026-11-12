@@ -113,6 +113,12 @@ let
         p.fleet-cli
       ];
     };
+    caddy-pins-check = mkScript "caddy-pins-check" {
+      runtimeInputs = [
+        git
+        jq
+      ];
+    };
     ci-flake-update = mkScript "ci-flake-update" {
       runtimeInputs = [
         p.ci-build

@@ -36,3 +36,7 @@ jobs:
           ATTIC_PUSH_TOKEN: ${{ secrets.ATTIC_PUSH_TOKEN }}
         run: |
           nix develop --no-update-lock-file --command just ci attic-push
+
+      - name: Check caddy plugin pins
+        run: |
+          nix develop --no-update-lock-file --command just ci caddy-pins "${{ github.event.before }}" "${{ github.sha }}"

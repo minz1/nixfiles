@@ -18,6 +18,10 @@ attic-push:
 vulnix *hosts:
     nix run {{ flake }}#ci-vulnix -- {{ hosts }}
 
+# Check caddy.withPlugins pins still reproduce; skipped when flake.lock is unchanged between two known commits before and after.
+caddy-pins before="" after="HEAD":
+    nix run {{ flake }}#caddy-pins-check -- "{{ before }}" "{{ after }}"
+
 # Bump flake.lock and build every deployed host's closure (the workflow pushes separately). Leaves flake.lock updated for the workflow to upload as an artifact.
 flake-update:
     nix run {{ flake }}#ci-flake-update

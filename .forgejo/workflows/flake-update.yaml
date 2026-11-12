@@ -26,3 +26,7 @@ jobs:
         with:
           name: flake.lock
           path: flake.lock
+
+      - name: Check caddy plugin pins
+        run: |
+          nix develop --no-update-lock-file --command just ci caddy-pins
