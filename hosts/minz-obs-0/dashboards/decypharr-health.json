@@ -44,7 +44,7 @@
       "description": "systemd ActiveState on media-0",
       "targets": [
         {
-          "expr": "node_systemd_unit_state{name=\"decypharr.service\",state=\"active\"}",
+          "expr": "max(node_systemd_unit_state{instance=\"10.10.0.7:9100\", name=\"decypharr.service\", state=\"active\"}) or vector(0)",
           "legendFormat": "",
           "refId": "A",
           "datasource": {
