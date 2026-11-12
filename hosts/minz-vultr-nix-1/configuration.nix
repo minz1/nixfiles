@@ -5,12 +5,15 @@
   lib,
   endpoints,
   node,
+  topology,
   mkHardened,
   ...
 }:
 
 let
   wgAddr = node.networks.mgmt.ip;
+  contracts = topology.contracts;
+  hosts = contracts.publicHosts;
 
   inherit (endpoints) authentik grafana;
   forgejo = endpoints.git;
@@ -296,12 +299,12 @@ in
 
     # every vhost logs to the journal (CrowdSec + Alloy read it); add new vhosts inside this set
     virtualHosts = lib.mapAttrs (_: v: v // { logFormat = accessLog; }) {
-      "auth.minz1.com" = mkProxyVhost {
+      ${hosts.auth} = mkProxyVhost {
         endpoint = authentik;
         clientAuth = true;
       };
 
-      "grafana.minz1.com" = mkProxyVhost {
+      ${hosts.grafana} = mkProxyVhost {
         endpoint = grafana;
         clientAuth = true;
       };
@@ -312,7 +315,7 @@ in
       };
 
       # X-Frame-Options omitted: Jellyfin uses iframes for some player views.
-      "jellyfin.minz1.com" = mkProxyVhost {
+      ${hosts.jellyfin} = mkProxyVhost {
         endpoint = media;
         headers = ''
           header {
@@ -324,16 +327,16 @@ in
         extra = "flush_interval -1";
       };
 
-      "seerr.minz1.com" = mkProxyVhost { endpoint = media; };
+      ${hosts.seerr} = mkProxyVhost { endpoint = media; };
 
       # routed by Host header to the ntfy route on services-0's shared Caddy instance
-      "ntfy.minz1.com" = mkProxyVhost {
+      ${hosts.ntfy} = mkProxyVhost {
         endpoint = servicesCaddy;
         # ntfy subscriptions are long-lived streams; without this Caddy buffers them.
         extra = "flush_interval -1";
       };
 
-      "admin.minz1.com" = {
+      ${hosts.admin} = {
         extraConfig = ''
           import security_headers
           crowdsec
@@ -344,7 +347,7 @@ in
             }
           }
 
-          handle /media* {
+          handle ${contracts.mediaFixerPath}* {
             import forward_auth_authentik
             reverse_proxy https://${servicesCaddy.ip}:${toString servicesCaddy.port} {
               header_up Host {http.request.host}
@@ -358,7 +361,7 @@ in
         '';
       };
 
-      "arr.minz1.com" = {
+      ${hosts.arr} = {
         extraConfig = ''
           import security_headers
           crowdsec
@@ -370,7 +373,7 @@ in
           }
 
           ${lib.concatMapStrings (app: ''
-            handle /${app}* {
+            handle ${contracts.localPorts.minz-media-0.${app}.urlBase or "/${app}"}* {
               import forward_auth_authentik
               reverse_proxy https://${media.ip}:${toString media.port} {
                 header_up Host {http.request.host}
