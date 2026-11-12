@@ -64,8 +64,8 @@ resource "sonarr_download_client_qbittorrent" "decypharr" {
   enable      = true
   priority    = 1
   host        = "127.0.0.1"
-  port        = 8282
-  username    = "http://127.0.0.1:8989/sonarr"
+  port        = local.media_ports.decypharr.port
+  username    = local.arr_local.sonarr
   password    = data.sops_file.decypharr.data["decypharr_api_token"]
   tv_category = "sonarr"
 
@@ -78,7 +78,7 @@ resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
   enable      = true
   priority    = 1
   host        = "127.0.0.1"
-  port        = 8282
+  port        = local.media_ports.decypharr.port
   url_base    = "/sabnzbd"
   api_key     = data.sops_file.decypharr.data["decypharr_api_token"]
   tv_category = "sonarr"
@@ -118,8 +118,8 @@ resource "radarr_download_client_qbittorrent" "decypharr" {
   enable         = true
   priority       = 1
   host           = "127.0.0.1"
-  port           = 8282
-  username       = "http://127.0.0.1:7878/radarr"
+  port           = local.media_ports.decypharr.port
+  username       = local.arr_local.radarr
   password       = data.sops_file.decypharr.data["decypharr_api_token"]
   movie_category = "radarr"
 
@@ -132,7 +132,7 @@ resource "radarr_download_client_sabnzbd" "decypharr_usenet" {
   enable         = true
   priority       = 1
   host           = "127.0.0.1"
-  port           = 8282
+  port           = local.media_ports.decypharr.port
   url_base       = "/sabnzbd"
   api_key        = data.sops_file.decypharr.data["decypharr_api_token"]
   movie_category = "radarr"
@@ -147,7 +147,7 @@ resource "prowlarr_tag" "flaresolverr" {
 
 resource "prowlarr_indexer_proxy_flaresolverr" "flaresolverr" {
   name            = "flaresolverr"
-  host            = "http://127.0.0.1:8191"
+  host            = local.local_url.flaresolverr
   request_timeout = 60
   tags            = [prowlarr_tag.flaresolverr.id]
 }
@@ -162,8 +162,8 @@ removed {
 resource "prowlarr_application_sonarr" "sonarr" {
   name         = "Sonarr"
   sync_level   = "addOnly"
-  base_url     = "http://127.0.0.1:8989/sonarr"
-  prowlarr_url = "http://127.0.0.1:9696/prowlarr"
+  base_url     = local.arr_local.sonarr
+  prowlarr_url = local.arr_local.prowlarr
   api_key      = data.sops_file.arr.data["sonarr_api_key"]
   sync_categories = [
     5000, # TV
@@ -179,8 +179,8 @@ resource "prowlarr_application_sonarr" "sonarr" {
 resource "prowlarr_application_radarr" "radarr" {
   name         = "Radarr"
   sync_level   = "addOnly"
-  base_url     = "http://127.0.0.1:7878/radarr"
-  prowlarr_url = "http://127.0.0.1:9696/prowlarr"
+  base_url     = local.arr_local.radarr
+  prowlarr_url = local.arr_local.prowlarr
   api_key      = data.sops_file.arr.data["radarr_api_key"]
   sync_categories = [
     2000, # Movies

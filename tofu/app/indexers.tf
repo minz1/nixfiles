@@ -126,7 +126,7 @@ resource "prowlarr_indexer" "seadexerr" {
   priority        = 25
 
   fields = [
-    { name = "baseUrl", text_value = "http://127.0.0.1:6868" },
+    { name = "baseUrl", text_value = local.local_url.seadexerr },
     { name = "apiPath", text_value = "/api" },
     { name = "apiKey", text_value = "" },
   ]
@@ -146,7 +146,7 @@ resource "prowlarr_indexer" "zilean" {
   priority        = 25
 
   fields = [
-    { name = "baseUrl", text_value = "http://127.0.0.1:8181/torznab" },
+    { name = "baseUrl", text_value = "${local.local_url.zilean}/torznab" },
     { name = "apiPath", text_value = "/api" },
     { name = "apiKey", text_value = "" },
   ]
@@ -166,7 +166,7 @@ resource "prowlarr_indexer" "comet" {
   priority        = 25
 
   fields = [
-    { name = "baseUrl", text_value = "http://127.0.0.1:8000/torznab" },
+    { name = "baseUrl", text_value = "${local.local_url.comet}/torznab" },
     { name = "apiPath", text_value = "/api" },
     { name = "apiKey", text_value = "" },
   ]

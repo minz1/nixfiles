@@ -58,7 +58,7 @@ resource "authentik_policy_expression" "minecraft_uuid_lookup" {
 resource "authentik_application" "minecraft_registration" {
   name            = "Link Minecraft Account"
   slug            = "minecraft-registration"
-  meta_launch_url = "https://auth.minz1.com/if/flow/minecraft-registration/"
+  meta_launch_url = "https://${local.contracts.publicHosts.auth}/if/flow/minecraft-registration/"
   open_in_new_tab = false
 }
 

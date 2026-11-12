@@ -4,7 +4,7 @@ resource "authentik_group" "arr_admins" {
 
 resource "authentik_provider_proxy" "arrs" {
   name               = "arrs"
-  external_host      = "https://arr.minz1.com"
+  external_host      = "https://${local.contracts.publicHosts.arr}"
   authorization_flow = data.authentik_flow.default_authorization.id
   invalidation_flow  = data.authentik_flow.default_invalidation.id
   mode               = "forward_single"
@@ -36,6 +36,6 @@ resource "authentik_outpost" "proxy" {
   ]
 
   config = jsonencode({
-    authentik_host = "https://auth.minz1.com"
+    authentik_host = "https://${local.contracts.publicHosts.auth}"
   })
 }

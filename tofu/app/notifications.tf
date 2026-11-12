@@ -1,6 +1,6 @@
 locals {
   jellyfin_host = "127.0.0.1"
-  jellyfin_port = 8096
+  jellyfin_port = local.media_ports.jellyfin.port
 }
 
 resource "sonarr_notification" "jellyfin" {
@@ -55,7 +55,7 @@ resource "radarr_notification" "jellyfin" {
 
 resource "sonarr_notification_webhook" "decypharr_import" {
   name   = "decypharr-import"
-  url    = "http://127.0.0.1:8282/webhooks/arr/sonarr"
+  url    = "${local.local_url.decypharr}/webhooks/arr/sonarr"
   method = 1
 
   on_grab                            = false
@@ -79,7 +79,7 @@ resource "sonarr_notification_webhook" "decypharr_import" {
 
 resource "radarr_notification_webhook" "decypharr_import" {
   name   = "decypharr-import"
-  url    = "http://127.0.0.1:8282/webhooks/arr/radarr"
+  url    = "${local.local_url.decypharr}/webhooks/arr/radarr"
   method = 1
 
   on_grab                          = false

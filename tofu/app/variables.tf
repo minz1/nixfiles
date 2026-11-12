@@ -28,4 +28,8 @@ locals {
   media_caddy   = var.fleet.services["media-caddy"]
   media_ip      = var.fleet.addresses[local.media_caddy.host]
   media_url     = "https://${local.media_ip}:${local.media_caddy.port}"
+  contracts     = var.fleet.contracts
+  media_ports   = local.contracts.localPorts["minz-media-0"]
+  arr_local     = { for k in ["sonarr", "radarr", "prowlarr"] : k => "http://127.0.0.1:${local.media_ports[k].port}${local.media_ports[k].urlBase}" }
+  local_url     = { for k, v in local.media_ports : k => "http://127.0.0.1:${v.port}" }
 }

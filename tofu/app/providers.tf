@@ -57,17 +57,17 @@ variable "nzbgeek_api_key" { sensitive = true }
 variable "torrentio_debrid_key" { sensitive = true }
 
 provider "sonarr" {
-  url     = "${local.media_url}/sonarr"
+  url     = "${local.media_url}${local.media_ports.sonarr.urlBase}"
   api_key = data.sops_file.arr.data["sonarr_api_key"]
 }
 
 provider "radarr" {
-  url     = "${local.media_url}/radarr"
+  url     = "${local.media_url}${local.media_ports.radarr.urlBase}"
   api_key = data.sops_file.arr.data["radarr_api_key"]
 }
 
 provider "prowlarr" {
-  url     = "${local.media_url}/prowlarr"
+  url     = "${local.media_url}${local.media_ports.prowlarr.urlBase}"
   api_key = ephemeral.sops_file.prowlarr.data["prowlarr_api_key"]
 }
 

@@ -7,11 +7,11 @@ resource "seerr_api_object" "jellyfin_settings" {
 
   request_body_json = jsonencode({
     ip                        = "127.0.0.1"
-    port                      = 8096
+    port                      = local.media_ports.jellyfin.port
     useSsl                    = false
     apiKey                    = var.jellyfin_api_key
-    externalHostname          = "https://jellyfin.minz1.com"
-    jellyfinForgotPasswordUrl = "https://auth.minz1.com/if/flow/${authentik_flow.recovery.slug}/"
+    externalHostname          = "https://${local.contracts.publicHosts.jellyfin}"
+    jellyfinForgotPasswordUrl = "https://${local.contracts.publicHosts.auth}/if/flow/${authentik_flow.recovery.slug}/"
   })
 }
 
@@ -27,7 +27,7 @@ resource "seerr_sonarr_server" "default" {
   name                   = "Sonarr"
   hostname               = local.media_ip
   port                   = local.media_caddy.port
-  base_url               = "/sonarr"
+  base_url               = local.media_ports.sonarr.urlBase
   use_ssl                = true
   api_key                = data.sops_file.arr.data["sonarr_api_key"]
   active_directory       = "/data/library/tv"
@@ -37,7 +37,7 @@ resource "seerr_sonarr_server" "default" {
   quality_profile_id     = 7 # WEB-2160p (Combined)
   extra_payload_json = jsonencode({
     activeAnimeProfileId = 8 # Remux-1080p Anime
-    externalUrl          = "https://arr.minz1.com/sonarr"
+    externalUrl          = "https://${local.contracts.publicHosts.arr}${local.media_ports.sonarr.urlBase}"
   })
   lifecycle { ignore_changes = [quality_profile_name, anime_tags, tags] }
 }
@@ -46,33 +46,31 @@ resource "seerr_radarr_server" "default" {
   name               = "Radarr"
   hostname           = local.media_ip
   port               = local.media_caddy.port
-  base_url           = "/radarr"
+  base_url           = local.media_ports.radarr.urlBase
   use_ssl            = true
   api_key            = data.sops_file.arr.data["radarr_api_key"]
   active_directory   = "/data/library/movies"
   is_default         = true
   quality_profile_id = 7 # Remux 2160p (Combined)
   extra_payload_json = jsonencode({
-    externalUrl = "https://arr.minz1.com/radarr"
+    externalUrl = "https://${local.contracts.publicHosts.arr}${local.media_ports.radarr.urlBase}"
   })
   lifecycle { ignore_changes = [quality_profile_name, tags] }
 }
 
 resource "authentik_provider_oauth2" "seerr" {
-  name               = "seerr"
-  client_id          = "seerr"
+  name               = local.contracts.oidc.seerr.clientId
+  client_id          = local.contracts.oidc.seerr.clientId
   client_type        = "confidential"
   grant_types        = ["authorization_code", "refresh_token"]
   authorization_flow = data.authentik_flow.default_authorization.id
   invalidation_flow  = data.authentik_flow.default_invalidation.id
   property_mappings  = data.authentik_property_mapping_provider_scope.oidc.ids
-  allowed_redirect_uris = [
-    {
-      matching_mode     = "strict"
-      redirect_uri_type = "authorization"
-      url               = "https://seerr.minz1.com/login"
-    }
-  ]
+  allowed_redirect_uris = [for u in local.contracts.oidc.seerr.redirectUris : {
+    matching_mode     = "strict"
+    redirect_uri_type = "authorization"
+    url               = u
+  }]
 }
 
 resource "authentik_application" "seerr" {
@@ -133,7 +131,7 @@ resource "seerr_notification_webhook" "media_fixer" {
     "ISSUE_REOPENED",
   ]
   webhook = {
-    webhook_url = "https://${var.fleet.services["services-caddy"].host}.internal/ingest/seerr"
+    webhook_url = "https://${var.fleet.services["services-caddy"].host}.internal${local.contracts.seerrIngestPath}"
     auth_header = "Bearer ${data.sops_file.seerr.data["seerr_webhook_secret"]}"
     json_payload = jsonencode({
       notification_type     = "{{notification_type}}"

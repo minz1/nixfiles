@@ -15,20 +15,18 @@ data "authentik_property_mapping_provider_scope" "oidc" {
 }
 
 resource "authentik_provider_oauth2" "grafana" {
-  name               = "grafana"
-  client_id          = "grafana"
+  name               = local.contracts.oidc.grafana.clientId
+  client_id          = local.contracts.oidc.grafana.clientId
   client_type        = "confidential"
   grant_types        = ["authorization_code", "refresh_token"]
   authorization_flow = data.authentik_flow.default_authorization.id
   invalidation_flow  = data.authentik_flow.default_invalidation.id
   property_mappings  = data.authentik_property_mapping_provider_scope.oidc.ids
-  allowed_redirect_uris = [
-    {
-      matching_mode     = "strict"
-      redirect_uri_type = "authorization"
-      url               = "https://grafana.minz1.com/login/generic_oauth"
-    }
-  ]
+  allowed_redirect_uris = [for u in local.contracts.oidc.grafana.redirectUris : {
+    matching_mode     = "strict"
+    redirect_uri_type = "authorization"
+    url               = u
+  }]
 }
 
 resource "authentik_application" "grafana" {
@@ -38,7 +36,7 @@ resource "authentik_application" "grafana" {
 }
 
 resource "authentik_group" "grafana_admins" {
-  name = "grafana-admins"
+  name = local.contracts.oidc.grafana.adminGroup
 }
 
 resource "authentik_policy_binding" "grafana_access" {
