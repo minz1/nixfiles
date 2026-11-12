@@ -115,7 +115,7 @@ let
     ++ map (h: "contracts.localPorts: ${h} is not a node") (
       filter (h: !(cfg.nodes ? ${h})) (attrNames cfg.contracts.localPorts)
     )
-    ++ map (hp: "two services use ${hp}") (
+    ++ map (hp: "two services or localPorts use ${hp}") (
       dupes (
         mapAttrsToList (_: v: "${v.host}:${toString v.port}") cfg.services
         ++ map (l: "${l.host}:${toString l.port}") localPorts

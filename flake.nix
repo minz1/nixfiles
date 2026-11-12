@@ -380,6 +380,23 @@
                 else
                   builtins.seq (builtins.toJSON fleetJson.contracts) "touch $out"
               );
+            contracts-recyclarr =
+              let
+                lp = fleet.contracts.localPorts.minz-media-0;
+                yml = builtins.readFile ./config/recyclarr/recyclarr.yml;
+                missing = builtins.filter (u: !(lib.hasInfix "base_url: ${u}\n" yml)) (
+                  map (a: "http://127.0.0.1:${toString lp.${a}.port}${lp.${a}.urlBase}") [
+                    "sonarr"
+                    "radarr"
+                  ]
+                );
+              in
+              pkgs.runCommand "contracts-recyclarr" { } (
+                if missing == [ ] then
+                  "touch $out"
+                else
+                  throw "config/recyclarr/recyclarr.yml lacks the contracted ${lib.concatStringsSep ", " missing}"
+              );
             forgejo-runner-uuid =
               let
                 got = (import ./modules/lib/forgejo-runner.nix { inherit lib; }).uuidOf "7c31591e8b67225a";

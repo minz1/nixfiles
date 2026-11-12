@@ -113,10 +113,14 @@ let
           port = 443;
         };
       };
+    contracts.contracts = {
+      mediaFixerPath = "/m";
+      seerrIngestPath = "/i";
+    };
   };
 
   f = mkFleet base;
-  withLocal = local: base // { contracts.contracts.localPorts = local; };
+  withLocal = local: lib.recursiveUpdate base { contracts.contracts.localPorts = local; };
   evaluates = args: (builtins.tryEval (builtins.deepSeq (mkFleet args) true)).success;
   with' = patch: lib.recursiveUpdate base patch;
   withServices = extra: {

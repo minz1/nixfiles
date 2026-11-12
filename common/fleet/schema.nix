@@ -190,8 +190,8 @@ let
         type = types.attrsOf oidcClient;
         default = { };
       };
-      mediaFixerPath = optStr;
-      seerrIngestPath = optStr;
+      mediaFixerPath = mkOption { type = types.str; };
+      seerrIngestPath = mkOption { type = types.str; };
       localPorts = mkOption {
         type = types.attrsOf (types.attrsOf localPort);
         default = { };
