@@ -445,6 +445,23 @@ in
               summary = "{{ $labels.host }}: accepted SSH login from outside WireGuard/bridge/LAN";
             })
             (mkLogCountRule {
+              uid = "ssh-lan-login";
+              title = "SSH login over home LAN";
+              logql = ''
+                sum by (host, src) (
+                  count_over_time(
+                    {unit="sshd.service"}
+                      |= "Accepted"
+                      |= " from 192.168."
+                      | regexp " from (?P<src>[0-9.]+) "
+                    [10m]
+                  )
+                )
+              '';
+              threshold = 0;
+              summary = "{{ $labels.host }}: accepted SSH login over the home LAN from {{ $labels.src }}";
+            })
+            (mkLogCountRule {
               uid = "ssh-password-auth";
               title = "SSH password authentication used";
               # Password auth is disabled fleet-wide; a successful one should be impossible.
