@@ -116,24 +116,9 @@ in
         comet = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "ghcr.io/g0ldyy/comet:latest@sha256:dca62133336e02784d02aaad861381820674d1c8e3e98a03797610b81ee4defe";
+            image = "ghcr.io/g0ldyy/comet:latest@sha256:31a41fa64ed2e174fe0bae915a168a0c77ae4bca17b7efb8fa3a31d7c9f164ea";
             publishPorts = [ "127.0.0.1:${toString lp.comet.port}:8000" ];
-            # minz1/comet fixes (DMM lists/<id>.txt, animetosho.net) over identical upstream files; drop once upstream merges
-            volumes = [
-              "/var/lib/comet:/app/data"
-              "${
-                pkgs.fetchurl {
-                  url = "https://raw.githubusercontent.com/minz1/comet/0fdcf6d894f8fa4df08c961b51505cfa5a0ad614/comet/services/dmm_ingester.py";
-                  hash = "sha256-FD2whyIsKNatMGhfZfwQVc2cxid/lh8besmflpQ6Oeg=";
-                }
-              }:/app/comet/services/dmm_ingester.py:ro"
-              "${
-                pkgs.fetchurl {
-                  url = "https://raw.githubusercontent.com/minz1/comet/7bcba210e0858ce2afcd91edb4d84f613a32aaee/comet/scrapers/animetosho.py";
-                  hash = "sha256-+PY4NTHAQb9c++ik4z5AltbNhQCL6qj0SVx2kCnqpSI=";
-                }
-              }:/app/comet/scrapers/animetosho.py:ro"
-            ];
+            volumes = [ "/var/lib/comet:/app/data" ];
             environments = {
               DATABASE_TYPE = "sqlite";
               COMETNET_ENABLED = "False";
