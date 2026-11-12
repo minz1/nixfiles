@@ -62,6 +62,19 @@ in
     enable = true;
     interval = "monthly";
   };
+  services.sanoid = {
+    enable = true;
+    datasets = lib.mapAttrs' (
+      name: _:
+      lib.nameValuePair "incus/pool/custom/default_${name}-persist" {
+        hourly = 24;
+        daily = 7;
+        monthly = 0;
+      }
+    ) (lib.filterAttrs (_: n: n.kind == "incus-vm") topology.nodes);
+  };
+  systemd.services.sanoid.serviceConfig.ExecStartPost =
+    "${config.services.sanoid.package}/bin/sanoid --monitor-snapshots --configdir /etc/sanoid";
   boot.zfs.forceImportRoot = false; # no ZFS root pool here (tmpfs+ext4)
   # i915 for stability on Small BAR hardware; enable_guc=3 required for Arc DG2 scheduling.
   boot.kernelParams = [
