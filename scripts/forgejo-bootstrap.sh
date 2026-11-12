@@ -22,7 +22,7 @@ SQL
 
 if forgejo admin user list | awk -v u="$RUNNER_SCOPE" '$2 == u { f = 1 } END { exit !f }'; then
     forgejo forgejo-cli actions register --scope "$RUNNER_SCOPE" --name "$RUNNER_NAME" \
-        --secret-file "$RUNNER_SECRET_FILE" || echo "forgejo-bootstrap: runner registration failed"
+        --keep-labels --secret-file "$RUNNER_SECRET_FILE" || echo "forgejo-bootstrap: runner registration failed"
 else
     echo "forgejo-bootstrap: user $RUNNER_SCOPE missing, runner registration skipped"
 fi

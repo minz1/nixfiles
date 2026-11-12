@@ -103,8 +103,11 @@ uid=$(q "select id from \"user\" where lower_name = 'minz1'")
 run "4"
 [ "$(q "select count(*) from action_runner where name = 'minz-runner-0' and owner_id = $uid and repo_id = 0")" = 1 ] \
     || fail "4: runner not registered to minz1"
+q "update action_runner set agent_labels = '[\"nixos-latest\"]' where name = 'minz-runner-0'"
 run "4b"
 [ "$(q "select count(*) from action_runner")" = 1 ] || fail "4b: runner registered twice"
+labels=$(q "select agent_labels from action_runner where name = 'minz-runner-0'")
+[ "$labels" = '["nixos-latest"]' ] || fail "4b: declared labels overwritten: $labels"
 
 printf '%s' xyz > "$RUNNER_SECRET_FILE"
 run "5"
