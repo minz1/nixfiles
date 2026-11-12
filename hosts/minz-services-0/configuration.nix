@@ -12,6 +12,7 @@ let
   mediaFixerPort = 8081;
   ntfyPort = 2586; # module default listen-http = "127.0.0.1:2586"
 
+  contracts = topology.contracts;
   mediaIp = topology.nodes.${topology.services.media-caddy.host}.networks.incus_bridge.ip;
   inherit (endpoints) loki;
   inherit (import ../../modules/lib/caddy.nix { inherit lib topology; }) denyUnless;
@@ -39,8 +40,8 @@ in
     enable = true;
     # loopback only: reachable solely through Caddy's mTLS-gated admin.minz1.com route below
     addr = "127.0.0.1:${toString mediaFixerPort}";
-    baseURL = "/media";
-    publicURL = "https://admin.minz1.com/media";
+    baseURL = contracts.mediaFixerPath;
+    publicURL = "https://${contracts.publicHosts.admin}${contracts.mediaFixerPath}";
     environmentFile = config.sops.secrets."media-fixer-env".path;
 
     discord = {
@@ -80,7 +81,7 @@ in
   services.ntfy-sh = {
     enable = true;
     settings = {
-      base-url = "https://ntfy.minz1.com";
+      base-url = "https://${contracts.publicHosts.ntfy}";
       # per-visitor rate limiting; without this every request looks like it's from Caddy's loopback
       behind-proxy = true;
       # default is read-write; unset this and the topic is world-publishable once the vhost exists
@@ -99,7 +100,7 @@ in
       {
         # media-fixer has no auth of its own (its approval endpoint gates destructive agent
         # actions), so only the edge — which enforces Authentik forward_auth — gets through
-        match = [ { host = [ "admin.minz1.com" ]; } ];
+        match = [ { host = [ contracts.publicHosts.admin ]; } ];
         handle = [
           {
             handler = "subroute";
@@ -122,7 +123,7 @@ in
         match = [
           {
             host = [ "minz-services-0.internal" ];
-            path = [ "/ingest/seerr" ];
+            path = [ contracts.seerrIngestPath ];
             remote_ip.ranges = [ "${mediaIp}/32" ];
           }
         ];
@@ -139,7 +140,7 @@ in
         match = [
           {
             host = [
-              "ntfy.minz1.com"
+              contracts.publicHosts.ntfy
               "minz-services-0.internal"
             ];
           }
