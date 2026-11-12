@@ -2,6 +2,7 @@
   lib,
   topology,
   services,
+  contracts ? { },
   hostDirs,
 }:
 let
@@ -21,10 +22,19 @@ let
         (import ./schema.nix { inherit lib hostDirs; })
         { inherit (topology) networks nodes; }
         services
+        contracts
       ];
     }).config;
 
   nodeList = attrValues cfg.nodes;
+  localPorts = concatMap (
+    h:
+    mapAttrsToList (n: v: {
+      host = h;
+      name = n;
+      inherit (v) port;
+    }) cfg.contracts.localPorts.${h}
+  ) (attrNames cfg.contracts.localPorts);
   memberships = concatMap (
     n:
     mapAttrsToList (net: m: {
@@ -102,9 +112,24 @@ let
       s: v:
       lib.optionalString (cfg.nodes.${v.host}.kind == "device") "service ${s}: host ${v.host} is a device"
     ) cfg.services
-    ++ map (hp: "two services use ${hp}") (
-      dupes (mapAttrsToList (_: v: "${v.host}:${toString v.port}") cfg.services)
+    ++ map (h: "contracts.localPorts: ${h} is not a node") (
+      filter (h: !(cfg.nodes ? ${h})) (attrNames cfg.contracts.localPorts)
     )
+    ++ map (hp: "two services use ${hp}") (
+      dupes (
+        mapAttrsToList (_: v: "${v.host}:${toString v.port}") cfg.services
+        ++ map (l: "${l.host}:${toString l.port}") localPorts
+      )
+    )
+    ++ concatMap (
+      l:
+      mapAttrsToList (
+        h: p:
+        lib.optionalString (
+          l.port == p
+        ) "localPorts ${l.host}.${l.name} uses hostPort ${h}'s port ${toString p}"
+      ) cfg.hostPorts
+    ) localPorts
     ++ concatMap (
       s:
       mapAttrsToList (
@@ -175,6 +200,7 @@ in
   networks = guard cfg.networks;
   services = services';
   hostPorts = guard cfg.hostPorts;
+  contracts = guard cfg.contracts;
   withRole = role: map (n: n.name) (filter (n: lib.elem role n.roles) nodeList);
   fleetSourcesFor =
     host:

@@ -116,6 +116,7 @@ let
   };
 
   f = mkFleet base;
+  withLocal = local: base // { contracts.contracts.localPorts = local; };
   evaluates = args: (builtins.tryEval (builtins.deepSeq (mkFleet args) true)).success;
   with' = patch: lib.recursiveUpdate base patch;
   withServices = extra: {
@@ -205,6 +206,16 @@ in
         "10.8.0.6"
         "10.9.0.1"
       ];
+    };
+    testContracts = {
+      expr =
+        (mkFleet (withLocal {
+          guest.x.port = 8080;
+        })).contracts.localPorts.guest.x;
+      expected = {
+        port = 8080;
+        urlBase = null;
+      };
     };
     testDefaults = {
       expr = {
@@ -375,6 +386,32 @@ in
           networks.incus_bridge.ip = "10.10.0.9";
         };
         hostDirs = base.hostDirs ++ [ "box" ];
+      };
+    }
+    {
+      name = "localPorts host not a node";
+      args = withLocal { nope.x.port = 1; };
+    }
+    {
+      name = "localPorts port on a service port";
+      args = withLocal { guest.x.port = 443; };
+    }
+    {
+      name = "localPorts port on a hostPort";
+      args = withLocal { guest.x.port = 9100; } // {
+        services = {
+          imports = [ base.services ];
+          hostPorts.node-exporter = 9100;
+        };
+      };
+    }
+    {
+      name = "two localPorts on one port";
+      args = withLocal {
+        guest = {
+          x.port = 8080;
+          y.port = 8080;
+        };
       };
     }
     {

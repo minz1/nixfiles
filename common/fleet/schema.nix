@@ -164,6 +164,40 @@ let
       port = mkOption { type = types.port; };
     };
   };
+
+  oidcClient = types.submodule {
+    options = {
+      clientId = mkOption { type = types.str; };
+      redirectUris = mkOption { type = types.listOf types.str; };
+      adminGroup = optStr;
+    };
+  };
+
+  localPort = types.submodule {
+    options = {
+      port = mkOption { type = types.port; };
+      urlBase = optStr;
+    };
+  };
+
+  contracts = types.submodule {
+    options = {
+      publicHosts = mkOption {
+        type = types.attrsOf types.str;
+        default = { };
+      };
+      oidc = mkOption {
+        type = types.attrsOf oidcClient;
+        default = { };
+      };
+      mediaFixerPath = optStr;
+      seerrIngestPath = optStr;
+      localPorts = mkOption {
+        type = types.attrsOf (types.attrsOf localPort);
+        default = { };
+      };
+    };
+  };
 in
 {
   options = {
@@ -175,6 +209,10 @@ in
     };
     hostPorts = mkOption {
       type = types.attrsOf types.port;
+      default = { };
+    };
+    contracts = mkOption {
+      type = contracts;
       default = { };
     };
   };

@@ -81,6 +81,7 @@
         inherit lib;
         topology = import ./common/topology.nix;
         services = ./common/services.nix;
+        contracts = ./common/contracts.nix;
         hostDirs = builtins.attrNames (lib.filterAttrs (_: t: t == "directory") (builtins.readDir ./hosts));
       };
       topology = {
@@ -89,6 +90,7 @@
           nodes
           services
           hostPorts
+          contracts
           ;
       };
       fleetArgs = {
@@ -165,6 +167,7 @@
           services
           hostPorts
           tunnelEndpoints
+          contracts
           ;
         phases = deployPhases;
         addresses = lib.filterAttrs (_: a: a != null) (
@@ -355,12 +358,28 @@
               else
                 throw "fleet unit tests failed: ${builtins.toJSON t.unit}, base fixture evaluates: ${lib.boolToString t.positive}"
             );
-            fleet-output = pkgs.runCommand "fleet-output" { } (
-              if self.packages.${system} ? fleet then
-                throw "packages.fleet shadows the fleet data output"
-              else
-                "touch $out"
-            );
+            fleet-output =
+              let
+                keysOf =
+                  v:
+                  if builtins.isAttrs v then
+                    lib.concatLists (lib.mapAttrsToList (k: x: [ k ] ++ keysOf x) v)
+                  else if builtins.isList v then
+                    lib.concatMap keysOf v
+                  else
+                    [ ];
+                secretKeys = builtins.filter (
+                  k: builtins.match "(.*[Ss]ecret.*|.*[Tt]oken.*|.*[Pp]assword.*)" k != null
+                ) (keysOf fleetJson.contracts);
+              in
+              pkgs.runCommand "fleet-output" { } (
+                if self.packages.${system} ? fleet then
+                  throw "packages.fleet shadows the fleet data output"
+                else if secretKeys != [ ] then
+                  throw "fleet contracts carry secret-like keys: ${lib.concatStringsSep ", " secretKeys}"
+                else
+                  builtins.seq (builtins.toJSON fleetJson.contracts) "touch $out"
+              );
             forgejo-runner-uuid =
               let
                 got = (import ./modules/lib/forgejo-runner.nix { inherit lib; }).uuidOf "7c31591e8b67225a";
