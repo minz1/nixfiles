@@ -28,8 +28,8 @@ let
     name: _: "${fleet.addressOf "minz-obs-0" name}:${toString topology.hostPorts.node-exporter}"
   ) nixosNodes;
 
-  # public vhosts on the edge Caddy, probed for availability + cert expiry
   ph = topology.contracts.publicHosts;
+  # public vhosts on the edge Caddy, probed for availability + cert expiry
   publicVhosts = [
     "https://${ph.auth}"
     "https://${ph.grafana}"

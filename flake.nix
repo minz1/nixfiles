@@ -369,7 +369,7 @@
                   else
                     [ ];
                 secretKeys = builtins.filter (
-                  k: builtins.match "(.*[Ss]ecret.*|.*[Tt]oken.*|.*[Pp]assword.*)" k != null
+                  k: builtins.match ".*(secret|token|password|key|credential).*" (lib.toLower k) != null
                 ) (keysOf fleetJson.contracts);
               in
               pkgs.runCommand "fleet-output" { } (
