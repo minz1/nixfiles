@@ -239,6 +239,7 @@ in
           bash deploy-phased.test.sh
           bash secrets-copy.test.sh
           bash router/adguard-querylog.test.sh
+          bash verify-attic-closure.test.sh
           touch $out
         '';
 

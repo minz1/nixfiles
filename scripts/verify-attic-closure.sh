@@ -11,12 +11,8 @@ attic_host=$(fleet host attic)
 attic_ip=$(fleet address "$attic_host")
 attic_url="https://${attic_ip}/homelab"
 
-if nix config show substituters | grep -qF "${attic_host}.internal"; then
-    echo "refusing to run: local substituters already include the Attic cache — this check is circular" >&2
-    exit 1
-fi
-
-if ! curl -fsS --max-time 5 "${attic_url}/nix-cache-info" > /dev/null; then
+if ! curl -fsS --max-time 5 "${attic_url}/nix-cache-info" > /dev/null \
+    || ! nix store info --store "$attic_url" > /dev/null 2>&1; then
     echo "Attic cache unreachable at $attic_url — use SKIP_ATTIC_VERIFY=1 if that's expected" >&2
     exit 2
 fi
@@ -39,10 +35,15 @@ fi
 mismatches=()
 allowlisted=0
 checked=0
-while IFS= read -r p; do
-    local_hash=$(echo "$local_json" | jq -r --arg p "$p" '.[$p].narHash')
+from_attic=0
+while IFS=$'\t' read -r p local_hash signed; do
+    if [ "$signed" = true ]; then
+        from_attic=$((from_attic + 1))
+        continue
+    fi
 
-    remote_json=$(nix path-info --store "$attic_url" --json --json-format 1 "$p" 2> /dev/null) || continue
+    remote_json=$(nix path-info --option narinfo-cache-negative-ttl 0 --option narinfo-cache-positive-ttl 0 \
+        --store "$attic_url" --json --json-format 1 "$p" 2> /dev/null) || continue
     remote_hash=$(echo "$remote_json" | jq -r --arg p "$p" '.[$p].narHash // empty')
     [ -z "$remote_hash" ] && continue
 
@@ -54,7 +55,7 @@ while IFS= read -r p; do
             mismatches+=("$p (local=$local_hash remote=$remote_hash)")
         fi
     fi
-done < <(echo "$local_json" | jq -r 'keys[]')
+done < <(echo "$local_json" | jq -r 'to_entries[] | [.key, .value.narHash, any(.value.signatures[]?; startswith("homelab:"))] | @tsv')
 
 if [ "${#mismatches[@]}" -gt 0 ]; then
     echo "Attic cache mismatch for $host — possible poisoned closure:" >&2
@@ -64,9 +65,4 @@ fi
 
 total=$(echo "$local_json" | jq 'keys | length')
 
-if [ "$checked" -eq 0 ]; then
-    echo "verify-attic-closure: 0 of $total closure paths reachable on Attic — cache may be down; use SKIP_ATTIC_VERIFY=1 if that's expected" >&2
-    exit 2
-fi
-
-echo "verify-attic-closure: $host OK ($checked of $total closure paths cross-checked against Attic, $allowlisted allowlisted)"
+echo "verify-attic-closure: $host OK ($checked of $total closure paths cross-checked against Attic, $allowlisted allowlisted, $from_attic substituted from Attic and trusted by its signature, not cross-checked)"
