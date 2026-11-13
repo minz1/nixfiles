@@ -19,6 +19,8 @@ No code comments, including `shortcut:` markers. Rationale goes in commit messag
 ## Deploy ordering
 `deployPhases` in flake.nix follows routing topology only. Service deps must be explicit: attic-0 (`services.attic.host` in common/services.nix) deploys in its own phase before its consumers via `dependsOnBinaryCache`. Phases: `[vultr-nix-0] [home-nix-0] [attic-0] [everything else + vultr-nix-1]`. Any new dep added this way must keep the old ordering transitively.
 
+A kernel downgrade, or a move to another kernel series, on any host (home-nix-0 above all) is an owner decision. Before deploying it, add an Owner line (an autopilot run's `plan.md` `## Owner`; in an interactive session, ask the owner directly) with the old and new kernel, why it changes, and the fallback generation, then wait for the owner's answer.
+
 ## flake.lock
 Before deploying, make sure flake.lock is not older than what the fleet runs (compare against the running systems' nixpkgs revision). Deploying a stale lock downgraded lego and broke ACME once.
 
@@ -63,6 +65,7 @@ Each section applies when working on the paths in its heading.
 
 #### Networking and TLS
 - `security.acme` with `listenHTTP = ":80"` doesn't open port 80; `modules/nixos/common.nix` adds it. Don't remove it. A cert issued by minica instead of step-ca means the HTTP-01 challenge couldn't reach port 80.
+- A port only fleet hosts and admin clients may reach over the mgmt WireGuard goes in `homelab.wireguard.fleetTCPPorts` (`common/wireguard.nix`), never in `allowedTCPPorts`, `allowedTCPPortRanges` or a WireGuard interface's firewall ports. An assertion catches an exact port that is in both, not ranges.
 - After changing `security.pki.certificates`, fully restart Go services (Caddy, alloy); reload keeps the old cert pool.
 - forgejo-runner cache (`cache.enabled = false` in hosts/minz-runner-0): if enabled, `settings.cache.host` must be an address job containers can reach. The rootful podman bridge 10.88.0.1 never exists here.
 - Quadlet containers (rootless, `oci` user) are system units: manage them with `sudo systemctl restart|status <name>.service`, never `podman restart` (systemd kills and recreates the container behind it) or `systemctl --user`. Use podman only to inspect (`exec`, `ps`, `inspect`).
@@ -70,6 +73,7 @@ Each section applies when working on the paths in its heading.
 
 ### Caddy (`hosts/**`, `modules/**`)
 
+- A Caddy server fronting a loopback backend with the host's step-ca cert or mTLS is a `homelab.internalProxy.servers.<name>` entry (`modules/nixos/internal-proxy.nix`), not hand-written `tls_connection_policies`. It loads and pins the tagged cert, sets `strict_sni_host = false`, sets the Host header on the `upstream` route, and builds the client-cert guard from `allowedClientNodes`/`allowedSources`. Its assertions fail if the server's routes or TLS policies are also set elsewhere. The cert-tag, `strict_sni_host` and `disable_redirects` rules below are only for servers outside it. The Host header rule still applies to raw `routes`, and the edge curl check still applies after any change to it.
 - Every `reverse_proxy` to an internal backend sets `header_up Host {http.request.host}`; otherwise backends build redirects and origin checks against the internal IP.
 - Caddy's JSON reverse_proxy overwrites `X-Forwarded-Host`. Where the upstream value matters (authentik's embedded outpost behind `forward_auth`), set `headers.request.set."X-Forwarded-Host" = [ "{http.request.header.X-Forwarded-Host}" ]`.
 - Adding `client_authentication` to a server's TLS policy turns on `strict_sni_host`. The edge (vultr-nix-1) dials internal Caddies by IP, so every vhost then returns 421. Set `strict_sni_host = false` and authorize on `{http.request.tls.client.subject}` in the route. After any internal TLS policy change, curl every public vhost through the edge, not only the one changed.
