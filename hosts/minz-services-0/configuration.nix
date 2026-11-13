@@ -66,6 +66,7 @@ in
     };
     mediaAgent.url = "https://${endpoints.media-agent.ip}:${toString endpoints.media-agent.port}";
     seerr.url = "https://${mediaIp}";
+    bazarr.url = "https://${mediaIp}/bazarr";
   };
 
   # bcrypt HASHES (from `ntfy user hash`), not plaintext — obs-0 holds the plaintext counterpart
