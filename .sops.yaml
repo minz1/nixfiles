@@ -168,6 +168,13 @@ creation_rules:
           - *minz-services-0
           - *minz-desktop
 
+  - path_regex: secrets/shared/bazarr-webhook\.yaml$
+    key_groups:
+      - age:
+          - *minz-media-0
+          - *minz-services-0
+          - *minz-desktop
+
   - path_regex: secrets/shared/seerr-api\.yaml$
     key_groups:
       - age:

@@ -12,6 +12,18 @@ let
   mediaIp = node.networks.incus_bridge.ip;
   lp = topology.contracts.localPorts.minz-media-0;
   arrHost = topology.contracts.publicHosts.arr;
+  mediaFixerIngest = "https://${topology.services.services-caddy.host}.internal${topology.contracts.bazarrIngestPath}";
+  bazarrNotifyMediaFixer = pkgs.writeShellScript "bazarr-notify-media-fixer" ''
+    case "$#:''${1-}" in
+      2:None) q="movie=$2" ;;
+      2:*) q="ep=$2" ;;
+      1:*) q="movie=$1" ;;
+      *) exit 0 ;;
+    esac
+    exec ${lib.getExe pkgs.curl} -fsS --connect-timeout 3 --max-time 10 -o /dev/null -X POST \
+      -K ${config.sops.templates.bazarr-media-fixer-auth.path} \
+      "${mediaFixerIngest}?$q"
+  '';
 in
 {
   sops.secrets.sonarr_api_key.sopsFile = ../../secrets/shared/arr.yaml;
@@ -117,6 +129,12 @@ in
         DYNACONF_ANIDB__API_CLIENT='@str ${ph.anidb_api_client}'
       '';
   };
+  sops.secrets.bazarr_webhook_secret.sopsFile = ../../secrets/shared/bazarr-webhook.yaml;
+  sops.templates.bazarr-media-fixer-auth = {
+    owner = "bazarr";
+    restartUnits = [ "bazarr.service" ];
+    content = ''user = "bazarr:${config.sops.placeholder.bazarr_webhook_secret}"'';
+  };
   sops.templates.bazarr-api-header = {
     restartUnits = [ "bazarr-languages.service" ];
     content = "X-API-KEY: ${config.sops.placeholder.bazarr_api_key}";
@@ -170,6 +188,8 @@ in
         upgrade_subs = true;
         minimum_score = 85;
         minimum_score_movie = 75;
+        use_postprocessing = true;
+        postprocessing_cmd = "${bazarrNotifyMediaFixer} {{series_id}} {{episode_id}}";
       };
       sonarr = {
         ip = "127.0.0.1";

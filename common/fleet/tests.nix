@@ -117,6 +117,7 @@ let
       mediaFixerPath = "/m";
       seerrIngestPath = "/i";
       sonarrIngestPath = "/s";
+      bazarrIngestPath = "/b";
     };
   };
 
