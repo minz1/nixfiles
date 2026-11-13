@@ -7,6 +7,7 @@
 
 let
   runner = import ../../modules/lib/forgejo-runner.nix { inherit lib; };
+  forgejoHost = "git.minz1.com";
 in
 {
   imports = [ ../../modules/nixos/rootless-podman.nix ];
@@ -29,7 +30,7 @@ in
           "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:19619a010b204f44c5340bff7d39b68551109fe6a56a53f75201ea91e05d4270"
         ];
         server.connections.default = {
-          url = "https://git.minz1.com";
+          url = "https://${forgejoHost}";
           uuid = runner.uuidOf runner.id;
         };
         cache.enabled = false;
@@ -81,6 +82,9 @@ in
       DynamicUser = lib.mkForce false;
       User = lib.mkForce "podman-runner";
       Group = lib.mkForce "podman-runner";
+      ExecStartPre = pkgs.writeShellScript "wait-forgejo-dns" ''
+        until ${pkgs.getent}/bin/getent hosts ${forgejoHost} >/dev/null; do ${pkgs.coreutils}/bin/sleep 1; done
+      '';
     };
   };
 
