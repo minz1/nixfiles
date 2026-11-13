@@ -159,7 +159,6 @@ in
                 # ngalert's webhook schema, not the legacy basicAuthUsername/basicAuthPassword names
                 username = "grafana";
                 password = "$NTFY_PASSWORD";
-                # settings.payload.template (not payloadTemplate); no `$name` vars (os.Expand blanks unknown $words); tmpl.Exec/define is broken in this Grafana version, and ntfy needs "tags" as a JSON array — all confirmed live against the receiver test API
                 payload.template = ''
                   {{ coll.Dict
                     "topic" "homelab-alerts"
