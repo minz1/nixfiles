@@ -5,6 +5,9 @@ NixOS fleet (deploy-rs) plus OpenTofu (`tofu/infra`, `tofu/app`), secrets in sop
 ## Declarative or it doesn't exist
 Anything not declared in this repo (Nix, tofu, repo scripts + just recipes) is transient: treat it as if it could be wiped any time. That covers host-local scripts in `/root`, `systemd-run` units, app settings changed through an API, plugins installed through an API, and session scratchpads. Don't build on it or point future work at it as durable. Clean up one-off work when it's done; anything worth keeping becomes a declarative change or a roadmap item. When a fix has to be applied imperatively, say so and name the declarative follow-up.
 
+## Code style
+No code comments, including `shortcut:` markers. Rationale goes in commit messages and `docs/`.
+
 ## Commands
 - Dev shell: `nix develop` (tofu, aws, etc. only exist inside it).
 - Before any deploy or install of a changed host: `nix build .#nixosConfigurations.<host>.config.system.build.toplevel`. `nix eval` misses derivation-time errors.
@@ -28,6 +31,7 @@ Before deploying, make sure flake.lock is not older than what the fleet runs (co
 - All SSH host keys go through the sops key ceremony (bootstrap-keygen → bootstrap-store-key → bootstrap-install[-vm]), no exceptions.
 
 ## Live hosts
+- SSH to fleet hosts over WireGuard (their `mgmt` IPs in `common/topology.nix`, e.g. home-nix-0 = 10.8.0.5), never a 192.168.* address: obs-0's `ssh-lan-login` alert pages the owner on any LAN login.
 - If a test result surprises you, read the command's stdout/stderr before acting. `sudo -u '#UID'` is unsupported on this fleet; test as a UID with `setpriv --reuid=<uid> --regid=<gid> --clear-groups --no-new-privs <cmd>`.
 - Before `restic restore`, `df -h` the exact target. Impermanence roots are small tmpfs; restore into `/persist/...` or restore a subset.
 - Units with `RefuseManualStop` (auditd daemon) only pick up changes on reboot. Check `systemctl show <unit> -p RefuseManualStop` before assuming a deploy applied. auditd *plugin* changes do apply via its reload.
@@ -60,7 +64,7 @@ Each section applies when working on the paths in its heading.
 #### Networking and TLS
 - `security.acme` with `listenHTTP = ":80"` doesn't open port 80; `modules/nixos/common.nix` adds it. Don't remove it. A cert issued by minica instead of step-ca means the HTTP-01 challenge couldn't reach port 80.
 - After changing `security.pki.certificates`, fully restart Go services (Caddy, alloy); reload keeps the old cert pool.
-- forgejo-runner cache (off today): if enabled, `settings.cache.host` must be an address job containers can reach. The rootful podman bridge 10.88.0.1 never exists here.
+- forgejo-runner cache (`cache.enabled = false` in hosts/minz-runner-0): if enabled, `settings.cache.host` must be an address job containers can reach. The rootful podman bridge 10.88.0.1 never exists here.
 - Quadlet containers (rootless, `oci` user) are system units: manage them with `sudo systemctl restart|status <name>.service`, never `podman restart` (systemd kills and recreates the container behind it) or `systemctl --user`. Use podman only to inspect (`exec`, `ps`, `inspect`).
 - Rootless podman containers (pasta) share the host IP, so `mediaIp` inside a container is the container itself. Reach host services via `host.containers.internal:<port>`. Debug distroless containers with `nsenter -t <pid> -n curl ...`.
 
@@ -94,7 +98,7 @@ Each section applies when working on the paths in its heading.
 
 - File provisioning never removes anything. Removing an alert rule or contact-point receiver from Nix needs a matching `deleteRules` / `deleteContactPoints` entry (`{ orgId; uid; }`, receiver uid) in the same settings block, then confirm via the API that the uid is gone.
 - ngalert webhook basic auth keys are `username`/`password` (not `basicAuthUsername`). Wrong keys are accepted silently and fail only at send time (403 with no Authorization header seen).
-- Custom payload: the key is `settings.payload.template`. No `$var` anywhere in it (provisioning's `os.Expand` blanks them; use `(or (and (eq .Status "firing") 4) 3)`). No `{{ define }}`/`tmpl.Exec` (broken in 13.1.x). ntfy `tags` must be a JSON array (`coll.Slice`). Test with the receiver test API pointed at a scratch `nc -l` listener.
+- Custom payload: the key is `settings.payload.template`. No `$var` anywhere in it (provisioning's `os.Expand` blanks them; use `(or (and (eq .Status "firing") 4) 3)`). No `{{ define }}`/`tmpl.Exec` (broken in 13.1.x; obs-0 runs 13.3, re-test before relying on them). ntfy `tags` must be a JSON array (`coll.Slice`). Test with the receiver test API pointed at a scratch `nc -l` listener.
 - LogQL: `(?i)a.*(b|c)` silently matches nothing. Use `.+`, split into two `|~`, or drop `(?i)`. Backtest every new or edited alert against a window with a known-positive line, then check rule health=ok.
 
 ### Media stack (`hosts/minz-media-0/**`, `hosts/minz-services-0/**`, `tofu/app/**`)
