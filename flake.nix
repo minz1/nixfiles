@@ -40,7 +40,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
-    decypharr.url = "github:minz1/decypharr/minz";
+    decypharr.url = "github:minz1/decypharr/main";
     mediafixer = {
       url = "github:minz1/media-fixer";
       inputs.nixpkgs.follows = "nixpkgs";
