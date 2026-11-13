@@ -49,6 +49,7 @@ in
         rootlessConfig.uid = 902;
         podConfig.publishPorts = [ "127.0.0.1:${toString lp.zilean.port}:8181" ];
         podConfig.shmSize = "256m";
+        podConfig.exitPolicy = "continue";
       };
 
       volumes.zilean-pg18 = {
