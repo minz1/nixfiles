@@ -126,12 +126,12 @@ in
     enable = true;
     package = pkgs.bazarr.overrideAttrs (
       finalAttrs: old: {
-        version = "1.6.3-beta.29";
+        version = "1.6.3-beta.30";
         src = pkgs.fetchFromGitHub {
           owner = "morpheus65535";
           repo = "bazarr";
           tag = "v${finalAttrs.version}";
-          hash = "sha256-flAQXHCJ3Y1ShkIXvftx15rviMCvAZvPFWZFsNSxYdU=";
+          hash = "sha256-koqBDkRehh4Ttj2NkykSI7b+/w7C3IK9UnHzgxADqgI=";
         };
         passthru = old.passthru // {
           frontend = old.passthru.frontend.overrideAttrs (

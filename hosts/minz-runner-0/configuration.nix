@@ -26,7 +26,7 @@ in
       enable = true;
       settings = {
         runner.labels = [
-          "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:62d572b92f9f32d3427b6d220ad1f9dca9c7b6ffad37d295425037dbff78abaf"
+          "nixos-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04@sha256:19619a010b204f44c5340bff7d39b68551109fe6a56a53f75201ea91e05d4270"
         ];
         server.connections.default = {
           url = "https://git.minz1.com";

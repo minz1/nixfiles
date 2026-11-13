@@ -247,7 +247,7 @@ in
           "github.com/hslatman/caddy-crowdsec-bouncer/http@v0.14.1"
           "github.com/mholt/caddy-l4@v0.1.2"
         ];
-        hash = "sha256-Av5Vu5TwsMOOLHkpO3H1PCO5Mk+JmwuD7Y8EsLWrlR4=";
+        hash = "sha256-jhpZuavA64N5EKBCSFzvLow5e9s7FPMrBscnA4r2M1k=";
       }).overrideAttrs
         (_: {
           doInstallCheck = false;
