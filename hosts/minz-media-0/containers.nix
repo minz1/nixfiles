@@ -51,7 +51,7 @@ in
         podConfig.shmSize = "256m";
       };
 
-      volumes.zilean-pg = {
+      volumes.zilean-pg18 = {
         rootlessConfig.uid = 902;
       };
 
@@ -59,9 +59,9 @@ in
         zilean-postgres = {
           rootlessConfig.uid = 902;
           containerConfig = {
-            image = "docker.io/library/postgres:16-alpine@sha256:f377d590e5474681d4d7838635031a2b50647923b7abfa803ce9b5ff35d5c663";
+            image = "docker.io/library/postgres:18-alpine@sha256:1018733457011bf88d81db98cf43aac6d5150afc18787dbe204771fedf80ff95";
             pod = pods.zilean.ref;
-            volumes = [ "${volumes.zilean-pg.ref}:/var/lib/postgresql/data" ];
+            volumes = [ "${volumes.zilean-pg18.ref}:/var/lib/postgresql" ];
             environments = {
               POSTGRES_DB = "zilean";
               POSTGRES_USER = "zilean";
