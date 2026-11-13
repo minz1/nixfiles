@@ -70,7 +70,7 @@ resource "sonarr_download_client_qbittorrent" "decypharr" {
   tv_category = "sonarr"
 
   remove_completed_downloads = true
-  remove_failed_downloads    = false
+  remove_failed_downloads    = true
 }
 
 resource "sonarr_download_client_sabnzbd" "decypharr_usenet" {
@@ -124,7 +124,7 @@ resource "radarr_download_client_qbittorrent" "decypharr" {
   movie_category = "radarr"
 
   remove_completed_downloads = true
-  remove_failed_downloads    = false
+  remove_failed_downloads    = true
 }
 
 resource "radarr_download_client_sabnzbd" "decypharr_usenet" {
