@@ -92,11 +92,8 @@ in
       matchConfig.Name = "eno1";
       vlan = [ "vlan10" ];
       address = [ "${lanAddr}/${lib.last (lib.splitString "/" lanNetwork.subnet)}" ];
-      networkConfig = {
-        DHCP = "ipv4";
-        ConfigureWithoutCarrier = true;
-      };
-      dhcpV4Config.UseGateway = false;
+      dns = [ routerIp ];
+      networkConfig.ConfigureWithoutCarrier = true;
     };
     networks."30-vlan10" = {
       matchConfig.Name = "vlan10";
