@@ -197,3 +197,25 @@ resource "prowlarr_indexer" "nzbgeek" {
     ignore_changes = [fields]
   }
 }
+
+resource "prowlarr_indexer" "nzbfinder" {
+  enable          = true
+  name            = "NZBFinder"
+  implementation  = "Newznab"
+  config_contract = "NewznabSettings"
+  protocol        = "usenet"
+  app_profile_id  = 1
+  priority        = 25
+
+  redirect = true
+
+  fields = [
+    { name = "baseUrl", text_value = "https://nzbfinder.ws" },
+    { name = "apiPath", text_value = "/api" },
+    { name = "apiKey", sensitive_value = data.sops_file.prowlarr_indexers.data["nzbfinder_api_key"] },
+  ]
+
+  lifecycle {
+    ignore_changes = [fields]
+  }
+}

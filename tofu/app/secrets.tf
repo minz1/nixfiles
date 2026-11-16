@@ -18,6 +18,10 @@ ephemeral "sops_file" "prowlarr" {
   source_file = "${path.root}/../../secrets/shared/prowlarr.yaml"
 }
 
+data "sops_file" "prowlarr_indexers" {
+  source_file = "${path.root}/../../secrets/shared/prowlarr.yaml"
+}
+
 ephemeral "sops_file" "seerr_api" {
   source_file = "${path.root}/../../secrets/shared/seerr-api.yaml"
 }
