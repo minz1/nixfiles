@@ -88,6 +88,16 @@
   };
 
   # jellyfin needs render+video group membership to access /dev/dri/renderD128 in the container.
+  sops.secrets.sonarr_api_key.restartUnits = [ "jellyfin.service" ];
+  sops.secrets.radarr_api_key.restartUnits = [ "jellyfin.service" ];
+
+  systemd.services.jellyfin = {
+    after = [ "seerr.service" ];
+    serviceConfig.ExecStartPre = [
+      "+${pkgs.writers.writePython3 "jellyfin-enhanced-keys" { } (builtins.readFile ./jellyfin-enhanced-keys.py)}"
+    ];
+  };
+
   users.users.jellyfin.extraGroups = [
     "render"
     "video"
