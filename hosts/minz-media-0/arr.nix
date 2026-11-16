@@ -29,6 +29,7 @@ in
   sops.secrets.sonarr_api_key.sopsFile = ../../secrets/shared/arr.yaml;
   sops.secrets.radarr_api_key.sopsFile = ../../secrets/shared/arr.yaml;
   sops.secrets.prowlarr_api_key.sopsFile = ../../secrets/shared/prowlarr.yaml;
+  sops.secrets.nzbfinder_api_key.sopsFile = ../../secrets/shared/prowlarr.yaml;
 
   sops.templates.sonarr-env = {
     restartUnits = [

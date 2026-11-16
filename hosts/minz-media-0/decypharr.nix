@@ -27,6 +27,8 @@ in
   sops.secrets.decypharr_password_hash = { };
   sops.secrets.decypharr_api_token.sopsFile = ../../secrets/shared/decypharr.yaml;
   sops.secrets.decypharr_secret_key = { };
+  sops.secrets.usenetfarm_username.sopsFile = ../../secrets/shared/decypharr.yaml;
+  sops.secrets.usenetfarm_password.sopsFile = ../../secrets/shared/decypharr.yaml;
 
   sops.templates.decypharr-env = {
     restartUnits = [
