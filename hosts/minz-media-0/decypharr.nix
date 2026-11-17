@@ -92,7 +92,11 @@ in
       categories = [
         "sonarr"
         "radarr"
+        "bindery"
       ];
+      category_download_actions = {
+        bindery = "download";
+      };
       folder_naming = "original_no_ext";
       default_download_action = "symlink";
 
@@ -127,6 +131,7 @@ in
           torrents_refresh_interval = "10m";
           download_links_refresh_interval = "40m";
           auto_expire_links_after = "3d";
+          download_uncached = true;
         }
         {
           provider = "torbox";
@@ -136,6 +141,7 @@ in
           torrents_refresh_interval = "10m";
           download_links_refresh_interval = "40m";
           auto_expire_links_after = "3d";
+          download_uncached = true;
         }
       ];
 
@@ -242,6 +248,14 @@ in
         "wtv"
         "wv"
         "xvid"
+        "epub"
+        "azw3"
+        "mobi"
+        "pdf"
+        "cbz"
+        "m4b"
+        "opus"
+        "aac"
       ];
 
       repair = {
