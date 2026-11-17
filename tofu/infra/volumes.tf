@@ -18,3 +18,12 @@ resource "incus_storage_volume" "media_cache" {
     size = "100GiB"
   }
 }
+
+resource "incus_storage_volume" "media_books" {
+  name = "minz-media-0-books"
+  pool = "default"
+
+  config = {
+    size = "30GiB"
+  }
+}

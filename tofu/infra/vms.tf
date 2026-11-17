@@ -140,6 +140,19 @@ resource "incus_instance" "container" {
     }
   }
 
+  dynamic "device" {
+    for_each = each.key == "minz-media-0" ? [1] : []
+    content {
+      name = "books"
+      type = "disk"
+      properties = {
+        source = incus_storage_volume.media_books.name
+        pool   = "default"
+        path   = "/data/books"
+      }
+    }
+  }
+
   # GPU DRM passthrough via cgroup device allowlisting — no VFIO/IOMMU required.
   dynamic "device" {
     for_each = each.value.incus.gpu ? [1] : []
