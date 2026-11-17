@@ -63,6 +63,7 @@ let
       ExecStart = "${mkBootstrap app}/bin/${app}-bootstrap";
       Restart = "on-failure";
       RestartSec = "30s";
+      TimeoutStartSec = "16min";
       StateDirectory = "books-bootstrap";
       StateDirectoryMode = "0700";
       UMask = "0077";

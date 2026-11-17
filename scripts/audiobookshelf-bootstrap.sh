@@ -2,8 +2,10 @@
 set -euo pipefail
 
 : "${SYSTEMCTL:=systemctl}"
+: "${DISCOVERY_DEADLINE:=900}"
 marker="$READY_DIR/audiobookshelf"
 restarts="$READY_DIR/audiobookshelf.restarts"
+pending="$READY_DIR/audiobookshelf.pending"
 fingerprint="$FINGERPRINT_DIR/audiobookshelf.sha256"
 
 rm -f "$marker"
@@ -37,23 +39,38 @@ expect() {
     [ "$1" = 200 ] || die "$2 returned HTTP $1"
 }
 
+invocation() {
+    local id
+    id=$("$SYSTEMCTL" show -p InvocationID --value audiobookshelf.service) \
+        || die "cannot read the InvocationID of audiobookshelf.service"
+    [ -n "$id" ] || die "audiobookshelf.service has no InvocationID"
+    printf '%s\n' "$id"
+}
+
+request_restart() {
+    "$SYSTEMCTL" restart --no-block audiobookshelf.service \
+        || die "restart request for audiobookshelf.service failed; $pending stays until it restarts"
+}
+
+token_pattern='^[A-Za-z0-9._-]+$'
 login() {
     jq -n --rawfile p "$1" '{username: "root", password: $p}' > "$tmp/body"
-    local code
+    local code token
     code=$(call POST /login -H 'Content-Type: application/json' --data-binary @"$tmp/body")
     case $code in
         200) ;;
         401) return 1 ;;
         *) die "POST /login returned HTTP $code" ;;
     esac
-    jq -r '.user.accessToken // empty' "$tmp/resp" > "$tmp/token"
-    [ -s "$tmp/token" ] || die "POST /login returned no access token"
-    printf 'header = "Authorization: Bearer %s"\n' "$(< "$tmp/token")" > "$tmp/auth"
+    jq -r '.user.accessToken // empty' "$tmp/resp" > "$tmp/token" || die "POST /login returned an unreadable response"
+    token=$(< "$tmp/token")
+    [[ $token =~ $token_pattern ]] || die "POST /login returned a missing or malformed access token"
+    printf 'header = "Authorization: Bearer %s"\n' "$token" > "$tmp/auth"
 }
 
 settings_match() {
     jq -e -n --slurpfile c "$tmp/current" --slurpfile d "$tmp/desired" '
-        def norm: if type == "array" then sort else . end;
+        def norm: if type == "array" then sort elif . == "" then null else . end;
         $c[0] as $c | $d[0] as $d
         | all($d | keys[]; . as $k
             | ($k == "authOpenIDClientSecret" and ($c | has($k) | not))
@@ -71,7 +88,12 @@ until curl -fsS --max-time 5 -o /dev/null "$ABS_URL/healthcheck" 2> /dev/null; d
     sleep 1
 done
 
-curl -fsS --max-time 15 -o "$tmp/discovery" "$OIDC_DISCOVERY_URL" || die "issuer discovery failed"
+deadline=$((SECONDS + DISCOVERY_DEADLINE))
+until curl -fsS --max-time 15 -o "$tmp/discovery" "$OIDC_DISCOVERY_URL" 2> "$tmp/discovery.err"; do
+    [ "$SECONDS" -lt "$deadline" ] \
+        || die "issuer discovery failed for ${DISCOVERY_DEADLINE}s: $(< "$tmp/discovery.err")"
+    sleep 2
+done
 jq -S -c --rawfile secret "$OIDC_SECRET_FILE" --arg id "$OIDC_CLIENT_ID" '
     if [.issuer, .authorization_endpoint, .token_endpoint, .userinfo_endpoint, .jwks_uri, .end_session_endpoint]
         | all(type == "string" and . != "") then . else error("issuer discovery is missing an endpoint") end
@@ -88,6 +110,8 @@ jq -S -c --rawfile secret "$OIDC_SECRET_FILE" --arg id "$OIDC_CLIENT_ID" '
         authOpenIDGroupClaim: "abs_roles",
         authOpenIDMobileRedirectURIs: ["audiobookshelf://oauth"],
         authOpenIDAutoRegister: true,
+        authOpenIDAutoLaunch: false,
+        authOpenIDAdvancedPermsClaim: null,
         authOpenIDButtonText: "Sign in with Authentik",
         authLoginCustomMessage: "Use the Sign in with Authentik button below.",
         authActiveAuthMethods: ["local", "openid"]
@@ -123,7 +147,9 @@ have_fp=$(cat "$fingerprint" 2> /dev/null || true)
 auth_changed=false
 if ! settings_match || [ "$have_fp" != "$want_fp" ]; then
     [ "$(cat "$restarts" 2> /dev/null || echo 0)" -lt 1 ] \
-        || die "auth settings need another change right after a restart for one; not restarting again"
+        || die "auth settings need another change right after a restart for one; not restarting again (remove $restarts once fixed)"
+    inv=$(invocation)
+    printf '%s\n' "$inv" > "$pending"
     jq --slurpfile c "$tmp/current" \
         'if ($c[0].authOpenIDMatchExistingBy // "") != "" then . + {authOpenIDMatchExistingBy: null} else . end' \
         "$tmp/desired" > "$tmp/body"
@@ -152,9 +178,19 @@ if [ "$auth_changed" = true ]; then
     printf '%s\n' "$want_fp" > "$fingerprint.tmp"
     mv "$fingerprint.tmp" "$fingerprint"
     echo $(($(cat "$restarts" 2> /dev/null || echo 0) + 1)) > "$restarts"
-    "$SYSTEMCTL" restart --no-block audiobookshelf.service
+    request_restart
     echo "audiobookshelf-bootstrap: auth settings changed, restarted audiobookshelf.service; the next run verifies"
     exit 0
+fi
+
+if [ -e "$pending" ]; then
+    inv=$(invocation)
+    if [ "$inv" = "$(cat "$pending")" ]; then
+        request_restart
+        echo "audiobookshelf-bootstrap: audiobookshelf.service has not restarted since the last auth change; restart requested again"
+        exit 0
+    fi
+    rm -f "$pending"
 fi
 
 rm -f "$restarts"

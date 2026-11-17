@@ -17,7 +17,6 @@ fail() {
 [ -f "$script" ] || fail "missing $script"
 
 bash_bin=$(command -v bash)
-real_curl=$(command -v curl)
 state="$work/state"
 bin="$work/bin"
 mkdir -p "$state" "$bin" "$work/fp" "$work/ready"
@@ -52,7 +51,10 @@ fi
 authed() { [ -n "$auth" ] && grep -qxF "$auth" "$s/tokens"; }
 case "$method $path" in
     "GET /healthcheck") reply 200 OK ;;
-    "GET "*/.well-known/openid-configuration) reply 200 "$(cat "$s/discovery.json")" ;;
+    "GET "*/.well-known/openid-configuration)
+        [ -e "$s/discovery_down" ] && reply 503 Unavailable
+        reply 200 "$(cat "$s/discovery.json")"
+        ;;
     "GET /status")
         if [ -e "$s/init" ]; then reply 200 '{"isInit":true}'; else reply 200 '{"isInit":false}'; fi
         ;;
@@ -65,6 +67,7 @@ case "$method $path" in
     "POST /login")
         if jq -e --rawfile p "$s/rootpw" '.username == "root" and .password == $p' <<< "$body" > /dev/null; then
             t="tok-$RANDOM$RANDOM"
+            [ -e "$s/bad_token" ] && reply 200 "{\"user\":{\"accessToken\":\"$t\\\"\\nheader = x\"}}"
             echo "Bearer $t" >> "$s/tokens"
             echo "$t" >> "$s/alltokens"
             reply 200 "{\"user\":{\"username\":\"root\",\"accessToken\":\"$t\"}}"
@@ -82,7 +85,7 @@ case "$method $path" in
         ;;
     "PATCH /api/auth-settings")
         if [ ! -e "$s/ignore_patch" ]; then
-            jq -c --argjson b "$body" '. + $b' "$s/auth.json" > "$s/auth.tmp" && mv "$s/auth.tmp" "$s/auth.json"
+            jq -c --argjson b "$body" '. + $b | .authOpenIDAdvancedPermsClaim //= ""' "$s/auth.json" > "$s/auth.tmp" && mv "$s/auth.tmp" "$s/auth.json"
         fi
         reply 200 '{"updated":true}'
         ;;
@@ -104,9 +107,24 @@ esac
 reply 404 'Not Found'
 HANDLER
 
-printf '#!%s\n{ printf "%%s\\037" "$@"; echo; } >> %q\nexec %q "$@"\n' "$bash_bin" "$work/argv" "$real_curl" > "$bin/curl"
-printf '#!%s\necho "$*" >> %q\n' "$bash_bin" "$work/systemctl" > "$bin/systemctl-stub"
-chmod +x "$bin/curl" "$bin/systemctl-stub"
+for c in curl jq mktemp rm mv cat sha256sum sleep; do
+    printf '#!%s\n{ printf "%%s\\037" %q "$@"; echo; } >> %q\nexec %q "$@"\n' \
+        "$bash_bin" "$c" "$work/argv" "$(command -v "$c")" > "$bin/$c"
+done
+cat > "$bin/systemctl-stub" << STUB
+#!$bash_bin
+echo "\$*" >> "$work/systemctl"
+case "\$*" in
+    "show -p InvocationID --value audiobookshelf.service") cat "$state/invocation" ;;
+    "restart --no-block audiobookshelf.service")
+        [ -e "$state/restart_fails" ] && exit 1
+        echo "inv-\$RANDOM\$RANDOM" > "$state/invocation"
+        ;;
+    *) exit 1 ;;
+esac
+STUB
+chmod +x "$bin"/*
+echo inv-0 > "$state/invocation"
 
 port=18090
 dport=18091
@@ -123,29 +141,29 @@ cat > "$state/discovery.json" << JSON
  "token_endpoint": "http://127.0.0.1:$dport/token", "userinfo_endpoint": "http://127.0.0.1:$dport/userinfo",
  "jwks_uri": "http://127.0.0.1:$dport/jwks", "end_session_endpoint": "http://127.0.0.1:$dport/end-session"}
 JSON
-echo '{"authLoginCustomMessage":null,"authActiveAuthMethods":["local"],"authOpenIDIssuerURL":null,"authOpenIDClientSecret":null,"authOpenIDAutoRegister":false,"authOpenIDMatchExistingBy":null,"authOpenIDMobileRedirectURIs":[]}' > "$state/auth.json"
+echo '{"authOpenIDAdvancedPermsClaim":"","authOpenIDAutoLaunch":false,"authLoginCustomMessage":null,"authActiveAuthMethods":["local"],"authOpenIDIssuerURL":null,"authOpenIDClientSecret":null,"authOpenIDAutoRegister":false,"authOpenIDMatchExistingBy":null,"authOpenIDMobileRedirectURIs":[]}' > "$state/auth.json"
 echo '[]' > "$state/libs.json"
 : > "$state/tokens"
 
-export PATH="$bin:$PATH"
 export ABS_URL="http://127.0.0.1:$port"
 export OIDC_DISCOVERY_URL="http://127.0.0.1:$dport/application/o/audiobookshelf/.well-known/openid-configuration"
 export OIDC_CLIENT_ID=abs-client
 export OIDC_SECRET_FILE="$work/oidc" ROOT_PASSWORD_FILE="$work/root" ROOT_PASSWORD_PREVIOUS_FILE="$work/root-prev"
 export FINGERPRINT_DIR="$work/fp" READY_DIR="$work/ready"
 export LIBRARY_EBOOKS=/data/books/ebooks LIBRARY_AUDIOBOOKS=/data/books/audiobooks
-export SYSTEMCTL=systemctl-stub
+export SYSTEMCTL=systemctl-stub DISCOVERY_DEADLINE=3
 secrets=("oidc s3cret 1'x" "oidc-s3cret-2" "root pw 'a\"1" "root-pw-2" "root-pw-other")
 printf '%s' "${secrets[0]}" > "$OIDC_SECRET_FILE"
 printf '%s' "${secrets[2]}" > "$ROOT_PASSWORD_FILE"
 marker="$work/ready/audiobookshelf"
 counter="$work/ready/audiobookshelf.restarts"
+pending="$work/ready/audiobookshelf.pending"
 
 run() {
     : > "$state/requests"
     : > "$work/systemctl"
     rc=0
-    bash "$script" > "$work/out" 2>&1 || rc=$?
+    PATH="$bin:$PATH" bash "$script" > "$work/out" 2>&1 || rc=$?
     cat "$work/out" >> "$work/allout"
 }
 ok() { run && [ "$rc" = 0 ] || fail "$1: exit $rc: $(cat "$work/out")"; }
@@ -167,13 +185,15 @@ jq -e --arg i "$issuer" --arg d "http://127.0.0.1:$dport" --rawfile s "$OIDC_SEC
     and .authOpenIDClientSecret == $s and .authOpenIDGroupClaim == "abs_roles"
     and .authOpenIDMobileRedirectURIs == ["audiobookshelf://oauth"] and .authOpenIDAutoRegister == true
     and (.authOpenIDButtonText | type) == "string" and (.authLoginCustomMessage | type) == "string"
-    and .authActiveAuthMethods == ["local", "openid"] and (has("authOpenIDMatchExistingBy") | not)' "$pb" > /dev/null \
+    and .authActiveAuthMethods == ["local", "openid"] and (has("authOpenIDMatchExistingBy") | not)
+    and .authOpenIDAutoLaunch == false and has("authOpenIDAdvancedPermsClaim") and .authOpenIDAdvancedPermsClaim == null' "$pb" > /dev/null \
     || fail "a: PATCH body wrong"
 [ "$(jq -j .password "$(body_of "POST /login")")" = "${secrets[2]}" ] || fail "a: login password"
 restarted || fail "a: no restart --no-block"
 [ ! -e "$marker" ] || fail "a: marker written in a restart run"
 [ "$(cat "$counter")" = 1 ] || fail "a: restart counter"
 [ -s "$FINGERPRINT_DIR/audiobookshelf.sha256" ] || fail "a: no fingerprint"
+[ "$(cat "$pending")" = inv-0 ] || fail "a: pending does not hold the pre-PATCH InvocationID"
 [ "$(count "POST /api/libraries")" = 2 ] || fail "c: libraries not created"
 jq -e 'map({name, mediaType, p: .folders[0].fullPath}) == [
     {name: "Ebooks", mediaType: "book", p: "/data/books/ebooks"},
@@ -186,7 +206,8 @@ ok b
 [ "$(count "POST /api/libraries")" = 0 ] || fail "b: library re-created"
 [ -e "$marker" ] || fail "b: no marker"
 [ ! -e "$counter" ] || fail "b: restart counter kept"
-[ ! -s "$work/systemctl" ] || fail "b: restarted with no change"
+[ ! -e "$pending" ] || fail "b: pending kept after the restart"
+! restarted || fail "b: restarted with no change"
 
 jq -c '[{id: "x", name: "My Ebooks", mediaType: "book", folders: [{fullPath: "/data/books/ebooks"}]}]' -n > "$state/libs.json"
 ok c
@@ -195,7 +216,7 @@ ok c
 [ "$(jq length "$state/libs.json")" = 2 ] || fail "c: library count"
 [ "$(count "PATCH /api/auth-settings")" = 0 ] || fail "c: auth PATCH on a library-only change"
 [ -e "$marker" ] || fail "c: library-only change did not publish the marker in one run"
-[ ! -s "$work/systemctl" ] || fail "c: restart on a library-only change"
+! restarted || fail "c: restart on a library-only change"
 
 touch "$state/hide_secret"
 printf '%s' "${secrets[1]}" > "$OIDC_SECRET_FILE"
@@ -215,12 +236,52 @@ restarted || fail "loop1: no restart"
 export OIDC_CLIENT_ID=abs-client-3
 bad loop2
 [ "$(count "PATCH /api/auth-settings")" = 0 ] || fail "loop2: PATCH past the loop guard"
-[ ! -s "$work/systemctl" ] || fail "loop2: restarted past the loop guard"
+! restarted || fail "loop2: restarted past the loop guard"
 [ ! -e "$marker" ] || fail "loop2: marker"
+grep -qF "remove $counter" "$work/out" || fail "loop2: message does not name the counter file"
 rm "$counter"
 ok loop3
 ok loop4
 [ -e "$marker" ] || fail "loop4: no marker"
+
+touch "$state/restart_fails"
+export OIDC_CLIENT_ID=abs-client-5
+inv_before=$(cat "$state/invocation")
+bad p1
+[ "$(count "PATCH /api/auth-settings")" = 1 ] || fail "p1: no PATCH"
+restarted || fail "p1: no restart request"
+[ "$(cat "$pending")" = "$inv_before" ] || fail "p1: pending missing after a failed restart request"
+[ ! -e "$marker" ] || fail "p1: marker"
+bad p2
+[ "$(count "PATCH /api/auth-settings")" = 0 ] || fail "p2: PATCH while the restart is pending"
+restarted || fail "p2: restart not re-requested"
+[ ! -e "$marker" ] || fail "p2: marker while InvocationID is unchanged"
+[ -e "$pending" ] || fail "p2: pending dropped"
+rm "$state/restart_fails"
+ok p3
+restarted || fail "p3: restart not re-requested"
+[ ! -e "$marker" ] || fail "p3: marker in the run that requested the restart"
+[ "$(cat "$state/invocation")" != "$inv_before" ] || fail "p3: stub InvocationID unchanged"
+ok p4
+[ -e "$marker" ] || fail "p4: no marker after InvocationID changed"
+[ ! -e "$pending" ] || fail "p4: pending kept"
+[ ! -e "$counter" ] || fail "p4: counter kept"
+touch "$state/restart_fails"
+export OIDC_CLIENT_ID=abs-client-6
+bad p5
+echo inv-manual > "$state/invocation"
+ok p6
+! restarted || fail "p6: restart requested after InvocationID changed"
+[ -e "$marker" ] || fail "p6: no marker once InvocationID changed"
+rm "$state/restart_fails"
+
+touch "$state/bad_token"
+bad token
+grep -qxF "audiobookshelf-bootstrap: POST /login returned a missing or malformed access token" "$work/out" \
+    || fail "token: no fixed message"
+[ "$(count "GET /api/auth-settings")" = 0 ] || fail "token: API used with a malformed token"
+rm "$state/bad_token"
+ok token-back
 
 touch "$state/ignore_patch"
 export OIDC_CLIENT_ID=abs-client-4
@@ -228,7 +289,7 @@ fp_before=$(cat "$FINGERPRINT_DIR/audiobookshelf.sha256")
 bad d
 grep -q "read back differ" "$work/out" || fail "d: no mismatch message"
 [ ! -e "$marker" ] || fail "d: marker after a read-back mismatch"
-[ ! -s "$work/systemctl" ] || fail "d: restart after a read-back mismatch"
+! restarted || fail "d: restart after a read-back mismatch"
 [ "$(cat "$FINGERPRINT_DIR/audiobookshelf.sha256")" = "$fp_before" ] || fail "d: fingerprint written"
 rm "$state/ignore_patch"
 ok d2
@@ -239,6 +300,12 @@ OIDC_DISCOVERY_URL="http://127.0.0.1:1/.well-known/openid-configuration" bad iss
 [ "$(count "PATCH /api/auth-settings")" = 0 ] || fail "issuer-down: PATCH"
 [ ! -e "$marker" ] || fail "issuer-down: marker"
 ok issuer-up
+touch "$state/discovery_down"
+(sleep 3 && rm "$state/discovery_down") &
+pids+=($!)
+DISCOVERY_DEADLINE=30 ok issuer-retry
+[ ! -e "$state/discovery_down" ] || fail "issuer-retry: finished before discovery came back"
+[ -e "$marker" ] || fail "issuer-retry: no marker"
 
 printf '%s' "${secrets[2]}" > "$ROOT_PASSWORD_PREVIOUS_FILE"
 printf '%s' "${secrets[3]}" > "$ROOT_PASSWORD_FILE"
@@ -262,13 +329,17 @@ ok h-back
 
 mapfile -t issued < "$state/alltokens"
 [ "${#issued[@]}" -gt 0 ] || fail "e: no tokens issued"
+for c in curl jq mktemp rm mv cat sha256sum; do
+    grep -q "^$c"$'\037' "$work/argv" || fail "e: no recorded $c calls"
+done
 for s in "${secrets[@]}" "${issued[@]}"; do
-    if grep -qF -- "$s" "$work/argv"; then fail "e: a secret or token reached curl argv"; fi
+    if grep -qF -- "$s" "$work/argv"; then fail "e: a secret or token reached a command argv"; fi
     if grep -qF -- "$s" "$work/allout"; then fail "e: a secret or token reached stdout/stderr"; fi
 done
 
 issuer_gets=0
 while IFS=$'\037' read -r -a args; do
+    [ "${args[0]}" = curl ] || continue
     url=""
     method=GET
     prev=""

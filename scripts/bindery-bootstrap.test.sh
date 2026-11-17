@@ -23,6 +23,11 @@ for c in providers prowlarr downloadclient rootfolder notification; do echo '[]'
 echo local-only > "$state/mode"
 : > "$state/log"
 : > "$state/fail"
+: > "$state/ignore"
+echo null > "$state/oidc_status.json"
+echo ok > "$state/oidc_reload"
+echo 0 > "$state/oidc_delay"
+echo 0 > "$state/oidc_delay_next"
 
 bash_bin=$(command -v bash)
 {
@@ -41,6 +46,7 @@ if [ "$p" = /api/v1/health ]; then reply 200 '{"status":"ok"}'; fi
 echo "$m $p" >> "$s/log"
 [ "${HTTP_X_API_KEY:-}" = "$(cat "$s/apikey")" ] || reply 401 '{"error":"unauthorized"}'
 if grep -qxF "$m $p" "$s/fail"; then reply 502 '{"error":"injected"}'; fi
+if grep -qxF "$m $p" "$s/ignore"; then reply 200 '{}'; fi
 blank='map(if has("apiKey") then .apiKeyConfigured = (.apiKey != "") | .apiKey = "" else . end
     | if has("password") then .passwordConfigured = (.password != "") | .password = "" else . end)'
 coll() { cat "$s/$1.json"; }
@@ -52,7 +58,16 @@ case "$m $p" in
         jq -r .mode <<< "$body" > "$s/mode"
         reply 200 '{"mode":"enabled"}' ;;
     "GET /api/v1/auth/oidc/providers")
-        reply 200 "$(coll providers | jq -c 'map(del(.client_secret) + {status: {state: "ready"}})')" ;;
+        st=$(cat "$s/oidc_status.json")
+        n=$(cat "$s/oidc_delay")
+        if [ "$n" -gt 0 ]; then
+            echo $((n - 1)) > "$s/oidc_delay"
+            st=$(cat "$s/oidc_old.json")
+        fi
+        alter=false
+        if [ -f "$s/alter_provider" ]; then alter=true; fi
+        reply 200 "$(coll providers | jq -c --argjson st "$st" --argjson a "$alter" 'map(del(.client_secret)
+            + (if $st == null then {} else {status: $st} end) + (if $a then {name: "altered"} else {} end))')" ;;
     "PUT /api/v1/auth/oidc/providers")
         new=$(jq -c --slurpfile e "$s/providers.json" 'map(. as $p | (first($e[0][] | select(.id == $p.id)) // {}) as $prev
             | if ($p.client_secret // "") == "" then .client_secret = $prev.client_secret else . end)' <<< "$body")
@@ -60,6 +75,13 @@ case "$m $p" in
             reply 400 '{"error":"client_secret required for new provider"}'
         fi
         save providers <<< "$new"
+        cp "$s/oidc_status.json" "$s/oidc_old.json"
+        cp "$s/oidc_delay_next" "$s/oidc_delay"
+        if [ "$(cat "$s/oidc_reload")" = fail ]; then
+            jq -nc --arg t "$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" '{state: "failed", last_error: "discovery failed", last_attempt: $t}' > "$s/oidc_status.json"
+        else
+            echo '{"state":"ok"}' > "$s/oidc_status.json"
+        fi
         reply 200 '{"ok":true}' ;;
     "GET /api/v1/prowlarr" | "GET /api/v1/downloadclient")
         reply 200 "$(coll "${p##*/}" | jq -c "$blank")" ;;
@@ -121,7 +143,14 @@ prowlarr_key=prowlarr-KEY-ffffffffffffffff
 token1=decypharr-TOKEN-one-1111
 token2=decypharr-TOKEN-two-2222
 ntfy_pw=ntfy-PASSWORD-xyz
+oidc3=oidc-third-SECRET
+oidc4=oidc-fourth-SECRET
+prowlarr_key2=prowlarr-KEY2-eeeeeeeeeeee
+ntfy_pw2=ntfy-PASSWORD2-abc
 ntfy_b64=$(printf 'bindery:%s' "$ntfy_pw" | base64 -w0)
+ntfy_b64_2=$(printf 'bindery:%s' "$ntfy_pw2" | base64 -w0)
+inject_lf=$(printf 'KEYLF-abc\nX-Injected: 1')
+inject_cr=$(printf 'KEYCR-abc\r\nX-Injected: 1')
 printf '%s' "$api_key" > "$state/apikey"
 printf '%s\n' "$api_key" > "$work/secrets/api"
 printf '%s' "$oidc1" > "$work/secrets/oidc"
@@ -177,6 +206,7 @@ done
 grep -qx 'POST /api/v1/downloadclient/1/test' "$state/log" || fail "1: qbit not tested"
 grep -qx 'POST /api/v1/downloadclient/2/test' "$state/log" || fail "1: sab not tested"
 [ "$(stat -c %a "$FINGERPRINT_DIR/bindery.sha256")" = 600 ] || fail "1: fingerprint file mode"
+[ "$(stat -c %a "$marker")" = 644 ] || fail "1: marker mode"
 
 ok "2 no change"
 [ -f "$marker" ] || fail "2: no marker"
@@ -219,11 +249,81 @@ if run; then fail "8: exit 0 with a rejected API key"; fi
 printf '%s' "$api_key" > "$state/apikey"
 ok "8b"
 
-for v in "$api_key" "$oidc1" "$oidc2" "$prowlarr_key" "$token1" "$token2" "$ntfy_pw" "$ntfy_b64" BODY-LEAK-MARKER; do
+echo 'POST /api/v1/prowlarr/1/sync' > "$state/fail"
+ok "10 failed prowlarr sync is operational"
+[ -f "$marker" ] || fail "10: no marker after a failed sync"
+grep -q 'warning: Prowlarr sync returned HTTP 502' "$work/out" || fail "10: no warning line"
+: > "$state/fail"
+
+echo '[]' > "$state/providers.json"
+echo null > "$state/oidc_status.json"
+echo 3 > "$state/oidc_delay_next"
+printf '%s' "$oidc3" > "$OIDC_SECRET_FILE"
+ok "11 delayed oidc reload"
+echo 0 > "$state/oidc_delay_next"
+[ "$(grep -cx 'GET /api/v1/auth/oidc/providers' "$state/log")" -ge 6 ] || fail "11: did not poll through the reload"
+[ "$(st providers '.[0].client_secret')" = "$oidc3" ] || fail "11: oidc secret"
+[ -f "$marker" ] || fail "11: no marker"
+
+fp_before=$(grep '^oidc ' "$FINGERPRINT_DIR/bindery.sha256")
+echo fail > "$state/oidc_reload"
+printf '%s' "$oidc4" > "$OIDC_SECRET_FILE"
+if run; then fail "12: exit 0 on a failed oidc reload"; fi
+[ -f "$marker" ] && fail "12: marker after a failed oidc reload"
+grep -q 'OIDC provider authentik failed to load' "$work/out" || fail "12: no failure line: $(cat "$work/out")"
+[ "$(grep '^oidc ' "$FINGERPRINT_DIR/bindery.sha256")" = "$fp_before" ] || fail "12: oidc fingerprint stored after a failed reload"
+echo ok > "$state/oidc_reload"
+ok "12b"
+grep -qx 'PUT /api/v1/auth/oidc/providers' "$state/log" || fail "12b: oidc not rewritten after a failed reload"
+[ -f "$marker" ] || fail "12b: no marker"
+
+printf move > "$state/settings/import.mode"
+echo 'PUT /api/v1/setting/import.mode' > "$state/ignore"
+if run; then fail "13: exit 0 when a setting write is ignored"; fi
+[ -f "$marker" ] && fail "13: marker after verify drift"
+grep -q 'still differs' "$work/out" || fail "13: no drift line: $(cat "$work/out")"
+: > "$state/ignore"
+ok "13b"
+touch "$state/alter_provider"
+if run; then fail "13c: exit 0 when the provider reads back altered"; fi
+[ -f "$marker" ] && fail "13c: marker after provider drift"
+grep -q 'OIDC provider authentik still differs' "$work/out" || fail "13c: no drift line: $(cat "$work/out")"
+rm "$state/alter_provider"
+ok "13d"
+
+printf '%s' "$prowlarr_key2" > "$PROWLARR_KEY_FILE"
+ok "14 rotated prowlarr key"
+expect_writes "14" "POST /api/v1/prowlarr/1/sync;PUT /api/v1/prowlarr/1;"
+[ "$(st prowlarr '.[0].apiKey')" = "$prowlarr_key2" ] || fail "14: prowlarr key not rotated"
+
+printf '%s' "$ntfy_pw2" > "$NTFY_PASSWORD_FILE"
+ok "15 rotated ntfy password"
+expect_writes "15" "POST /api/v1/prowlarr/1/sync;PUT /api/v1/notification/1;"
+[ "$(st notification '.[0].headers | fromjson | .Authorization')" = "Basic $ntfy_b64_2" ] || fail "15: ntfy header not rotated"
+
+jq '(.[] | select(.name == "decypharr-qbit") | .password) = ""' "$state/downloadclient.json" > "$state/dc.tmp"
+mv "$state/dc.tmp" "$state/downloadclient.json"
+ok "16 credential not configured"
+expect_writes "16" "POST /api/v1/downloadclient/1/test;POST /api/v1/prowlarr/1/sync;PUT /api/v1/downloadclient/1;"
+[ "$(st downloadclient '.[] | select(.name == "decypharr-qbit") | .password')" = "$token1" ] || fail "16: password not resent"
+
+for bad in "$inject_lf" "$inject_cr"; do
+    printf '%s' "$bad" > "$API_KEY_FILE"
+    if run; then fail "17: exit 0 with a control character in the API key"; fi
+    [ -f "$marker" ] && fail "17: marker with a control character in the API key"
+    grep -q 'bindery_api_key has non-printable characters' "$work/out" || fail "17: no rejection line"
+    [ -s "$state/log" ] && fail "17: request sent with a bad API key"
+done
+printf '%s' "$api_key" > "$API_KEY_FILE"
+ok "17b"
+
+secrets=("$api_key" "$oidc1" "$oidc2" "$oidc3" "$oidc4" "$prowlarr_key" "$prowlarr_key2" "$token1" "$token2"
+    "$ntfy_pw" "$ntfy_pw2" "$ntfy_b64" "$ntfy_b64_2" KEYLF-abc KEYCR-abc X-Injected BODY-LEAK-MARKER)
+for v in "${secrets[@]}"; do
     if grep -qaF -- "$v" "$work/argv"; then fail "9: a secret reached argv"; fi
 done
 grep -qaF -- "-K" "$work/argv" || fail "9: curl not given a config file"
-for v in "$api_key" "$oidc2" "$prowlarr_key" "$token1" "$ntfy_pw" "$ntfy_b64" BODY-LEAK-MARKER; do
+for v in "${secrets[@]}"; do
     if grep -qaF -- "$v" "$work/allout"; then fail "9: a secret reached stdout/stderr"; fi
 done
 

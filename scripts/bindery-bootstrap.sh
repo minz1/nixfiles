@@ -32,6 +32,7 @@ load ntfy-password "$NTFY_PASSWORD_FILE"
 } | base64 -w0 > "$tmp/ntfy"
 
 key=$(< "$tmp/apikey")
+[[ $key =~ ^[[:graph:]]+$ ]] || die "bindery_api_key has non-printable characters"
 key=${key//\\/\\\\}
 key=${key//\"/\\\"}
 printf 'header = "X-Api-Key: %s"\n' "$key" > "$tmp/curlrc"
@@ -81,6 +82,25 @@ fp_put() {
     mv "$fpfile.tmp" "$fpfile"
 }
 
+oidc_put=0
+oidc_status() {
+    jq -r '[.[] | select(.id == "authentik")] | first | .status // {} | "\(.state // "") \(.last_attempt // "")"' "$tmp/resp"
+}
+
+wait_oidc() {
+    local before=$1 now deadline=$((SECONDS + 60))
+    while :; do
+        req GET /api/v1/auth/oidc/providers
+        now=$(oidc_status)
+        case $now in
+            "ok "*) return 0 ;;
+            "failed "*) [ "$now" = "$before" ] || die "OIDC provider authentik failed to load, see the Bindery log" ;;
+        esac
+        [ "$SECONDS" -lt "$deadline" ] || die "OIDC provider authentik did not load within 60s"
+        sleep 1
+    done
+}
+
 reconcile_oidc() {
     jq -n --arg i "$OIDC_ISSUER" --arg c "$OIDC_CLIENT_ID" '[{
         id: "authentik", name: "Authentik", issuer: $i, client_id: $c,
@@ -88,6 +108,12 @@ reconcile_oidc() {
     }]' > "$tmp/desired"
     req GET /api/v1/auth/oidc/providers
     local fp present same send=0
+    if [ "$verify" = 1 ] && [ "$oidc_put" = 1 ]; then
+        case $(oidc_status) in
+            "ok "*) ;;
+            *) die "OIDC provider authentik is not loaded after reconcile" ;;
+        esac
+    fi
     fp=$(fp_calc oidc "oidc $OIDC_ISSUER $OIDC_CLIENT_ID")
     present=$(jq '[.[] | select(.id == "authentik")] | length' "$tmp/resp")
     same=$(jq --slurpfile d "$tmp/desired" \
@@ -95,12 +121,16 @@ reconcile_oidc() {
     if [ "$present" = 0 ] || [ "$fp" != "$(fp_get oidc)" ]; then send=1; fi
     [ "$same" = true ] && [ "$send" = 0 ] && return 0
     drift "OIDC provider authentik"
+    local before
+    before=$(oidc_status)
     if [ "$send" = 1 ]; then
         jq --rawfile s "$tmp/oidc" '.[0].client_secret = $s' "$tmp/desired" > "$tmp/body"
     else
         cp "$tmp/desired" "$tmp/body"
     fi
     req PUT /api/v1/auth/oidc/providers "$tmp/body"
+    oidc_put=1
+    wait_oidc "$before"
     if [ "$send" = 1 ]; then fp_put oidc "$fp"; fi
 }
 
@@ -227,8 +257,12 @@ done
 
 prowlarr_id=""
 reconcile
-req POST "/api/v1/prowlarr/$prowlarr_id/sync"
+api POST "/api/v1/prowlarr/$prowlarr_id/sync"
+case $status in
+    2??) ;;
+    *) echo "bindery-bootstrap: warning: Prowlarr sync returned HTTP $status" >&2 ;;
+esac
 verify=1
 reconcile
-: > "$marker"
+(umask 022 && : > "$marker")
 echo "bindery-bootstrap: configuration verified"
