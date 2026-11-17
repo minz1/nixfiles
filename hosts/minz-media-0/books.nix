@@ -130,12 +130,17 @@ in
   systemd.services.audiobookshelf = {
     requires = [ "books-volume-ready.service" ];
     after = [ "books-volume-ready.service" ];
-    environment.ROUTER_BASE_PATH = "";
-    serviceConfig = mkHardened { privateUsers = false; } // {
-      ExecStartPre = [ (invalidate "audiobookshelf") ];
-      ExecStopPost = [ (invalidate "audiobookshelf") ];
-      ReadOnlyPaths = [ "/data/books" ];
-    };
+    environment.ROUTER_BASE_PATH = "/";
+    serviceConfig =
+      mkHardened {
+        privateUsers = false;
+        extraSystemCallFilter = [ "@chown" ];
+      }
+      // {
+        ExecStartPre = [ (invalidate "audiobookshelf") ];
+        ExecStopPost = [ (invalidate "audiobookshelf") ];
+        ReadOnlyPaths = [ "/data/books" ];
+      };
   };
 
   systemd.services.audiobookshelf-bootstrap =
