@@ -36,6 +36,8 @@ let
     "https://${ph.jellyfin}"
     "https://${ph.seerr}"
     "https://${ph.ntfy}"
+    "https://${ph.books}"
+    "https://${ph.bindery}"
     "https://${ph.admin}${topology.contracts.mediaFixerPath}"
     "https://${ph.arr}${topology.contracts.localPorts.minz-media-0.sonarr.urlBase}"
     "https://git.minz1.com"
