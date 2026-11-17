@@ -275,6 +275,15 @@ in
               for = "30m";
               summary = "{{ $labels.instance }} decypharr cache volume above 90% — eviction isn't keeping up with diskCacheSize";
             })
+            (mkThresholdRule {
+              uid = "disk-books";
+              title = "Books volume nearly full";
+              expr = ''100 - (node_filesystem_avail_bytes{mountpoint="/data/books"} / node_filesystem_size_bytes{mountpoint="/data/books"} * 100)'';
+              evaluatorType = "gt";
+              evaluatorParams = [ 90 ];
+              for = "30m";
+              summary = "{{ $labels.instance }} books volume above 90% — grow minz-media-0-books or prune the library";
+            })
             (mkLogCountRule {
               uid = "oom-kill";
               title = "Kernel OOM kill";

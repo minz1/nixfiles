@@ -8,6 +8,7 @@
     ../../modules/nixos/rootless-podman.nix
     ./arr.nix
     ./backups.nix
+    ./books.nix
     ./caddy.nix
     ./containers.nix
     ./decypharr.nix
