@@ -94,7 +94,7 @@ until curl -fsS --max-time 15 -o "$tmp/discovery" "$OIDC_DISCOVERY_URL" 2> "$tmp
         || die "issuer discovery failed for ${DISCOVERY_DEADLINE}s: $(< "$tmp/discovery.err")"
     sleep 2
 done
-jq -S -c --rawfile secret "$OIDC_SECRET_FILE" --arg id "$OIDC_CLIENT_ID" '
+jq -S -c --rawfile secret "$OIDC_SECRET_FILE" --arg id "$OIDC_CLIENT_ID" --arg sub "$REDIRECT_SUBFOLDER" '
     if [.issuer, .authorization_endpoint, .token_endpoint, .userinfo_endpoint, .jwks_uri, .end_session_endpoint]
         | all(type == "string" and . != "") then . else error("issuer discovery is missing an endpoint") end
     | {
@@ -108,6 +108,7 @@ jq -S -c --rawfile secret "$OIDC_SECRET_FILE" --arg id "$OIDC_CLIENT_ID" '
         authOpenIDClientID: $id,
         authOpenIDClientSecret: $secret,
         authOpenIDGroupClaim: "abs_roles",
+        authOpenIDSubfolderForRedirectURLs: $sub,
         authOpenIDMobileRedirectURIs: ["audiobookshelf://oauth"],
         authOpenIDAutoRegister: true,
         authOpenIDAutoLaunch: false,

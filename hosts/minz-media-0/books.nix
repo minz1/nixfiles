@@ -157,6 +157,7 @@ in
         ROOT_PASSWORD_FILE = secret "audiobookshelf_root_password";
         LIBRARY_EBOOKS = "/data/books/ebooks";
         LIBRARY_AUDIOBOOKS = "/data/books/audiobooks";
+        REDIRECT_SUBFOLDER = "/audiobookshelf";
       };
 
   virtualisation.containers.containersConf.settings.engine.runtime = "crun";

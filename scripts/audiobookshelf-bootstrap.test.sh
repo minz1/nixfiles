@@ -152,6 +152,7 @@ export OIDC_CLIENT_ID=abs-client
 export OIDC_SECRET_FILE="$work/oidc" ROOT_PASSWORD_FILE="$work/root" ROOT_PASSWORD_PREVIOUS_FILE="$work/root-prev"
 export FINGERPRINT_DIR="$work/fp" READY_DIR="$work/ready"
 export LIBRARY_EBOOKS=/data/books/ebooks LIBRARY_AUDIOBOOKS=/data/books/audiobooks
+export REDIRECT_SUBFOLDER=/audiobookshelf
 export SYSTEMCTL=systemctl-stub DISCOVERY_DEADLINE=3
 secrets=("oidc s3cret 1'x" "oidc-s3cret-2" "root pw 'a\"1" "root-pw-2" "root-pw-other")
 printf '%s' "${secrets[0]}" > "$OIDC_SECRET_FILE"
@@ -183,6 +184,7 @@ jq -e --arg i "$issuer" --arg d "http://127.0.0.1:$dport" --rawfile s "$OIDC_SEC
     and .authOpenIDTokenURL == $d + "/token" and .authOpenIDUserInfoURL == $d + "/userinfo"
     and .authOpenIDJwksURL == $d + "/jwks" and .authOpenIDLogoutURL == $d + "/end-session"
     and .authOpenIDTokenSigningAlgorithm == "RS256" and .authOpenIDClientID == "abs-client"
+    and .authOpenIDSubfolderForRedirectURLs == "/audiobookshelf"
     and .authOpenIDClientSecret == $s and .authOpenIDGroupClaim == "abs_roles"
     and .authOpenIDMobileRedirectURIs == ["audiobookshelf://oauth"] and .authOpenIDAutoRegister == true
     and (.authOpenIDButtonText | type) == "string" and (.authLoginCustomMessage | type) == "string"
