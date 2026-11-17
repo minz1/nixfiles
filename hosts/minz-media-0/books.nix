@@ -71,7 +71,7 @@ let
     };
   };
 
-  binderyImage = "ghcr.io/vavallee/bindery:v1.51.1@sha256:c22516f3ebe69239c09021cc232765944737dfd1c5c77fa18a2213a87d65ddb9";
+  binderyImage = "ghcr.io/vavallee/bindery:sha-b418ece@sha256:98ef99daff131ffb7f3ad961928d61692a3171ca7faa2c47b776de7f0fe90648";
 in
 {
   users.users.oci.extraGroups = [ "media" ];
