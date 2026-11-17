@@ -13,6 +13,7 @@ let
   hosts = topology.contracts.publicHosts;
   oidc = topology.contracts.oidc;
   issuer = app: "https://${hosts.auth}/application/o/${app}/";
+  absBasePath = "/audiobookshelf";
   readyDir = "/run/books-ready";
   fingerprintDir = "/var/lib/books-bootstrap";
   secret = name: config.sops.secrets.${name}.path;
@@ -129,6 +130,7 @@ in
 
   services.audiobookshelf = {
     enable = true;
+    package = pkgs.audiobookshelf.override { routerBasePath = absBasePath; };
     host = "127.0.0.1";
     port = lp.audiobookshelf.port;
   };
@@ -158,7 +160,7 @@ in
         ROOT_PASSWORD_FILE = secret "audiobookshelf_root_password";
         LIBRARY_EBOOKS = "/data/books/ebooks";
         LIBRARY_AUDIOBOOKS = "/data/books/audiobooks";
-        REDIRECT_SUBFOLDER = "/audiobookshelf";
+        REDIRECT_SUBFOLDER = absBasePath;
       };
 
   virtualisation.containers.containersConf.settings.engine.runtime = "crun";
