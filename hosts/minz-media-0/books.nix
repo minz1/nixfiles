@@ -4,6 +4,7 @@
   pkgs,
   topology,
   mkHardened,
+  node,
   ...
 }:
 
@@ -203,6 +204,7 @@ in
         BINDERY_AUDIOBOOK_DIR = "/data/books/audiobooks";
         BINDERY_OIDC_REDIRECT_BASE_URL = "https://${hosts.bindery}";
         BINDERY_ALLOWED_HOSTS = hosts.bindery;
+        BINDERY_TRUSTED_PROXY = node.networks.incus_bridge.ip;
       };
       environmentFiles = [ config.sops.templates.bindery-env.path ];
     };
