@@ -26,7 +26,7 @@ echo local-only > "$state/mode"
 : > "$state/ignore"
 echo null > "$state/oidc_status.json"
 echo ok > "$state/oidc_reload"
-echo 0 > "$state/oidc_delay"
+: > "$state/oidc_queue"
 echo 0 > "$state/oidc_delay_next"
 
 bash_bin=$(command -v bash)
@@ -58,12 +58,16 @@ case "$m $p" in
         jq -r .mode <<< "$body" > "$s/mode"
         reply 200 '{"mode":"enabled"}' ;;
     "GET /api/v1/auth/oidc/providers")
+        : > "$s/oidc_queue.new"
+        while IFS=$'\t' read -r c j; do
+            if [ "$c" -le 0 ]; then
+                printf '%s\n' "$j" > "$s/oidc_status.json"
+            else
+                printf '%s\t%s\n' $((c - 1)) "$j" >> "$s/oidc_queue.new"
+            fi
+        done < "$s/oidc_queue"
+        mv "$s/oidc_queue.new" "$s/oidc_queue"
         st=$(cat "$s/oidc_status.json")
-        n=$(cat "$s/oidc_delay")
-        if [ "$n" -gt 0 ]; then
-            echo $((n - 1)) > "$s/oidc_delay"
-            st=$(cat "$s/oidc_old.json")
-        fi
         alter=false
         if [ -f "$s/alter_provider" ]; then alter=true; fi
         reply 200 "$(coll providers | jq -c --argjson st "$st" --argjson a "$alter" 'map(del(.client_secret)
@@ -75,12 +79,16 @@ case "$m $p" in
             reply 400 '{"error":"client_secret required for new provider"}'
         fi
         save providers <<< "$new"
-        cp "$s/oidc_status.json" "$s/oidc_old.json"
-        cp "$s/oidc_delay_next" "$s/oidc_delay"
         if [ "$(cat "$s/oidc_reload")" = fail ]; then
-            jq -nc --arg t "$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" '{state: "failed", last_error: "discovery failed", last_attempt: $t}' > "$s/oidc_status.json"
+            result=$(jq -nc --arg t "t-$RANDOM$RANDOM" '{state: "failed", last_error: "discovery failed", last_attempt: $t}')
         else
-            echo '{"state":"ok"}' > "$s/oidc_status.json"
+            result='{"state":"ok"}'
+        fi
+        n=$(cat "$s/oidc_delay_next")
+        if [ "$n" -gt 0 ]; then
+            printf '%s\t%s\n' "$n" "$result" >> "$s/oidc_queue"
+        else
+            printf '%s\n' "$result" > "$s/oidc_status.json"
         fi
         reply 200 '{"ok":true}' ;;
     "GET /api/v1/prowlarr" | "GET /api/v1/downloadclient")
@@ -142,7 +150,7 @@ case "\$*" in
         [ -e "$state/restart_fails" ] && exit 1
         [ -e "$state/restart_noop" ] && exit 0
         echo "inv-\$RANDOM\$RANDOM" > "$state/invocation"
-        echo 0 > "$state/oidc_delay"
+        : > "$state/oidc_queue"
         if [ "\$(cat "$state/oidc_reload")" = fail ]; then
             echo '{"state":"failed","last_error":"discovery failed","last_attempt":"fresh"}' > "$state/oidc_status.json"
         else
@@ -173,6 +181,7 @@ oidc3=oidc-third-SECRET
 oidc4=oidc-fourth-SECRET
 oidc5=oidc-fifth-SECRET
 oidc6=oidc-sixth-SECRET
+oidc7=oidc-seventh-SECRET
 prowlarr_key2=prowlarr-KEY2-eeeeeeeeeeee
 ntfy_pw2=ntfy-PASSWORD2-abc
 ntfy_b64=$(printf 'bindery:%s' "$ntfy_pw" | base64 -w0)
@@ -357,8 +366,8 @@ grep -q 'OIDC provider authentik failed to load' "$work/out" || fail "18b: no fa
 echo ok > "$state/oidc_reload"
 ok "18c"
 
-echo null > "$state/oidc_old.json"
-echo 3 > "$state/oidc_delay"
+echo null > "$state/oidc_status.json"
+printf '3\t{"state":"ok"}\n' > "$state/oidc_queue"
 ok "19 status absent while loading"
 grep -qx 'PUT /api/v1/auth/oidc/providers' "$state/log" && fail "19: providers PUT while status was only absent"
 [ "$(grep -cx 'GET /api/v1/auth/oidc/providers' "$state/log")" -ge 4 ] || fail "19: verify did not poll"
@@ -390,6 +399,40 @@ ok "20e"
 [ -f "$pending" ] && fail "20e: pending left"
 [ -f "$READY_DIR/bindery.restarts" ] && fail "20e: restart counter left"
 
+inflight="$READY_DIR/bindery.oidc-inflight"
+cp "$state/invocation" "$inflight"
+ok "21 unconfirmed reload left behind"
+[ -f "$marker" ] && fail "21: marker while an earlier reload is unconfirmed"
+grep -q 'earlier reload is unconfirmed' "$work/out" || fail "21: no unconfirmed line: $(cat "$work/out")"
+restarted || fail "21: no restart requested"
+ok "21b"
+[ -f "$inflight" ] && fail "21b: inflight left after a restart"
+[ -f "$marker" ] || fail "21b: no marker after the restart"
+
+echo '[]' > "$state/providers.json"
+echo null > "$state/oidc_status.json"
+jq -n --arg i "$OIDC_ISSUER" --rawfile s "$OIDC_SECRET_FILE" '[{id: "authentik", name: "Authentik", issuer: $i,
+    client_id: "bindery-client", scopes: ["openid", "profile", "email"],
+    allowed_groups: ["book-users", "arr-admins"], client_secret: $s}]' > "$work/run-a.json"
+echo 4 > "$state/oidc_delay_next"
+"$real_curl" -sS -o /dev/null -X PUT -H "X-Api-Key: $api_key" -H 'Content-Type: application/json' \
+    --data-binary "@$work/run-a.json" "$BINDERY_URL/api/v1/auth/oidc/providers"
+cp "$state/invocation" "$inflight"
+echo 6 > "$state/oidc_delay_next"
+echo fail > "$state/oidc_reload"
+printf '%s' "$oidc7" > "$OIDC_SECRET_FILE"
+ok "22 run B after interrupted run A"
+echo 0 > "$state/oidc_delay_next"
+[ -f "$marker" ] && fail "22: marker accepted from run A's late reload"
+restarted || fail "22: no restart requested"
+grep -qx 'PUT /api/v1/auth/oidc/providers' "$state/log" || fail "22: rotated secret not written"
+if run; then fail "22b: exit 0 while the restarted provider fails"; fi
+[ -f "$marker" ] && fail "22b: marker while the restarted provider fails"
+echo ok > "$state/oidc_reload"
+ok "22c"
+[ -f "$marker" ] || fail "22c: no marker"
+[ -f "$inflight" ] && fail "22c: inflight left after a confirmed load"
+
 printf '%s' "$prowlarr_key2" > "$PROWLARR_KEY_FILE"
 ok "14 rotated prowlarr key"
 expect_writes "14" "POST /api/v1/prowlarr/1/sync;PUT /api/v1/prowlarr/1;"
@@ -416,7 +459,7 @@ done
 printf '%s' "$api_key" > "$API_KEY_FILE"
 ok "17b"
 
-secrets=("$api_key" "$oidc1" "$oidc2" "$oidc3" "$oidc4" "$oidc5" "$oidc6" "$prowlarr_key" "$prowlarr_key2" "$token1" "$token2"
+secrets=("$api_key" "$oidc1" "$oidc2" "$oidc3" "$oidc4" "$oidc5" "$oidc6" "$oidc7" "$prowlarr_key" "$prowlarr_key2" "$token1" "$token2"
     "$ntfy_pw" "$ntfy_pw2" "$ntfy_b64" "$ntfy_b64_2" KEYLF-abc KEYCR-abc X-Injected BODY-LEAK-MARKER)
 for v in "${secrets[@]}"; do
     if grep -qaF -- "$v" "$work/argv"; then fail "9: a secret reached argv"; fi

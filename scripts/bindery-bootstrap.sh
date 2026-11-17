@@ -5,6 +5,7 @@ set -euo pipefail
 marker="$READY_DIR/bindery"
 pending="$READY_DIR/bindery.pending"
 restarts="$READY_DIR/bindery.restarts"
+inflight="$READY_DIR/bindery.oidc-inflight"
 fpfile="$FINGERPRINT_DIR/bindery.sha256"
 
 rm -f "$marker"
@@ -99,6 +100,7 @@ request_restart() {
 }
 
 oidc_restart=false
+oidc_untrusted=false
 oidc_status() {
     jq -r '[.[] | select(.id == "authentik")] | first | .status // {} | "\(.state // "") \(.last_attempt // "")"' "$tmp/resp"
 }
@@ -122,12 +124,36 @@ wait_oidc() {
         req GET /api/v1/auth/oidc/providers
         now=$(oidc_status)
         case $now in
-            "ok "*) return 0 ;;
-            "failed "*) [ "$now" = "$before" ] || die "OIDC provider authentik failed to load, see the Bindery log" ;;
+            "ok "*)
+                rm -f "$inflight"
+                return 0
+                ;;
+            "failed "*)
+                if [ "$now" != "$before" ]; then
+                    rm -f "$inflight"
+                    die "OIDC provider authentik failed to load, see the Bindery log"
+                fi
+                ;;
         esac
         [ "$SECONDS" -lt "$deadline" ] || die "OIDC provider authentik did not load within 60s"
         sleep 1
     done
+}
+
+restart_for_oidc() {
+    [ "$(cat "$restarts" 2> /dev/null || echo 0)" -lt 1 ] \
+        || die "OIDC provider needs another change before bindery.service restarted for the last one; not restarting again (remove $restarts once fixed)"
+    local inv
+    inv=$(invocation)
+    printf '%s\n' "$inv" > "$pending"
+    oidc_restart=true
+}
+
+put_oidc() {
+    local inv
+    inv=$(invocation)
+    printf '%s\n' "$inv" > "$inflight"
+    req PUT /api/v1/auth/oidc/providers "$tmp/body"
 }
 
 reconcile_oidc() {
@@ -147,6 +173,11 @@ reconcile_oidc() {
     if [ "$same" = true ] && [ "$send" = 0 ]; then
         [ "$verify" = 0 ] || return 0
         [ ! -e "$pending" ] || return 0
+        if [ "$oidc_untrusted" = true ]; then
+            drift "OIDC provider authentik (an earlier reload is unconfirmed)"
+            restart_for_oidc
+            return 0
+        fi
         case $before in
             "failed "*) ;;
             *) return 0 ;;
@@ -160,23 +191,17 @@ reconcile_oidc() {
     else
         cp "$tmp/desired" "$tmp/body"
     fi
-    case $before in
-        "ok "*)
-            [ "$(cat "$restarts" 2> /dev/null || echo 0)" -lt 1 ] \
-                || die "OIDC provider needs another change before bindery.service restarted for the last one; not restarting again (remove $restarts once fixed)"
-            local inv
-            inv=$(invocation)
-            printf '%s\n' "$inv" > "$pending"
-            req PUT /api/v1/auth/oidc/providers "$tmp/body"
-            if [ "$send" = 1 ]; then fp_put oidc "$fp"; fi
-            oidc_restart=true
+    case $oidc_untrusted:$before in
+        true:* | false:"ok "*)
+            restart_for_oidc
+            put_oidc
             ;;
         *)
-            req PUT /api/v1/auth/oidc/providers "$tmp/body"
+            put_oidc
             wait_oidc "$before"
-            if [ "$send" = 1 ]; then fp_put oidc "$fp"; fi
             ;;
     esac
+    if [ "$send" = 1 ]; then fp_put oidc "$fp"; fi
 }
 
 reconcile_mode() {
@@ -303,6 +328,14 @@ done
 if [ -e "$pending" ]; then
     inv=$(invocation)
     [ "$inv" = "$(cat "$pending")" ] || rm -f "$pending" "$restarts"
+fi
+if [ -e "$inflight" ]; then
+    inv=$(invocation)
+    if [ "$inv" = "$(cat "$inflight")" ]; then
+        oidc_untrusted=true
+    else
+        rm -f "$inflight"
+    fi
 fi
 
 prowlarr_id=""
