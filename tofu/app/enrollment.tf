@@ -9,3 +9,9 @@ module "homelab" {
   app_name = "homelab"
 }
 
+
+module "books" {
+  source   = "./modules/app-enrollment"
+  app_name = "books"
+  group_id = authentik_group.book_users.id
+}

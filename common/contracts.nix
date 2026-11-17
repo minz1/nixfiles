@@ -12,6 +12,8 @@ in
       admin = "admin.minz1.com";
       jellyfin = "jellyfin.minz1.com";
       ntfy = "ntfy.minz1.com";
+      books = "books.minz1.com";
+      bindery = "bindery.minz1.com";
     };
     oidc.grafana = {
       clientId = "grafana";
@@ -21,6 +23,18 @@ in
     oidc.seerr = {
       clientId = "seerr";
       redirectUris = [ "https://${hosts.seerr}/login" ];
+    };
+    oidc.audiobookshelf = {
+      clientId = "audiobookshelf";
+      redirectUris = [
+        "https://${hosts.books}/auth/openid/callback"
+        "https://${hosts.books}/auth/openid/mobile-redirect"
+      ];
+    };
+    oidc.bindery = {
+      clientId = "bindery";
+      providerId = "authentik";
+      redirectUris = [ "https://${hosts.bindery}/api/v1/auth/oidc/authentik/callback" ];
     };
     mediaFixerPath = "/media";
     seerrIngestPath = "/ingest/seerr";
@@ -46,6 +60,8 @@ in
       zilean.port = 8181;
       comet.port = 8000;
       flaresolverr.port = 8191;
+      audiobookshelf.port = 13378;
+      bindery.port = 8787;
     };
   };
 }

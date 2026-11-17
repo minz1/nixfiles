@@ -29,3 +29,11 @@ ephemeral "sops_file" "seerr_api" {
 data "sops_file" "sonarr_webhook" {
   source_file = "${path.root}/../../secrets/shared/sonarr-webhook.yaml"
 }
+
+data "sops_file" "bindery" {
+  source_file = "${path.root}/../../secrets/shared/bindery.yaml"
+}
+
+data "sops_file" "audiobookshelf" {
+  source_file = "${path.root}/../../secrets/shared/audiobookshelf.yaml"
+}
