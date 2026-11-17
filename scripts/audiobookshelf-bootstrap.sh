@@ -155,6 +155,9 @@ if ! settings_match || [ "$have_fp" != "$want_fp" ]; then
         "$tmp/desired" > "$tmp/body"
     expect "$(send PATCH /api/auth-settings)" "PATCH /api/auth-settings"
     auth_changed=true
+elif [ -e "$pending" ]; then
+    inv=$(invocation)
+    [ "$inv" = "$(cat "$pending")" ] || rm -f "$pending" "$restarts"
 fi
 
 expect "$(api GET /api/libraries)" "GET /api/libraries"
@@ -184,13 +187,9 @@ if [ "$auth_changed" = true ]; then
 fi
 
 if [ -e "$pending" ]; then
-    inv=$(invocation)
-    if [ "$inv" = "$(cat "$pending")" ]; then
-        request_restart
-        echo "audiobookshelf-bootstrap: audiobookshelf.service has not restarted since the last auth change; restart requested again"
-        exit 0
-    fi
-    rm -f "$pending"
+    request_restart
+    echo "audiobookshelf-bootstrap: audiobookshelf.service has not restarted since the last auth change; restart requested again"
+    exit 0
 fi
 
 rm -f "$restarts"

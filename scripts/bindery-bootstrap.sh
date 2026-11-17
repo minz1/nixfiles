@@ -82,9 +82,21 @@ fp_put() {
     mv "$fpfile.tmp" "$fpfile"
 }
 
-oidc_put=0
 oidc_status() {
     jq -r '[.[] | select(.id == "authentik")] | first | .status // {} | "\(.state // "") \(.last_attempt // "")"' "$tmp/resp"
+}
+
+require_oidc_ok() {
+    local deadline=$((SECONDS + 60))
+    while :; do
+        case $(oidc_status) in
+            "ok "*) return 0 ;;
+            "failed "*) die "OIDC provider authentik is not loaded after reconcile" ;;
+        esac
+        [ "$SECONDS" -lt "$deadline" ] || die "OIDC provider authentik is not loaded after reconcile"
+        sleep 1
+        req GET /api/v1/auth/oidc/providers
+    done
 }
 
 wait_oidc() {
@@ -108,19 +120,21 @@ reconcile_oidc() {
     }]' > "$tmp/desired"
     req GET /api/v1/auth/oidc/providers
     local fp present same send=0
-    if [ "$verify" = 1 ] && [ "$oidc_put" = 1 ]; then
-        case $(oidc_status) in
-            "ok "*) ;;
-            *) die "OIDC provider authentik is not loaded after reconcile" ;;
-        esac
-    fi
+    if [ "$verify" = 1 ]; then require_oidc_ok; fi
     fp=$(fp_calc oidc "oidc $OIDC_ISSUER $OIDC_CLIENT_ID")
     present=$(jq '[.[] | select(.id == "authentik")] | length' "$tmp/resp")
     same=$(jq --slurpfile d "$tmp/desired" \
         '[.[] | {id, name, issuer, client_id, scopes, allowed_groups}] == $d[0]' "$tmp/resp")
     if [ "$present" = 0 ] || [ "$fp" != "$(fp_get oidc)" ]; then send=1; fi
-    [ "$same" = true ] && [ "$send" = 0 ] && return 0
-    drift "OIDC provider authentik"
+    if [ "$same" = true ] && [ "$send" = 0 ]; then
+        case $(oidc_status) in
+            "failed "*) ;;
+            *) return 0 ;;
+        esac
+        drift "OIDC provider authentik (reload after failed discovery)"
+    else
+        drift "OIDC provider authentik"
+    fi
     local before
     before=$(oidc_status)
     if [ "$send" = 1 ]; then
@@ -129,7 +143,6 @@ reconcile_oidc() {
         cp "$tmp/desired" "$tmp/body"
     fi
     req PUT /api/v1/auth/oidc/providers "$tmp/body"
-    oidc_put=1
     wait_oidc "$before"
     if [ "$send" = 1 ]; then fp_put oidc "$fp"; fi
 }

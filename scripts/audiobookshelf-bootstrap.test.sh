@@ -91,6 +91,7 @@ case "$method $path" in
         ;;
     "GET /api/libraries") reply 200 "$(jq -c '{libraries: .}' "$s/libs.json")" ;;
     "POST /api/libraries")
+        [ -e "$s/lib_fail" ] && reply 500 Error
         jq -c --argjson b "$body" '. + [{id: ("lib-" + (length | tostring)), name: $b.name, mediaType: $b.mediaType,
             folders: [{fullPath: $b.folders[0].fullPath}]}]' "$s/libs.json" > "$s/libs.tmp" && mv "$s/libs.tmp" "$s/libs.json"
         reply 200 '{}'
@@ -282,6 +283,25 @@ grep -qxF "audiobookshelf-bootstrap: POST /login returned a missing or malformed
 [ "$(count "GET /api/auth-settings")" = 0 ] || fail "token: API used with a malformed token"
 rm "$state/bad_token"
 ok token-back
+
+export OIDC_CLIENT_ID=abs-client-7
+ok r1
+restarted || fail "r1: no restart"
+[ "$(cat "$counter")" = 1 ] || fail "r1: counter"
+jq -c 'map(select(.name != "Audiobooks"))' "$state/libs.json" > "$state/libs.tmp" && mv "$state/libs.tmp" "$state/libs.json"
+touch "$state/lib_fail"
+bad r2
+[ "$(count "PATCH /api/auth-settings")" = 0 ] || fail "r2: PATCH with matching settings"
+[ ! -e "$pending" ] || fail "r2: pending kept after InvocationID changed"
+[ ! -e "$counter" ] || fail "r2: counter kept after the restart was confirmed"
+[ ! -e "$marker" ] || fail "r2: marker after a library failure"
+rm "$state/lib_fail"
+printf '%s' "${secrets[0]}" > "$OIDC_SECRET_FILE"
+ok r3
+[ "$(count "PATCH /api/auth-settings")" = 1 ] || fail "r3: rotation not PATCHed"
+restarted || fail "r3: rotation did not restart"
+ok r4
+[ -e "$marker" ] || fail "r4: no marker"
 
 touch "$state/ignore_patch"
 export OIDC_CLIENT_ID=abs-client-4

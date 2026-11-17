@@ -54,16 +54,13 @@ let
       READY_DIR = readyDir;
       FINGERPRINT_DIR = fingerprintDir;
     };
-    unitConfig = {
-      StartLimitIntervalSec = 600;
-      StartLimitBurst = 5;
-    };
+    unitConfig.StartLimitIntervalSec = 0;
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${mkBootstrap app}/bin/${app}-bootstrap";
       Restart = "on-failure";
       RestartSec = "30s";
-      TimeoutStartSec = "16min";
+      TimeoutStartSec = "25min";
       StateDirectory = "books-bootstrap";
       StateDirectoryMode = "0700";
       UMask = "0077";

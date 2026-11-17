@@ -291,6 +291,26 @@ grep -q 'OIDC provider authentik still differs' "$work/out" || fail "13c: no dri
 rm "$state/alter_provider"
 ok "13d"
 
+stale_failed='{"state":"failed","last_error":"discovery failed","last_attempt":"2026-01-01T00:00:00Z"}'
+echo "$stale_failed" > "$state/oidc_status.json"
+ok "18 restart with discovery down, reload ok"
+grep -qx 'PUT /api/v1/auth/oidc/providers' "$state/log" || fail "18: failed provider not reloaded"
+[ -f "$marker" ] || fail "18: no marker"
+echo "$stale_failed" > "$state/oidc_status.json"
+echo fail > "$state/oidc_reload"
+if run; then fail "18b: exit 0 with discovery still down"; fi
+[ -f "$marker" ] && fail "18b: marker with discovery still down"
+grep -q 'OIDC provider authentik failed to load' "$work/out" || fail "18b: no failure line: $(cat "$work/out")"
+echo ok > "$state/oidc_reload"
+ok "18c"
+
+echo null > "$state/oidc_old.json"
+echo 3 > "$state/oidc_delay"
+ok "19 status absent while loading"
+grep -qx 'PUT /api/v1/auth/oidc/providers' "$state/log" && fail "19: providers PUT while status was only absent"
+[ "$(grep -cx 'GET /api/v1/auth/oidc/providers' "$state/log")" -ge 4 ] || fail "19: verify did not poll"
+[ -f "$marker" ] || fail "19: no marker"
+
 printf '%s' "$prowlarr_key2" > "$PROWLARR_KEY_FILE"
 ok "14 rotated prowlarr key"
 expect_writes "14" "POST /api/v1/prowlarr/1/sync;PUT /api/v1/prowlarr/1;"
