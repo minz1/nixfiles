@@ -74,14 +74,15 @@ in
   # bcrypt HASHES (from `ntfy user hash`), not plaintext — obs-0 holds the plaintext counterpart
   sops.secrets."ntfy_grafana_password_hash" = { };
   sops.secrets."ntfy_phone_password_hash" = { };
+  sops.secrets."ntfy_bindery_password_hash" = { };
 
   sops.templates."ntfy-env" = {
     restartUnits = [
       "ntfy-sh.service"
     ];
     content = ''
-      NTFY_AUTH_USERS='grafana:${config.sops.placeholder.ntfy_grafana_password_hash}:user,phone:${config.sops.placeholder.ntfy_phone_password_hash}:user'
-      NTFY_AUTH_ACCESS='grafana:homelab-alerts:write-only,phone:homelab-alerts:read-only'
+      NTFY_AUTH_USERS='grafana:${config.sops.placeholder.ntfy_grafana_password_hash}:user,phone:${config.sops.placeholder.ntfy_phone_password_hash}:user,bindery:${config.sops.placeholder.ntfy_bindery_password_hash}:user'
+      NTFY_AUTH_ACCESS='grafana:homelab-alerts:write-only,phone:homelab-alerts:read-only,bindery:books-requests:write-only,phone:books-requests:read-only'
     '';
   };
 
