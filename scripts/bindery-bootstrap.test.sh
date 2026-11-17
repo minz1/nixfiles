@@ -131,6 +131,32 @@ for t in curl jq base64 sha256sum; do
     chmod +x "$work/bin/$t"
 done
 
+echo inv-0 > "$state/invocation"
+: > "$work/systemctl"
+cat > "$work/systemctl-stub" << STUB
+#!$bash_bin
+echo "\$*" >> "$work/systemctl"
+case "\$*" in
+    "show -p InvocationID --value bindery.service") cat "$state/invocation" ;;
+    "restart --no-block bindery.service")
+        [ -e "$state/restart_fails" ] && exit 1
+        [ -e "$state/restart_noop" ] && exit 0
+        echo "inv-\$RANDOM\$RANDOM" > "$state/invocation"
+        echo 0 > "$state/oidc_delay"
+        if [ "\$(cat "$state/oidc_reload")" = fail ]; then
+            echo '{"state":"failed","last_error":"discovery failed","last_attempt":"fresh"}' > "$state/oidc_status.json"
+        else
+            echo '{"state":"ok"}' > "$state/oidc_status.json"
+        fi
+        ;;
+    *) exit 1 ;;
+esac
+STUB
+chmod +x "$work/systemctl-stub"
+export SYSTEMCTL="$work/systemctl-stub"
+pending="$work/ready/bindery.pending"
+restarted() { grep -qxF "restart --no-block bindery.service" "$work/systemctl"; }
+
 port=18787
 STUB_STATE="$state" busybox httpd -f -p "127.0.0.1:$port" -h "$work/www" &
 stub_pid=$!
@@ -145,6 +171,8 @@ token2=decypharr-TOKEN-two-2222
 ntfy_pw=ntfy-PASSWORD-xyz
 oidc3=oidc-third-SECRET
 oidc4=oidc-fourth-SECRET
+oidc5=oidc-fifth-SECRET
+oidc6=oidc-sixth-SECRET
 prowlarr_key2=prowlarr-KEY2-eeeeeeeeeeee
 ntfy_pw2=ntfy-PASSWORD2-abc
 ntfy_b64=$(printf 'bindery:%s' "$ntfy_pw" | base64 -w0)
@@ -170,6 +198,7 @@ marker="$READY_DIR/bindery"
 
 run() {
     : > "$state/log"
+    : > "$work/systemctl"
     local rc=0
     PATH="$work/bin:$PATH" bash "$script" > "$work/out" 2>&1 || rc=$?
     cat "$work/out" >> "$work/allout"
@@ -222,6 +251,9 @@ printf '%s' "$oidc2" > "$OIDC_SECRET_FILE"
 ok "4 rotated oidc secret"
 expect_writes "4" "POST /api/v1/prowlarr/1/sync;PUT /api/v1/auth/oidc/providers;"
 [ "$(st providers '.[0].client_secret')" = "$oidc2" ] || fail "4: oidc secret not rotated"
+[ -f "$marker" ] && fail "4: marker before bindery restarted for the new provider"
+restarted || fail "4: no restart requested"
+[ -f "$pending" ] || fail "4: no pending file"
 
 printf move > "$state/settings/import.mode"
 ok "5 settings drift"
@@ -265,17 +297,34 @@ echo 0 > "$state/oidc_delay_next"
 [ "$(st providers '.[0].client_secret')" = "$oidc3" ] || fail "11: oidc secret"
 [ -f "$marker" ] || fail "11: no marker"
 
-fp_before=$(grep '^oidc ' "$FINGERPRINT_DIR/bindery.sha256")
+echo 2 > "$state/oidc_delay_next"
 echo fail > "$state/oidc_reload"
 printf '%s' "$oidc4" > "$OIDC_SECRET_FILE"
-if run; then fail "12: exit 0 on a failed oidc reload"; fi
-[ -f "$marker" ] && fail "12: marker after a failed oidc reload"
-grep -q 'OIDC provider authentik failed to load' "$work/out" || fail "12: no failure line: $(cat "$work/out")"
-[ "$(grep '^oidc ' "$FINGERPRINT_DIR/bindery.sha256")" = "$fp_before" ] || fail "12: oidc fingerprint stored after a failed reload"
+ok "12 loaded provider replaced by one that fails after a delay"
+echo 0 > "$state/oidc_delay_next"
+[ -f "$marker" ] && fail "12: marker while the old provider still reports ok"
+restarted || fail "12: no restart requested"
+if run; then fail "12b: exit 0 while the restarted provider fails"; fi
+[ -f "$marker" ] && fail "12b: marker while the restarted provider fails"
+[ -f "$pending" ] && fail "12b: pending kept after a confirmed restart"
+if run; then fail "12c: exit 0 while discovery still fails"; fi
+[ -f "$marker" ] && fail "12c: marker while discovery still fails"
 echo ok > "$state/oidc_reload"
-ok "12b"
-grep -qx 'PUT /api/v1/auth/oidc/providers' "$state/log" || fail "12b: oidc not rewritten after a failed reload"
-[ -f "$marker" ] || fail "12b: no marker"
+ok "12d discovery back"
+grep -qx 'PUT /api/v1/auth/oidc/providers' "$state/log" || fail "12d: failed provider not reloaded"
+[ -f "$marker" ] || fail "12d: no marker"
+
+fp_before=$(grep '^oidc ' "$FINGERPRINT_DIR/bindery.sha256")
+echo '[]' > "$state/providers.json"
+echo null > "$state/oidc_status.json"
+echo fail > "$state/oidc_reload"
+if run; then fail "12e: exit 0 when a new provider fails to load"; fi
+[ -f "$marker" ] && fail "12e: marker when a new provider fails to load"
+grep -q 'OIDC provider authentik failed to load' "$work/out" || fail "12e: no failure line: $(cat "$work/out")"
+[ "$(grep '^oidc ' "$FINGERPRINT_DIR/bindery.sha256")" = "$fp_before" ] || fail "12e: oidc fingerprint stored after a failed load"
+echo ok > "$state/oidc_reload"
+ok "12f"
+[ -f "$marker" ] || fail "12f: no marker"
 
 printf move > "$state/settings/import.mode"
 echo 'PUT /api/v1/setting/import.mode' > "$state/ignore"
@@ -290,6 +339,10 @@ if run; then fail "13c: exit 0 when the provider reads back altered"; fi
 grep -q 'OIDC provider authentik still differs' "$work/out" || fail "13c: no drift line: $(cat "$work/out")"
 rm "$state/alter_provider"
 ok "13d"
+[ -f "$marker" ] && fail "13d: marker while the restart for the provider change is pending"
+restarted || fail "13d: restart not requested again"
+ok "13e"
+[ -f "$marker" ] || fail "13e: no marker after the restart"
 
 stale_failed='{"state":"failed","last_error":"discovery failed","last_attempt":"2026-01-01T00:00:00Z"}'
 echo "$stale_failed" > "$state/oidc_status.json"
@@ -310,6 +363,32 @@ ok "19 status absent while loading"
 grep -qx 'PUT /api/v1/auth/oidc/providers' "$state/log" && fail "19: providers PUT while status was only absent"
 [ "$(grep -cx 'GET /api/v1/auth/oidc/providers' "$state/log")" -ge 4 ] || fail "19: verify did not poll"
 [ -f "$marker" ] || fail "19: no marker"
+
+printf '%s' "$oidc5" > "$OIDC_SECRET_FILE"
+touch "$state/restart_fails"
+if run; then fail "20: exit 0 when the restart request fails"; fi
+[ -f "$marker" ] && fail "20: marker when the restart request fails"
+[ -f "$pending" ] || fail "20: pending dropped after a failed restart request"
+grep -q 'restart request for bindery.service failed' "$work/out" || fail "20: no failure line: $(cat "$work/out")"
+rm "$state/restart_fails"
+touch "$state/restart_noop"
+ok "20b unchanged invocation"
+[ -f "$marker" ] && fail "20b: marker before bindery restarted"
+restarted || fail "20b: restart not requested again"
+[ -f "$pending" ] || fail "20b: pending dropped without a restart"
+printf '%s' "$oidc6" > "$OIDC_SECRET_FILE"
+if run; then fail "20c: exit 0 on a second restart-requiring change in a row"; fi
+[ -f "$marker" ] && fail "20c: marker when the loop guard trips"
+grep -q 'bindery.restarts' "$work/out" || fail "20c: loop guard message does not name the file: $(cat "$work/out")"
+rm "$state/restart_noop"
+"$SYSTEMCTL" restart --no-block bindery.service
+ok "20d after a confirmed restart"
+grep -qx 'PUT /api/v1/auth/oidc/providers' "$state/log" || fail "20d: rotated secret not written"
+[ -f "$marker" ] && fail "20d: marker before bindery restarted"
+ok "20e"
+[ -f "$marker" ] || fail "20e: no marker"
+[ -f "$pending" ] && fail "20e: pending left"
+[ -f "$READY_DIR/bindery.restarts" ] && fail "20e: restart counter left"
 
 printf '%s' "$prowlarr_key2" > "$PROWLARR_KEY_FILE"
 ok "14 rotated prowlarr key"
@@ -337,7 +416,7 @@ done
 printf '%s' "$api_key" > "$API_KEY_FILE"
 ok "17b"
 
-secrets=("$api_key" "$oidc1" "$oidc2" "$oidc3" "$oidc4" "$prowlarr_key" "$prowlarr_key2" "$token1" "$token2"
+secrets=("$api_key" "$oidc1" "$oidc2" "$oidc3" "$oidc4" "$oidc5" "$oidc6" "$prowlarr_key" "$prowlarr_key2" "$token1" "$token2"
     "$ntfy_pw" "$ntfy_pw2" "$ntfy_b64" "$ntfy_b64_2" KEYLF-abc KEYCR-abc X-Injected BODY-LEAK-MARKER)
 for v in "${secrets[@]}"; do
     if grep -qaF -- "$v" "$work/argv"; then fail "9: a secret reached argv"; fi

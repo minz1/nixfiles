@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+: "${SYSTEMCTL:=systemctl}"
 marker="$READY_DIR/bindery"
+pending="$READY_DIR/bindery.pending"
+restarts="$READY_DIR/bindery.restarts"
 fpfile="$FINGERPRINT_DIR/bindery.sha256"
 
 rm -f "$marker"
@@ -82,6 +85,20 @@ fp_put() {
     mv "$fpfile.tmp" "$fpfile"
 }
 
+invocation() {
+    local inv
+    inv=$("$SYSTEMCTL" show -p InvocationID --value bindery.service) \
+        || die "cannot read the InvocationID of bindery.service"
+    [ -n "$inv" ] || die "bindery.service has no InvocationID"
+    printf '%s\n' "$inv"
+}
+
+request_restart() {
+    "$SYSTEMCTL" restart --no-block bindery.service \
+        || die "restart request for bindery.service failed; $pending stays until it restarts"
+}
+
+oidc_restart=false
 oidc_status() {
     jq -r '[.[] | select(.id == "authentik")] | first | .status // {} | "\(.state // "") \(.last_attempt // "")"' "$tmp/resp"
 }
@@ -119,15 +136,18 @@ reconcile_oidc() {
         scopes: ["openid", "profile", "email"], allowed_groups: ["book-users", "arr-admins"]
     }]' > "$tmp/desired"
     req GET /api/v1/auth/oidc/providers
-    local fp present same send=0
-    if [ "$verify" = 1 ]; then require_oidc_ok; fi
+    local fp present same send=0 before
+    if [ "$verify" = 1 ] && [ "$oidc_restart" = false ] && [ ! -e "$pending" ]; then require_oidc_ok; fi
     fp=$(fp_calc oidc "oidc $OIDC_ISSUER $OIDC_CLIENT_ID")
     present=$(jq '[.[] | select(.id == "authentik")] | length' "$tmp/resp")
     same=$(jq --slurpfile d "$tmp/desired" \
         '[.[] | {id, name, issuer, client_id, scopes, allowed_groups}] == $d[0]' "$tmp/resp")
     if [ "$present" = 0 ] || [ "$fp" != "$(fp_get oidc)" ]; then send=1; fi
+    before=$(oidc_status)
     if [ "$same" = true ] && [ "$send" = 0 ]; then
-        case $(oidc_status) in
+        [ "$verify" = 0 ] || return 0
+        [ ! -e "$pending" ] || return 0
+        case $before in
             "failed "*) ;;
             *) return 0 ;;
         esac
@@ -135,16 +155,28 @@ reconcile_oidc() {
     else
         drift "OIDC provider authentik"
     fi
-    local before
-    before=$(oidc_status)
     if [ "$send" = 1 ]; then
         jq --rawfile s "$tmp/oidc" '.[0].client_secret = $s' "$tmp/desired" > "$tmp/body"
     else
         cp "$tmp/desired" "$tmp/body"
     fi
-    req PUT /api/v1/auth/oidc/providers "$tmp/body"
-    wait_oidc "$before"
-    if [ "$send" = 1 ]; then fp_put oidc "$fp"; fi
+    case $before in
+        "ok "*)
+            [ "$(cat "$restarts" 2> /dev/null || echo 0)" -lt 1 ] \
+                || die "OIDC provider needs another change before bindery.service restarted for the last one; not restarting again (remove $restarts once fixed)"
+            local inv
+            inv=$(invocation)
+            printf '%s\n' "$inv" > "$pending"
+            req PUT /api/v1/auth/oidc/providers "$tmp/body"
+            if [ "$send" = 1 ]; then fp_put oidc "$fp"; fi
+            oidc_restart=true
+            ;;
+        *)
+            req PUT /api/v1/auth/oidc/providers "$tmp/body"
+            wait_oidc "$before"
+            if [ "$send" = 1 ]; then fp_put oidc "$fp"; fi
+            ;;
+    esac
 }
 
 reconcile_mode() {
@@ -268,6 +300,11 @@ until curl -fsS --max-time 5 -o /dev/null "$BINDERY_URL/api/v1/health" 2> /dev/n
     sleep 2
 done
 
+if [ -e "$pending" ]; then
+    inv=$(invocation)
+    [ "$inv" = "$(cat "$pending")" ] || rm -f "$pending" "$restarts"
+fi
+
 prowlarr_id=""
 reconcile
 api POST "/api/v1/prowlarr/$prowlarr_id/sync"
@@ -277,5 +314,17 @@ case $status in
 esac
 verify=1
 reconcile
+if [ "$oidc_restart" = true ]; then
+    echo $(($(cat "$restarts" 2> /dev/null || echo 0) + 1)) > "$restarts"
+    request_restart
+    echo "bindery-bootstrap: OIDC provider changed, restarted bindery.service; the next run verifies"
+    exit 0
+fi
+if [ -e "$pending" ]; then
+    request_restart
+    echo "bindery-bootstrap: bindery.service has not restarted since the last OIDC change; restart requested again"
+    exit 0
+fi
+rm -f "$restarts"
 (umask 022 && : > "$marker")
 echo "bindery-bootstrap: configuration verified"
