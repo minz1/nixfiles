@@ -3,7 +3,7 @@
 }:
 
 let
-  mediaBackupUnits = "sonarr.service radarr.service prowlarr.service bazarr.service seerr.service jellyfin.service";
+  mediaBackupUnits = "sonarr.service radarr.service prowlarr.service bazarr.service seerr.service jellyfin.service audiobookshelf.service bindery.service";
 in
 {
   # Config + operational state only — not the media library itself (lives on NFS/decypharr mounts
@@ -20,6 +20,8 @@ in
       "/var/lib/private/seerr"
       "/var/lib/bazarr"
       "/var/lib/jellyfin"
+      "/var/lib/audiobookshelf"
+      "/var/lib/bindery"
       "/var/lib/decypharr/db"
     ];
     prepareCommand = "systemctl stop ${mediaBackupUnits}";

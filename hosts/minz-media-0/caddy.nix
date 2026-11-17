@@ -29,6 +29,84 @@ let
   mediaAgentHttpsPort = topology.services.media-agent.port;
   adminIps = map (n: topology.nodes.${n}.networks.mgmt.ip) (fleet.withRole "admin-client");
   servicesIp = topology.nodes.${topology.services.services-caddy.host}.networks.incus_bridge.ip;
+  booksApps = [
+    {
+      name = "audiobookshelf";
+      host = hosts.books;
+      port = lp.audiobookshelf.port;
+    }
+    {
+      name = "bindery";
+      host = hosts.bindery;
+      port = lp.bindery.port;
+    }
+  ];
+  booksRoutes = [
+    {
+      match = [
+        {
+          host = [ hosts.books ];
+          path = [
+            "/init"
+            "/init/*"
+          ];
+        }
+        {
+          host = [ hosts.books ];
+          path = [
+            "/login"
+            "/login/*"
+          ];
+          method = [ "POST" ];
+        }
+        {
+          host = [ hosts.bindery ];
+          path = [
+            "/api/v1/auth/setup"
+            "/api/v1/auth/setup/*"
+            "/metrics"
+            "/metrics/*"
+          ];
+        }
+      ];
+      handle = [
+        {
+          handler = "static_response";
+          status_code = 403;
+        }
+      ];
+    }
+  ]
+  ++ lib.concatMap (app: [
+    {
+      match = [
+        {
+          host = [ app.host ];
+          file = {
+            root = "/run/books-ready";
+            try_files = [ "/${app.name}" ];
+          };
+        }
+      ];
+      handle = [
+        {
+          handler = "reverse_proxy";
+          upstreams = [ { dial = "127.0.0.1:${toString app.port}"; } ];
+          headers.request.set.Host = [ "{http.request.host}" ];
+          flush_interval = -1;
+        }
+      ];
+    }
+    {
+      match = [ { host = [ app.host ]; } ];
+      handle = [
+        {
+          handler = "static_response";
+          status_code = 503;
+        }
+      ];
+    }
+  ]) booksApps;
 in
 {
   homelab.internalProxy.servers =
@@ -81,6 +159,7 @@ in
           }
           # Path-specific routes before the seerr catch-all; mediaIp allows direct WireGuard access (e.g. from the Tofu runner at https://10.10.0.7/sonarr).
         ]
+        ++ booksRoutes
         ++
           map
             (app: {

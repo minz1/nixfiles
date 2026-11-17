@@ -79,6 +79,14 @@ let
       request>headers>X-Emby-Token delete
       request>headers>X-Mediabrowser-Token delete
       request>headers>X-Emby-Authorization delete
+      request>uri query {
+        delete setToken
+        delete accessToken
+        delete token
+        delete apikey
+        delete api_key
+      }
+      resp_headers>Location delete
     }
   '';
 in
@@ -328,6 +336,10 @@ in
       };
 
       ${hosts.seerr} = mkProxyVhost { endpoint = media; };
+
+      ${hosts.books} = mkProxyVhost { endpoint = media; };
+
+      ${hosts.bindery} = mkProxyVhost { endpoint = media; };
 
       # routed by Host header to the ntfy route on services-0's shared Caddy instance
       ${hosts.ntfy} = mkProxyVhost {
