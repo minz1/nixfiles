@@ -58,6 +58,7 @@ let
     unitConfig.StartLimitIntervalSec = 0;
     serviceConfig = {
       Type = "simple";
+      RemainAfterExit = true;
       ExecStart = pkgs.writeShellScript "${app}-bootstrap-retry" ''
         until ${mkBootstrap app}/bin/${app}-bootstrap; do
           echo "${app}-bootstrap: retrying in 30s"
