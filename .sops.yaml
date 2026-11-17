@@ -138,6 +138,18 @@ creation_rules:
           - *minz-media-0
           - *minz-desktop
 
+  - path_regex: secrets/shared/bindery\.yaml$
+    key_groups:
+      - age:
+          - *minz-media-0
+          - *minz-desktop
+
+  - path_regex: secrets/shared/audiobookshelf\.yaml$
+    key_groups:
+      - age:
+          - *minz-media-0
+          - *minz-desktop
+
   - path_regex: secrets/shared/minecraft\.yaml$
     key_groups:
       - age:
