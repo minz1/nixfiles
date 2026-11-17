@@ -49,6 +49,8 @@ let
           path = [
             "/init"
             "/init/*"
+            "/audiobookshelf/init"
+            "/audiobookshelf/init/*"
           ];
         }
         {
@@ -56,6 +58,8 @@ let
           path = [
             "/login"
             "/login/*"
+            "/audiobookshelf/login"
+            "/audiobookshelf/login/*"
           ];
           method = [ "POST" ];
         }

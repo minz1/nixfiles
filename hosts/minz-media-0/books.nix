@@ -135,7 +135,6 @@ in
   systemd.services.audiobookshelf = {
     requires = [ "books-volume-ready.service" ];
     after = [ "books-volume-ready.service" ];
-    environment.ROUTER_BASE_PATH = "/";
     serviceConfig =
       mkHardened {
         privateUsers = false;

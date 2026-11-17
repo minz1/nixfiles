@@ -27,8 +27,8 @@ in
     oidc.audiobookshelf = {
       clientId = "audiobookshelf";
       redirectUris = [
-        "https://${hosts.books}/auth/openid/callback"
-        "https://${hosts.books}/auth/openid/mobile-redirect"
+        "https://${hosts.books}/audiobookshelf/auth/openid/callback"
+        "https://${hosts.books}/audiobookshelf/auth/openid/mobile-redirect"
       ];
     };
     oidc.bindery = {
