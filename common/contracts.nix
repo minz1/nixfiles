@@ -33,7 +33,6 @@ in
     };
     oidc.bindery = {
       clientId = "bindery";
-      providerId = "authentik";
       redirectUris = [ "https://${hosts.bindery}/api/v1/auth/oidc/authentik/callback" ];
     };
     mediaFixerPath = "/media";
