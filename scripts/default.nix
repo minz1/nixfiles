@@ -260,9 +260,49 @@ in
           touch $out
         '';
 
+    audiobookshelf-bootstrap-test =
+      pkgs.runCommand "audiobookshelf-bootstrap-test"
+        {
+          nativeBuildInputs = with pkgs; [
+            bash
+            coreutils
+            curl
+            gawk
+            gnugrep
+            gnused
+            jq
+            socat
+          ];
+        }
+        ''
+          cp -r ${./.} scripts
+          bash scripts/audiobookshelf-bootstrap.test.sh
+          touch $out
+        '';
+
+    bindery-bootstrap-test =
+      pkgs.runCommand "bindery-bootstrap-test"
+        {
+          nativeBuildInputs = with pkgs; [
+            bash
+            busybox
+            coreutils
+            curl
+            gawk
+            gnugrep
+            gnused
+            jq
+          ];
+        }
+        ''
+          cp -r ${./.} scripts
+          bash scripts/bindery-bootstrap.test.sh
+          touch $out
+        '';
+
     shellcheck = pkgs.runCommand "scripts-shellcheck" { nativeBuildInputs = [ pkgs.shellcheck ]; } ''
       cd ${./.}
-      shellcheck -x -P . ./*.test.sh secrets-copy.sh secrets-same.sh forgejo-bootstrap.sh
+      shellcheck -x -P . ./*.test.sh secrets-copy.sh secrets-same.sh forgejo-bootstrap.sh audiobookshelf-bootstrap.sh bindery-bootstrap.sh
       cd router
       shellcheck -s sh adguard-querylog
       shellcheck -x ./*.sh
