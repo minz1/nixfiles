@@ -19,6 +19,52 @@ let
   forgejo = endpoints.git;
   forgejoSsh = endpoints.git-ssh;
   publicIp = lib.head (lib.splitString ":" node.networks.edge.endpoint);
+  hubPublicIp = lib.head (lib.splitString ":" topology.nodes.minz-vultr-nix-0.networks.mgmt.endpoint);
+  crowdsecConfigDir = config.services.crowdsec.settings.config.config_paths.config_dir;
+  jellyfinApiFamilies = [
+    "Items"
+    "items"
+    "Users"
+    "UserItems"
+    "useritems"
+    "UserViews"
+    "userviews"
+    "Shows"
+    "shows"
+    "Videos"
+    "videos"
+    "Sessions"
+    "SyncPlay"
+    "HomeScreen"
+    "JellyfinEnhanced"
+    "DisplayPreferences"
+    "Branding"
+    "Playback"
+    "MediaSegments"
+    "QuickConnect"
+    "LiveTv"
+    "Library"
+    "System"
+    "Plugins"
+    "user_usage_stats"
+    "socket"
+  ];
+  jellyfinAppPaths = (pkgs.formats.yaml { }).generate "zz-homelab-jellyfin-app-paths.yaml" {
+    name = "homelab/jellyfin-app-paths";
+    description = "Treat Jellyfin's own API paths as static so the crawl and probing scenarios skip them";
+    filter = lib.concatStringsSep " && " [
+      "evt.Meta.service == 'http'"
+      "evt.Meta.target_fqdn == '${hosts.jellyfin}'"
+      "evt.Parsed.verb in ['GET', 'HEAD']"
+      "evt.Parsed.request matches '^/(${lib.concatStringsSep "|" jellyfinApiFamilies})(/[A-Za-z0-9_-]+)*/?$'"
+    ];
+    statics = [
+      {
+        parsed = "static_ressource";
+        value = "true";
+      }
+    ];
+  };
   media = endpoints.media-caddy;
   servicesCaddy = endpoints.services-caddy;
 
@@ -152,14 +198,30 @@ in
         labels.type = "syslog";
       }
     ];
-    # local decisions recorded but not enforced until a day of alerts is reviewed (OBS-13); CAPI bans still apply
-    settings.simulation.simulation = true;
+    settings.parsers.s02Enrich = [
+      {
+        name = "homelab/own-hosts";
+        description = "Never ban the fleet's own public addresses";
+        whitelist = {
+          reason = "fleet host";
+          ip = [
+            publicIp
+            hubPublicIp
+          ];
+        };
+      }
+    ];
   };
+
+  systemd.tmpfiles.settings."10-crowdsec"."${crowdsecConfigDir}/parsers/s02-enrich/zz-homelab-jellyfin-app-paths.yaml"."L+".argument =
+    toString jellyfinAppPaths;
 
   # the module rewrites these files via tmpfiles but never tells the running crowdsec; reload (-t, then HUP) avoids restarting caddy, which requires crowdsec
   systemd.services.crowdsec.reloadTriggers = [
     (builtins.toJSON config.services.crowdsec.settings.acquisitions)
     (builtins.toJSON config.services.crowdsec.settings.simulation)
+    (builtins.toJSON config.services.crowdsec.settings.parsers)
+    jellyfinAppPaths
   ];
 
   # the caddy bouncer's key is fixed in sops, so it is registered with that key rather than via cscli's generated one
