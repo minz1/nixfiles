@@ -33,6 +33,7 @@ in
       };
       # WAL: reads don't wait on a writer's commit during home-nix-0 disk stalls.
       database.wal = true;
+      metrics.enabled = false;
       analytics = {
         reporting_enabled = false;
         check_for_updates = false;
