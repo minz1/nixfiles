@@ -94,7 +94,11 @@
   systemd.services.jellyfin = {
     after = [ "seerr.service" ];
     serviceConfig.ExecStartPre = [
-      "+${pkgs.writers.writePython3 "jellyfin-enhanced-keys" { } (builtins.readFile ./jellyfin-enhanced-keys.py)}"
+      "+${
+        pkgs.writers.writePython3 "jellyfin-enhanced-keys" { } (
+          builtins.readFile ./jellyfin-enhanced-keys.py
+        )
+      }"
     ];
   };
 
